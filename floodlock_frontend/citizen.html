@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FloodLock — Mumbai Citizen Flood Safety & Live Radar</title>
+  <meta name="description" content="Real-time citizen flood forecasting, standing water warnings, and safe elevated routes for Mumbai F-South Ward (Hindmata & Dadar).">
+
+  <!-- Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@1&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Leaflet CSS for Monochromatic Map Canvas -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+
+  <!-- Design System CSS -->
+  <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body class="citizen-app-body">
+
+  <!-- ══════════════════════════════════════════════════════════════════════════
+       CITIZEN HEADER / NAVIGATION BAR
+       ══════════════════════════════════════════════════════════════════════════ -->
+  <header class="citizen-header">
+    <div class="citizen-brand">
+      <a href="index.html" style="text-decoration:none; display:flex; align-items:center; gap:12px; color:inherit;">
+        <div class="brand-logo-icon" style="background:linear-gradient(135deg, var(--cyan), var(--emerald));">FL</div>
+        <div>
+          <div style="font-weight:800; font-size:15px; letter-spacing:0.5px;">FloodLock Mumbai</div>
+          <div style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono);">F-SOUTH WARD // CITIZEN SAFETY PORTAL</div>
+        </div>
+      </a>
+    </div>
+
+    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+      <div class="scenario-pill-group">
+        <button class="scenario-btn active live-active" data-scenario="live">🟢 LIVE</button>
+        <button class="scenario-btn" data-scenario="july2023">🟠 JULY 2023</button>
+        <button class="scenario-btn" data-scenario="july2005">🔴 JULY 2005</button>
+      </div>
+      <a href="index.html" class="status-pill" style="text-decoration:none; color:var(--cyan); border-color:var(--cyan); background:rgba(6,182,212,0.08); cursor:pointer;">
+        🎬 4K Genesis Story
+      </a>
+      <a href="admin.html" class="status-pill" style="text-decoration:none; color:var(--purple); border-color:var(--purple); cursor:pointer;">
+        ⚙️ Admin (1416)
+      </a>
+      <a href="monitor.html" class="status-pill" style="text-decoration:none; color:var(--cyan); border-color:var(--cyan); cursor:pointer;">
+        📊 Monitor (2324)
+      </a>
+      <div class="status-pill" id="deckBackendBadge">[OFFLINE DEMO MODE: Edge MLP Active]</div>
+      <button class="btn-icon theme-toggle-btn" title="Toggle Theme">🌓</button>
+    </div>
+  </header>
+
+  <!-- ══════════════════════════════════════════════════════════════════════════
+       CITIZEN CONTAINER
+       ══════════════════════════════════════════════════════════════════════════ -->
+  <main class="citizen-container">
+
+    <!-- 1. Conversational AI Safety Assistant Card ("AI Says: ...") -->
+    <section class="citizen-ai-hero" id="aiAdvisorCard">
+      <div class="citizen-ai-avatar" id="aiAdvisorIcon">☀️</div>
+      <div class="citizen-ai-text">
+        <div class="citizen-ai-title">FLOODLOCK ASSISTANT // REAL-TIME HAZARD ADVISORY</div>
+        <div class="citizen-ai-body" id="aiAdvisorMsg">
+          Weather in Mumbai F-South Ward is currently clear & sunny. Sluice gates are operating normally. All surface roads including Dr. B.A. Road are 100% open and safe. No flood risk detected.
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Conditional Safe vs Danger Route Alerts -->
+    <div class="citizen-safe-banner" id="safeRouteBanner">
+      <span style="font-size:16px;">✓</span>
+      <span><strong>ALL SURFACE ROADS CLEAR:</strong> Normal traffic flow permitted through Hindmata Underpass & Dr. B.A. Road. No bypass needed.</span>
+    </div>
+    <div class="citizen-danger-banner" id="dangerRouteBanner">
+      <span style="font-size:16px;">⚠️</span>
+      <span><strong>ACTIVE FLOOD CLOGGING:</strong> Hindmata Basin is submersed! Use glowing cyan <strong>Dadar TT Elevated Flyover (+8.5m MSL)</strong> to stay safe.</span>
+    </div>
+
+    <!-- 3. Interactive Monochromatic Map Viewport with Filters -->
+    <section class="citizen-card">
+      <div class="citizen-card-header">
+        <span>🗺️ Interactive Ward Map & Radar</span>
+        <div class="map-filter-bar" style="position:static; transform:none; padding:0; background:transparent; border:none; box-shadow:none;">
+          <button class="filter-btn active" data-layer="rain">🌧️ Rain Radar</button>
+          <button class="filter-btn active" data-layer="elevation">⛰️ Safe High Ground</button>
+          <button class="filter-btn active" data-layer="flood">🌊 Flood Risk</button>
+          <button class="filter-btn active" data-layer="timing">⏱️ Water Depths</button>
+          <button class="filter-btn" id="btnLocateUser" style="border-color:var(--cyan); color:var(--cyan);">📍 Locate Me</button>
+        </div>
+      </div>
+      <div class="citizen-map-wrapper">
+        <div id="mapCanvas" style="height:100%; width:100%;"></div>
+      </div>
+    </section>
+
+    <!-- 4. Antecedent Standing Water Memory & Simulation Cache -->
+    <section class="citizen-card" style="padding:16px; background:radial-gradient(circle at 10% 20%, rgba(168, 85, 247, 0.08), var(--panel)); border-color:rgba(168, 85, 247, 0.3);">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; margin-bottom:12px;">
+        <div>
+          <div style="font-size:13px; font-weight:700; color:var(--purple); display:flex; align-items:center; gap:6px;">
+            <span>🧠</span> ANTECEDENT WATER CACHE (STORM MEMORY ENGINE)
+          </div>
+          <div style="font-size:12px; color:var(--text-secondary); margin-top:4px; max-width:650px; line-height:1.5;">
+            Our AI remembers prior waterlogged puddles. If 14cm of water is already standing when rain arrives, the drainage threshold is already consumed, immediately cutting flood warning time.
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:11px; color:var(--text-muted); font-family:var(--font-mono);">TEST MEMORY:</span>
+          <button class="btn-antecedent active" data-antecedent="0">☀️ Dry (0 cm)</button>
+          <button class="btn-antecedent" data-antecedent="14">🌊 Logged (14 cm)</button>
+          <button class="btn-antecedent" data-antecedent="30">⛈️ Extreme (30 cm)</button>
+        </div>
+      </div>
+      <div style="font-size:11px; font-family:var(--font-mono); color:var(--text-muted); display:flex; align-items:center; gap:12px;">
+        <span>HYDROLOGICAL MEMORY: <strong style="color:var(--emerald);">ACTIVE</strong></span>
+        <span>•</span>
+        <span>RESILIENCE: <strong style="color:var(--cyan);">EDGE NEURAL INFERENCE RUNNING</strong></span>
+      </div>
+    </section>
+
+    <!-- 5. Key Citizen Safety Metrics (3-Grid) -->
+    <div class="citizen-grid-3">
+      <!-- Metric 1: Inundation Countdown -->
+      <div class="citizen-metric-box">
+        <div class="citizen-metric-label">TIME TO SEVERE INUNDATION</div>
+        <div class="citizen-metric-value" id="countdownDigits" style="color:var(--emerald);">> 180 MIN</div>
+        <div class="citizen-metric-desc" id="countdownSubtext">
+          Gravity drainage stable across all corridors.
+        </div>
+      </div>
+
+      <!-- Metric 2: Estimated Street Water Depth -->
+      <div class="citizen-metric-box">
+        <div class="citizen-metric-label">STREET WATER DEPTH (HINDMATA)</div>
+        <div class="citizen-metric-value" id="bento1Val" style="color:var(--cyan);">0.0 cm</div>
+        <div class="citizen-metric-desc" id="bento1Sub">
+          Hindmata Underpass // Normal street clearance.
+        </div>
+      </div>
+
+      <!-- Metric 3: Coastal Sluice Gate Choke -->
+      <div class="citizen-metric-box">
+        <div class="citizen-metric-label">LOVE GROVE SLUICE DRAINAGE</div>
+        <div class="citizen-metric-value" id="bento2Val" style="color:var(--emerald);">0.0%</div>
+        <div class="citizen-metric-desc" id="bento2Sub">
+          Drainage Rate: 25.0 mm/hr // Sluice fully open to Arabian Sea.
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. Emergency Transit & Safe Route Corridor Directive -->
+    <section class="citizen-card" style="padding:16px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <span style="font-size:12px; font-weight:700; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.5px;">
+          SAFE EVACUATION &amp; AMBULANCE CORRIDOR
+        </span>
+        <span class="status-pill" id="transitStatusBadge" style="font-size:11px; padding:2px 8px;">SURFACE NOMINAL</span>
+      </div>
+      <div style="font-size:15px; font-weight:700; margin-bottom:4px;" id="transitRoute">Surface Dr. B.A. Road (Normal)</div>
+      <div style="font-family:var(--font-mono); font-size:12px; color:var(--cyan); margin-bottom:8px;" id="transitDelay">0 min delay (Normal Flow)</div>
+      <div style="font-size:13px; color:var(--text-secondary); line-height:1.5; margin-bottom:12px;" id="transitDirective">
+        Dr. B.A. Road surface corridor nominal. Normal traffic flow permitted.
+      </div>
+      <button class="btn-launch" id="btnHighlightBypass" style="width:100%; justify-content:center; padding:10px; font-size:13px;">
+        Highlight Elevated Safe Route: Dadar TT Viaduct (+8.5m MSL) ↗
+      </button>
+    </section>
+
+    <!-- 7. Bottom Gateway to Admin Console -->
+    <footer style="text-align:center; padding:24px 12px; border-top:1px solid var(--border); color:var(--text-muted); font-size:12px;">
+      <p style="margin-bottom:8px;">Municipal Corporation of Greater Mumbai (MCGM) // F-South Ward Flood Resilience</p>
+      <p>
+        Are you a municipal engineer or flood dispatcher? 
+        <a href="admin.html" style="color:var(--cyan); font-weight:600; text-decoration:none;">Open Engineering Command Console (Pass: 1416) &rarr;</a>
+      </p>
+    </footer>
+
+  </main>
+
+  <!-- Leaflet Map JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <!-- FloodLock Modules -->
+  <script src="js/config.js"></script>
+  <script src="js/inference.js"></script>
+  <script src="js/map_engine.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

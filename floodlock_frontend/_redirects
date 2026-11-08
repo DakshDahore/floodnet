@@ -1,0 +1,13 @@
+# Netlify Serverless API Functions
+/api/*         /.netlify/functions/api/:splat  200
+
+# Specific static routes for FloodLock pages
+/citizen.html  /citizen.html                   200
+/citizen       /citizen.html                   200
+/admin.html    /admin.html                     200
+/admin         /admin.html                     200
+/monitor.html  /monitor.html                   200
+/monitor       /monitor.html                   200
+
+# SPA fallback for Cloudflare Pages and Netlify
+/*             /index.html                     200

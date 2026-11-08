@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FloodLock // Engineering Command Deck & Neural Admin</title>
+  <meta name="description" content="Municipal engineering crisis workstation, neural network node firing diagnostics, and hydrodynamic physics simulator.">
+
+  <!-- Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@1&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+
+  <!-- Design System CSS -->
+  <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body style="overflow:hidden;">
+
+  <!-- Security Gate Modal for Admin Console (Passcode 1416) -->
+  <div class="security-gate-overlay" id="adminGateOverlay" style="display:none;">
+    <div class="security-gate-box">
+      <div style="font-size:36px; margin-bottom:12px;">🔒</div>
+      <div style="font-family:var(--font-mono); font-size:11px; color:var(--purple); letter-spacing:1.5px; margin-bottom:6px;">
+        RESTRICTED MUNICIPAL CLEARANCE
+      </div>
+      <h3 style="font-size:20px; font-weight:700; margin-bottom:8px;">MCGM Engineering Console</h3>
+      <p style="font-size:12px; color:var(--text-secondary); line-height:1.5; margin-bottom:16px;">
+        This workstation provides live 60 FPS physics control and neural node visualizers. Please enter your municipal passcode to continue.
+      </p>
+      <div class="apple-code-pill admin-code-pill" onclick="document.getElementById('gatePassInput').value='1416'; document.getElementById('btnGateUnlock').click();" style="margin:0 auto 16px auto; cursor:pointer;" title="Click to auto-fill passcode 1416">
+        <span class="code-key-icon">🔑</span>
+        <span class="code-label">DEFAULT MUNICIPAL CODE:</span>
+        <span class="code-val">1416</span>
+        <span class="code-tap-hint">(Click to auto-fill)</span>
+      </div>
+      <div style="display:flex; gap:8px; margin-bottom:12px;">
+        <div class="passcode-input-wrapper">
+          <input type="text" id="gatePassInput" class="passcode-input" placeholder="Passcode (1416)" style="text-align:center; font-size:16px; letter-spacing:4px; width:100%;" maxlength="8">
+          <span class="passcode-watermark">1416</span>
+        </div>
+        <button id="btnGateUnlock" class="btn-gateway-action btn-gateway-admin" style="padding:10px 18px;">
+          Unlock ↗
+        </button>
+      </div>
+      <div id="gateErrorMsg" style="font-size:11px; color:var(--crimson); font-family:var(--font-mono); display:none; margin-bottom:12px;">
+        ✕ Invalid Passcode! (Default: 1416)
+      </div>
+      <a href="index.html" style="font-size:11px; color:var(--text-muted); text-decoration:none; font-family:var(--font-mono);">
+        &larr; Return to Intro Hub
+      </a>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════════
+       ADMIN / ENGINEERING CRISIS WORKSTATION
+       ══════════════════════════════════════════════════════════════════════════ -->
+  <main id="deckView" style="display:flex; width:100vw; height:100vh;">
+    <!-- Top System Telemetry Bar (54px) -->
+    <header class="deck-top-bar">
+      <div class="deck-brand-precinct">
+        <a href="index.html" style="text-decoration:none; display:flex; align-items:center; gap:10px; color:inherit;">
+          <div class="brand-logo-icon" style="background:linear-gradient(135deg, var(--purple), var(--cyan));">⚙️</div>
+          <div>
+            <div class="precinct-title">MCGM F-SOUTH WARD // ENGINEERING COMMAND DECK</div>
+            <div style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono);">NEURAL SENTINEL &amp; ANTECEDENT HYDRODYNAMICS</div>
+          </div>
+        </a>
+      </div>
+
+      <!-- 4 Scenario Switcher Buttons -->
+      <div class="scenario-pill-group">
+        <button class="scenario-btn active live-active" data-scenario="live">🟢 LIVE MUMBAI API</button>
+        <button class="scenario-btn" data-scenario="july2023">🟠 JULY 2023 CLOUDBURST</button>
+        <button class="scenario-btn" data-scenario="july2005">🔴 JULY 2005 DISASTER</button>
+        <button class="scenario-btn" data-scenario="manual">🎛️ MANUAL SIMULATOR</button>
+      </div>
+
+      <!-- Deck Controls & Indicators -->
+      <div class="deck-controls">
+        <a href="index.html" class="status-pill" style="text-decoration:none; color:var(--text-secondary); border-color:var(--border); cursor:pointer;">← Intro Hub</a>
+        <a href="index.html" class="status-pill" style="text-decoration:none; color:var(--cyan); border-color:var(--cyan); background:rgba(6,182,212,0.08); cursor:pointer;">🎬 4K Genesis Story</a>
+        <a href="citizen.html" class="status-pill" style="text-decoration:none; color:var(--emerald); border-color:var(--emerald); cursor:pointer;">📱 Citizen View ↗</a>
+        <a href="monitor.html" class="status-pill" style="text-decoration:none; color:var(--cyan); border-color:var(--cyan); cursor:pointer;">📊 Monitor (2324)</a>
+        <div class="status-pill" id="deckBackendBadge">[OFFLINE DEMO MODE: Edge MLP Active]</div>
+        <button class="btn-icon" id="btnNotifToggle" title="Toggle Notifications & Audio HUD">🔔</button>
+        <button class="btn-icon api-modal-btn" title="API Keys & Hardware Node Config">🔑</button>
+        <button class="btn-icon theme-toggle-btn" title="Toggle Theme">🌓</button>
+      </div>
+    </header>
+
+    <!-- 3-Column Split Workstation Body -->
+    <div class="deck-body">
+      <!-- ── Left Panel (340px): Telemetry Controls & Precinct Nodes ── -->
+      <aside class="deck-left-panel">
+        <div class="panel-header">
+          <span>HYDRODYNAMIC CONTROLS (60 FPS)</span>
+          <span style="color:var(--cyan); font-family:var(--font-mono);">EDGE MLP</span>
+        </div>
+
+        <div class="panel-section">
+          <!-- Instant Rain Slider -->
+          <div class="slider-group">
+            <div class="slider-label-row">
+              <span>Instant Rainfall</span>
+              <span class="slider-value" id="valRainInstant">45.0 mm/hr</span>
+            </div>
+            <input type="range" id="sliderRainInstant" min="0" max="195" step="1" value="45">
+          </div>
+
+          <!-- 1-Hr Rain Slider -->
+          <div class="slider-group">
+            <div class="slider-label-row">
+              <span>1-Hr Rolling Rainfall</span>
+              <span class="slider-value" id="valRain1hr">38.0 mm/hr</span>
+            </div>
+            <input type="range" id="sliderRain1hr" min="0" max="180" step="1" value="38">
+          </div>
+
+          <!-- Antecedent Standing Water Slider (Memory Engine) -->
+          <div class="slider-group" style="background:rgba(168, 85, 247, 0.08); padding:8px; border-radius:6px; border:1px solid rgba(168, 85, 247, 0.25);">
+            <div class="slider-label-row">
+              <span style="color:var(--purple); font-weight:600;">Antecedent Standing Depth</span>
+              <span class="slider-value" id="valAntecedent" style="color:var(--purple);">0.0 cm</span>
+            </div>
+            <input type="range" id="sliderAntecedent" min="0" max="60" step="1" value="0">
+            <div style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono); margin-top:4px;">
+              Pre-saturation of municipal drainage basin prior to storm event.
+            </div>
+          </div>
+
+          <!-- Tide Slider -->
+          <div class="slider-group">
+            <div class="slider-label-row">
+              <span>Astronomical Tide</span>
+              <span class="slider-value" id="valTide">3.40 m MSL</span>
+            </div>
+            <input type="range" id="sliderTide" min="1.00" max="5.20" step="0.05" value="3.40">
+          </div>
+
+          <!-- Pressure Slider -->
+          <div class="slider-group">
+            <div class="slider-label-row">
+              <span>Barometric Pressure</span>
+              <span class="slider-value" id="valPressure">1004 hPa</span>
+            </div>
+            <input type="range" id="sliderPressure" min="960" max="1022" step="1" value="1004">
+          </div>
+
+          <!-- Wind Speed Slider -->
+          <div class="slider-group">
+            <div class="slider-label-row">
+              <span>Wind Speed</span>
+              <span class="slider-value" id="valWindSpeed">12.0 m/s</span>
+            </div>
+            <input type="range" id="sliderWindSpeed" min="0" max="35" step="0.5" value="12">
+          </div>
+
+          <!-- Wind Direction Slider -->
+          <div class="slider-group">
+            <div class="slider-label-row">
+              <span>Wind Direction (Onshore 250°)</span>
+              <span class="slider-value" id="valWindDir">250°</span>
+            </div>
+            <input type="range" id="sliderWindDir" min="0" max="360" step="5" value="250">
+          </div>
+
+          <!-- InSAR Subsidence Slider -->
+          <div class="slider-group">
+            <div class="slider-label-row">
+              <span>InSAR Land Subsidence</span>
+              <span class="slider-value" id="valSubsidence">14.2 mm/yr</span>
+            </div>
+            <input type="range" id="sliderSubsidence" min="0" max="35" step="0.5" value="14.2">
+          </div>
+        </div>
+
+        <!-- Active Sector Precinct Nodes -->
+        <div class="panel-header">
+          <span>PRECINCT NODES</span>
+          <span style="color:var(--emerald);">MONITORED</span>
+        </div>
+
+        <div class="panel-section sector-feed">
+          <div class="sector-row">
+            <div>
+              <div class="sector-name">Hindmata Saucer Basin</div>
+              <div style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono);">Elevation +1.8m MSL</div>
+            </div>
+            <div class="sector-status-pill" id="statusHindmata">NOMINAL</div>
+          </div>
+
+          <div class="sector-row">
+            <div>
+              <div class="sector-name">Love Grove Sluice Outfall</div>
+              <div style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono);">Invert +3.0m MSL</div>
+            </div>
+            <div class="sector-status-pill" id="statusLoveGrove">SLUICE OPEN</div>
+          </div>
+
+          <div class="sector-row">
+            <div>
+              <div class="sector-name">Dadar TT Elevated Viaduct</div>
+              <div style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono);">Elevation +8.5m MSL</div>
+            </div>
+            <div class="sector-status-pill" id="statusDadarTT">BYPASS ACTIVE</div>
+          </div>
+
+          <div class="sector-row">
+            <div>
+              <div class="sector-name">KEM Hospital Emergency</div>
+              <div style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono);">Elevation +4.5m MSL</div>
+            </div>
+            <div class="sector-status-pill" id="statusKemHospital">SURFACE ACCESS OK</div>
+          </div>
+
+          <div class="sector-row">
+            <div>
+              <div class="sector-name">Pramod Mahajan Sump Tank</div>
+              <div style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono);">Capacity 162,000 m³</div>
+            </div>
+            <div class="sector-status-pill" id="statusPramodMahajan">STANDBY</div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- ── Center Viewport: Monochromatic Map + Bottom Bento Strip ── -->
+      <section class="deck-center-viewport">
+        <!-- Interactive Layer Filter Bar -->
+        <div class="map-filter-bar">
+          <button class="filter-btn active" data-layer="rain">🌧️ Rain Radar</button>
+          <button class="filter-btn active" data-layer="elevation">⛰️ Elevations</button>
+          <button class="filter-btn active" data-layer="flood">🌊 Flood Risk</button>
+          <button class="filter-btn active" data-layer="timing">⏱️ Water Depths</button>
+          <button class="filter-btn" id="btnLocateUser" style="border-color:var(--cyan); color:var(--cyan);">📍 Locate Me</button>
+        </div>
+
+        <!-- Interactive Leaflet Monochromatic Map (Zero API Key Watermark) -->
+        <div id="mapCanvas"></div>
+
+        <!-- Bottom 4-Card Bento Telemetry Strip (Ref Image 2) -->
+        <div class="bento-strip">
+          <!-- Bento Card 1: Ward Population Exposure -->
+          <div class="bento-cell">
+            <div class="bento-title">POPULATION EXPOSURE</div>
+            <div class="bento-value-row">
+              <span class="bento-main-metric" id="bento1Val">14,200</span>
+              <span class="bento-unit">RESIDENTS</span>
+            </div>
+            <div class="bento-subtext" id="bento1Sub">Hindmata Precinct // +0.18m Street Depth</div>
+            <div class="dot-matrix" id="bentoDotMatrix"></div>
+          </div>
+
+          <!-- Bento Card 2: Outfall Hydraulic Choke Gauge -->
+          <div class="bento-cell">
+            <div class="bento-title">SLUICE CHOKE GAUGE</div>
+            <div class="bento-value-row">
+              <span class="bento-main-metric" id="bento2Val" style="color:var(--emerald);">0.0%</span>
+            </div>
+            <div class="bento-subtext" id="bento2Sub">Drainage Rate: 25.0 mm/hr (Sill +3.0m)</div>
+          </div>
+
+          <!-- Bento Card 3: Compound Surge & Precipitation Amplification -->
+          <div class="bento-cell">
+            <div class="bento-title">COMPOUND SURGE & AMP</div>
+            <div class="bento-value-row">
+              <span class="bento-main-metric" id="bento3Val">+9.2 cm</span>
+            </div>
+            <div class="bento-subtext" id="bento3Sub">Tide: 3.49m MSL // Rain +7.2%</div>
+          </div>
+
+          <!-- Bento Card 4: Wind Vector Compass Dial -->
+          <div class="bento-cell">
+            <div class="bento-title">WIND VECTOR & DIAL</div>
+            <div class="bento-value-row" style="align-items:center;">
+              <span class="bento-main-metric" id="bento4Val">12.0 m/s</span>
+              <div style="width:24px; height:24px; border:1px solid var(--border); border-radius:50%; display:flex; align-items:center; justify-content:center; margin-left:8px;">
+                <div id="compassArrow" style="font-size:12px; transform:rotate(250deg); transition:transform 0.2s;">↑</div>
+              </div>
+            </div>
+            <div class="bento-subtext" id="bento4Sub">@ 250° // Onshore: 12.0 m/s</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Right Panel (380px): Dual Neural Audit & Locked M2M LLM Terminal ── -->
+      <aside class="deck-right-panel">
+        <div class="panel-header">
+          <span>AI ADVISORY &amp; NEURAL AUDIT</span>
+          <span style="color:var(--cyan); font-family:var(--font-mono);">VERIFIED TELEMETRY</span>
+        </div>
+
+        <div class="panel-section">
+          <!-- FloodLock AI Assistant ("AI Says: ...") -->
+          <div class="ai-advisor-card" id="aiAdvisorCard">
+            <span class="ai-advisor-icon" id="aiAdvisorIcon">☀️</span>
+            <div class="ai-advisor-body">
+              <div class="ai-advisor-title">FLOODLOCK AI ADVISORY // QWEN2.5:0.5B</div>
+              <div class="ai-advisor-message" id="aiAdvisorMsg">
+                Weather in Mumbai F-South Ward is currently clear & sunny. Gravity sluices are operating normally. All surface roads including Dr. B.A. Road are 100% open. No flood risk detected.
+              </div>
+            </div>
+          </div>
+
+          <!-- Real Neural Network Node Firing Visualizer (Asserted 209-Param Architecture) -->
+          <div class="neural-visualizer">
+            <div class="neural-vis-header">
+              <span>REAL NEURAL NET NODE FIRING</span>
+              <span style="color:var(--cyan);">209-EDGE MLP</span>
+            </div>
+            <div class="neural-layers-grid">
+              <!-- Inputs (3) -->
+              <div class="neural-col">
+                <div class="neural-col-title">INPUTS</div>
+                <div class="neuron-node" title="Rainfall"><div class="neuron-fill" id="n_in_0" style="width:25%;"></div></div>
+                <div class="neuron-node" title="Effective Tide"><div class="neuron-fill" id="n_in_1" style="width:50%;"></div></div>
+                <div class="neuron-node" title="InSAR Subsidence"><div class="neuron-fill" id="n_in_2" style="width:35%;"></div></div>
+              </div>
+              <!-- Hidden Layer 1 (16 neurons) -->
+              <div class="neural-col">
+                <div class="neural-col-title">L1 (16N)</div>
+                <div id="layer1NodesContainer" style="display:flex; flex-direction:column; gap:2px;"></div>
+              </div>
+              <!-- Hidden Layer 2 (8 neurons) -->
+              <div class="neural-col">
+                <div class="neural-col-title">L2 (8N)</div>
+                <div id="layer2NodesContainer" style="display:flex; flex-direction:column; gap:2px;"></div>
+              </div>
+              <!-- Output (1) -->
+              <div class="neural-col">
+                <div class="neural-col-title">ETA</div>
+                <div class="neuron-node" style="height:100%;"><div class="neuron-fill" id="n_out" style="width:90%;"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Countdown Box -->
+          <div class="countdown-box">
+            <div style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:4px;">
+              TIME TO SEVERE INUNDATION
+            </div>
+            <div class="countdown-digits" id="countdownDigits">48.2 MIN</div>
+            <div style="font-size:11px; color:var(--text-secondary); margin-top:4px;" id="countdownSubtext">
+              GRAVITY DRAINAGE STABLE ACROSS CORRIDORS
+            </div>
+
+            <!-- Dual Neural Net Comparison Tiles -->
+            <div class="dual-audit-row">
+              <div class="audit-tile">
+                <div class="audit-tile-label">TIER-1 EDGE MLP</div>
+                <div class="audit-tile-val" id="auditVal209" style="color:var(--cyan);">48.2m</div>
+                <div style="font-size:10px; color:var(--emerald); font-family:var(--font-mono);" id="auditBadge209">&lt;0.05 ms</div>
+              </div>
+
+              <div class="audit-tile">
+                <div class="audit-tile-label">TIER-2 DEEP MLP</div>
+                <div class="audit-tile-val" id="auditVal737" style="color:var(--purple);">46.8m</div>
+                <div style="font-size:10px; color:var(--emerald); font-family:var(--font-mono);" id="auditBadge737">MAE 5.73m</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Transit & Routing Corridor Card -->
+          <div style="background:var(--recessed); border:1px solid var(--border); border-radius:6px; padding:12px; margin-bottom:14px;">
+            <div class="citizen-safe-banner" id="safeRouteBanner">
+              <span>✓</span> <span>ALL SURFACE ROADS CLEAR: Normal traffic permitted (No detour needed)</span>
+            </div>
+            <div class="citizen-danger-banner" id="dangerRouteBanner">
+              <span>⚠️</span> <span>ACTIVE FLOOD CLOGGING: Dadar TT Elevated Bypass Active!</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <span style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted);">AMBULANCE CORRIDOR</span>
+              <span class="status-pill" id="transitStatusBadge" style="font-size:10px; padding:2px 6px;">SURFACE NOMINAL</span>
+            </div>
+            <div style="font-size:12px; font-weight:600; margin-bottom:4px;" id="transitRoute">Surface Dr. B.A. Road (Normal)</div>
+            <div style="font-family:var(--font-mono); font-size:11px; color:var(--cyan); margin-bottom:8px;" id="transitDelay">0 min delay (Normal)</div>
+            <div style="font-size:11px; color:var(--text-secondary); line-height:1.5; margin-bottom:10px;" id="transitDirective">
+              Dr. B.A. Road surface corridor nominal. Normal traffic flow permitted.
+            </div>
+            <button class="btn-launch" id="btnHighlightBypass" style="width:100%; justify-content:center; padding:6px 12px; font-size:12px;">
+              Highlight Dadar TT Viaduct (+8.5m MSL) ↗
+            </button>
+          </div>
+
+          <!-- Locked M2M LLM Dispatch Terminal -->
+          <div class="dispatch-terminal">
+            <div class="dispatch-header">
+              <span>🔒</span>
+              <span>SYSTEM-ONLY M2M DISPATCH // QWEN2.5:0.5B (LOCKED)</span>
+            </div>
+            <pre class="dispatch-log" id="dispatchLogBox"></pre>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <!-- In-App Hardware Node Modal -->
+  <div class="modal-overlay" id="apiModalOverlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 style="font-size:15px; font-weight:700;">Hardware Ingress &amp; Network Tunnels</h3>
+        <button class="btn-icon" id="modalCloseBtn" style="width:28px; height:28px;">✕</button>
+      </div>
+
+      <div class="form-group">
+        <label>Cloudflare Public HTTPS Tunnel (Worldwide Access)</label>
+        <input type="text" id="inputTunnelUrl" placeholder="https://surveys-method-chris-aware.trycloudflare.com">
+      </div>
+
+      <div class="form-group">
+        <label>Local Compute Server URL (Home Wi-Fi LAN)</label>
+        <input type="text" id="inputMsiUrl" placeholder="http://192.168.1.109:8000">
+      </div>
+
+      <div class="form-group">
+        <label>Cloud Secondary Fallback URL (Render / GCP)</label>
+        <input type="text" id="inputCloudUrl" placeholder="https://floodlock-backend-cloud.onrender.com">
+      </div>
+
+      <div style="background:rgba(16, 185, 129, 0.1); border:1px solid var(--emerald); border-radius:6px; padding:10px 12px; margin-top:12px; font-size:11px; font-family:var(--font-mono); color:#cbd5e1; line-height:1.6;">
+        🔒 <strong style="color:var(--emerald);">SECURITY MANDATE VERIFIED:</strong><br>
+        Weather API keys (OpenWeather, Tomorrow.io, WorldTides) are safely isolated in the backend server's <code>.env</code> file. No keys are ever exposed in client code.
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+        <button class="hero-cta-secondary" id="modalCancelBtn" onclick="window.FloodApp.closeApiModal()">Cancel</button>
+        <button class="btn-launch" id="modalSaveBtn">Save &amp; Re-Connect ↗</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="js/config.js"></script>
+  <script src="js/inference.js"></script>
+  <script src="js/map_engine.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    // Enforce Security Gate Check (Passcode: 1416)
+    const overlay = document.getElementById("adminGateOverlay");
+    const gateInput = document.getElementById("gatePassInput");
+    const gateBtn = document.getElementById("btnGateUnlock");
+    const gateErr = document.getElementById("gateErrorMsg");
+
+    function checkAuth() {
+      if (sessionStorage.getItem("floodlock_auth_admin") === "1416") {
+        overlay.style.display = "none";
+      } else {
+        overlay.style.display = "flex";
+      }
+    }
+    checkAuth();
+
+    function unlockFromGate() {
+      if (gateInput.value.trim() === "1416") {
+        sessionStorage.setItem("floodlock_auth_admin", "1416");
+        overlay.style.display = "none";
+      } else {
+        gateInput.classList.add("error");
+        gateErr.style.display = "block";
+        setTimeout(() => gateInput.classList.remove("error"), 600);
+      }
+    }
+    if (gateBtn) gateBtn.addEventListener("click", unlockFromGate);
+    if (gateInput) {
+      gateInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") unlockFromGate();
+      });
+    }
+
+    // Bind Antecedent Water Slider in Admin Console
+    window.addEventListener("DOMContentLoaded", () => {
+      const s = document.getElementById("sliderAntecedent");
+      const l = document.getElementById("valAntecedent");
+      if (s && l) {
+        s.addEventListener("input", (e) => {
+          const depthCm = parseFloat(e.target.value);
+          l.textContent = `${depthCm.toFixed(1)} cm`;
+          if (window.FloodApp) {
+            window.FloodApp.inputs.antecedent_depth_m = depthCm / 100.0;
+            window.FloodApp.antecedentDepthM = depthCm / 100.0;
+            window.FloodApp.render();
+          }
+        });
+      }
+    });
+  </script>
+</body>
+</html>

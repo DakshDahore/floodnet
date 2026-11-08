@@ -1,0 +1,26 @@
+# Environment Variables & Secrets
+.env
+*.env.local
+
+# Python Environments & Cache
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# PyTorch Checkpoints
+checkpoints/*.pt
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Archive & Zips
+*.zip
+*.tar.gz
+
+# Node dependencies
+node_modules/
+dist/
+floodlock_gemini_memory_pack/

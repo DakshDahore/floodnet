@@ -1,0 +1,30 @@
+{
+  "standing_water_depth_m": 0.0,
+  "standing_water_depth_cm": 0.0,
+  "cumulative_rain_6hr_mm": 0.0,
+  "last_update_ts": 1792649742.2028573,
+  "last_update_iso": "2026-10-22T11:45:42.202857",
+  "history_count": 2,
+  "history": [
+    {
+      "timestamp": 1792388428.2864823,
+      "iso": "11:10:28",
+      "rain_mm_hr": 0.0,
+      "effective_rain_mm_hr": 0.0,
+      "q_drain_mm_hr": 2.5,
+      "choke_pct": 90.0,
+      "water_depth_m": 0.0,
+      "water_depth_cm": 0.0
+    },
+    {
+      "timestamp": 1792649742.2028573,
+      "iso": "11:45:42",
+      "rain_mm_hr": 0.0,
+      "effective_rain_mm_hr": 0.0,
+      "q_drain_mm_hr": 25.0,
+      "choke_pct": 0.0,
+      "water_depth_m": 0.0,
+      "water_depth_cm": 0.0
+    }
+  ]
+}
