@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FloodLock — Sovereign Commercial SaaS Storefront</title>
+
+  <!-- Legal Typography: 100% Free SIL OFL Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --c-obsidian: #16100B;
+      --c-umber: #35281E;
+      --c-cognac: #92542B;
+      --c-cognac-hover: #b86b38;
+      --c-sage: #788279;
+      --c-cream: #D6C5B3;
+      --c-linen: #F8F5EE;
+      
+      --c-card: rgba(30, 22, 16, 0.9);
+      --c-border: rgba(214, 197, 179, 0.2);
+      
+      --font-display: 'Instrument Serif', Georgia, serif;
+      --font-sans: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--c-obsidian);
+      color: var(--c-linen);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      padding-bottom: 120px;
+    }
+
+    /* TOP LUXURY BAR */
+    header {
+      position: sticky; top: 0; z-index: 100;
+      backdrop-filter: blur(24px); background: rgba(22, 16, 11, 0.92);
+      border-bottom: 1px solid var(--c-border);
+      padding: 1.1rem 2.5rem; display: flex; justify-content: space-between; align-items: center;
+    }
+    .brand { font-family: var(--font-display); font-size: 2.1rem; color: var(--c-linen); text-decoration: none; }
+    .brand span { color: var(--c-cognac); font-style: italic; }
+
+    .container { max-width: 1120px; margin: 0 auto; padding: 3rem 1.5rem; }
+    .view-pane { display: none; }
+    .view-pane.active { display: block; }
+
+    /* EDITORIAL HERO */
+    .hero { text-align: center; margin-bottom: 4rem; }
+    .eyebrow { font-size: 0.8rem; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.15em; color: var(--c-cream); margin-bottom: 0.8rem; }
+    .hero-title { font-family: var(--font-display); font-size: 4.2rem; letter-spacing: -0.02em; line-height: 1.05; margin-bottom: 1.25rem; }
+    .hero-title span { color: var(--c-cognac); font-style: italic; }
+    .hero-sub { max-width: 700px; margin: 0 auto 2.5rem; font-size: 1.15rem; color: var(--c-cream); line-height: 1.6; }
+
+    .btn-main {
+      background: var(--c-cognac); color: var(--c-linen); border: none;
+      padding: 0.85rem 2.2rem; border-radius: 999px; font-weight: 700; font-size: 0.95rem;
+      cursor: pointer; transition: all 0.25s ease; box-shadow: 0 10px 30px rgba(146, 84, 43, 0.4);
+    }
+    .btn-main:hover { background: var(--c-cognac-hover); transform: translateY(-2px); }
+
+    /* INTERACTIVE QUOTA CALCULATOR */
+    .calc-card {
+      background: var(--c-card); border: 1px solid var(--c-border);
+      border-radius: 24px; padding: 2.5rem; margin-bottom: 3.5rem; box-shadow: 0 25px 60px rgba(0,0,0,0.5);
+    }
+    input[type=range] {
+      width: 100%; -webkit-appearance: none; background: #2a1e16; height: 10px; border-radius: 5px; outline: none; margin: 1rem 0;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 26px; height: 26px; border-radius: 50%;
+      background: var(--c-cognac); cursor: pointer; border: 3px solid #fff; box-shadow: 0 0 15px rgba(146,84,43,0.8);
+    }
+
+    /* PRICING CARDS */
+    .pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.75rem; margin-bottom: 3.5rem; }
+    .price-card {
+      background: var(--c-card); border: 1px solid var(--c-border);
+      border-radius: 22px; padding: 2.2rem; display: flex; flex-direction: column;
+      justify-content: space-between; transition: all 0.3s ease;
+    }
+    .price-card.featured {
+      border: 2px solid var(--c-cognac); transform: translateY(-8px);
+      box-shadow: 0 25px 60px rgba(146, 84, 43, 0.3);
+      background: linear-gradient(180deg, rgba(53,40,30,0.95), rgba(30,22,16,0.95));
+    }
+    .tier-price { font-size: 3rem; font-weight: 800; font-family: var(--font-mono); color: var(--c-linen); margin: 0.8rem 0; }
+    .tier-price span { font-size: 1rem; color: var(--c-cream); font-weight: 400; }
+
+    /* T+5 ESCROW BANNER */
+    .escrow-banner {
+      background: rgba(146, 84, 43, 0.15); border: 1px solid var(--c-cognac);
+      border-radius: 18px; padding: 1.75rem; margin-bottom: 3.5rem;
+      display: flex; gap: 1.5rem; align-items: center;
+    }
+
+    /* BOTTOM LIQUID DOCK */
+    .liquid-dock {
+      position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); z-index: 100;
+      backdrop-filter: blur(28px) saturate(200%); -webkit-backdrop-filter: blur(28px) saturate(200%);
+      background: rgba(30, 22, 16, 0.9); border: 1px solid var(--c-border);
+      padding: 0.45rem; border-radius: 999px; display: flex; gap: 0.4rem;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+    }
+    .dock-btn {
+      padding: 0.65rem 1.4rem; border-radius: 999px; border: none; background: transparent;
+      color: var(--c-cream); font-size: 0.82rem; font-weight: 600; cursor: pointer;
+      transition: all 0.25s;
+    }
+    .dock-btn.active { background: var(--c-cognac); color: var(--c-linen); box-shadow: 0 4px 15px rgba(146,84,43,0.4); }
+
+    /* MODAL */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.85); backdrop-filter: blur(20px);
+      display: none; justify-content: center; align-items: center; z-index: 200;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal-box {
+      background: #1e1610; border: 1px solid var(--c-cognac); border-radius: 24px;
+      width: 90%; max-width: 480px; padding: 2.2rem; text-align: center; position: relative;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header -->
+  <header>
+    <a href="#" class="brand" onclick="switchView('pricing')">Flood<span>Lock</span></a>
+    <div style="display: flex; gap: 1rem; align-items: center;">
+      <span style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--c-cream);">T+5 ESCROW VERIFIED</span>
+      <button class="btn-main" style="padding: 0.5rem 1.25rem; font-size: 0.82rem;" onclick="openAuth()">18+ Sign In</button>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <!-- VIEW 1: PRICING & STOREFRONT (DEFAULT) -->
+    <section id="view-pricing" class="view-pane active">
+      <div class="hero">
+        <div class="eyebrow">Enterprise Hydrodynamic Intelligence</div>
+        <h1 class="hero-title">Predictable Tiers. <br><span>Guaranteed by Escrow.</span></h1>
+        <p class="hero-sub">
+          Industrial-grade planetary flash flood intelligence with automated 5-day escrow protection and unconditional 50% partial refund assurance.
+        </p>
+      </div>
+
+      <!-- T+5 Escrow Notice Banner -->
+      <div class="escrow-banner">
+        <div style="font-size: 2.4rem;">🛡️</div>
+        <div>
+          <strong style="color: var(--c-linen); font-size: 1.1rem; display: block; margin-bottom: 0.25rem;">
+            Automated T+5 Commercial Escrow & 50% Refund Guarantee
+          </strong>
+          <p style="font-size: 0.88rem; color: var(--c-cream); line-height: 1.5;">
+            All subscription payments are held in escrow for 5 days. Cancel anytime within 5 days for an immediate <strong>50% partial refund</strong> (50% retained for edge telemetry & compute costs). Alert dispatched directly to founder inbox.
+          </p>
+        </div>
+      </div>
+
+      <!-- Quota Volume Calculator -->
+      <div class="calc-card">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--c-cream); text-transform: uppercase;">Estimate Your Daily Inundation Volume</span>
+          <strong id="calc-display" style="font-family: var(--font-mono); font-size: 1.4rem; color: var(--c-cognac);">2,500 Requests/Day</strong>
+        </div>
+        <input type="range" id="vol-slider" min="50" max="25000" step="50" value="2500">
+        <div style="display: flex; justify-content: space-between; font-size: 0.72rem; font-family: var(--font-mono); color: var(--c-cream);">
+          <span>Free (50/day)</span>
+          <span>Pro (2.5k/day)</span>
+          <span>Ultra (15k/day)</span>
+          <span>Enterprise (25k+/day)</span>
+        </div>
+      </div>
+
+      <!-- Pricing Matrix -->
+      <div class="pricing-grid">
+        <!-- Citizen -->
+        <div class="price-card">
+          <div>
+            <div style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--c-cream); text-transform: uppercase;">Free Citizen</div>
+            <div class="tier-price">₹0 <span>/ forever</span></div>
+            <ul style="list-style: none; font-size: 0.85rem; color: var(--c-linen); line-height: 2;">
+              <li>✔ 50 Inundation Queries/Day</li>
+              <li>✔ Public Vector Map Access</li>
+              <li>✔ 3-Hour Inundation Horizon</li>
+            </ul>
+          </div>
+          <button class="btn-main" style="background:var(--c-umber); width:100%; margin-top:1.5rem;" onclick="alert('You are on the Free Citizen plan.')">Current Plan</button>
+        </div>
+
+        <!-- Pro -->
+        <div class="price-card featured" id="card-pro">
+          <div>
+            <div style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--c-cognac); text-transform: uppercase; font-weight: 700;">Tactical Pro</div>
+            <div class="tier-price">₹49 <span>/ month</span></div>
+            <ul style="list-style: none; font-size: 0.85rem; color: var(--c-linen); line-height: 2;">
+              <li>✔ 2,500 High-Speed Queries/Day</li>
+              <li>✔ Full 14-Feature Deep Inference</li>
+              <li>✔ Sub-2ms V8 Edge Response</li>
+              <li>✔ Gemini Tactical Causal Guidance</li>
+              <li>✔ 5-Day 50% Escrow Guarantee</li>
+            </ul>
+          </div>
+          <button class="btn-main" style="width:100%; margin-top:1.5rem;" onclick="openUpi('pro', 49)">Subscribe with UPI (₹49)</button>
+        </div>
+
+        <!-- Ultra -->
+        <div class="price-card" id="card-ultra">
+          <div>
+            <div style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--c-cream); text-transform: uppercase;">Command Ultra</div>
+            <div class="tier-price">₹149 <span>/ month</span></div>
+            <ul style="list-style: none; font-size: 0.85rem; color: var(--c-linen); line-height: 2;">
+              <li>✔ 15,000 High-Speed Queries/Day</li>
+              <li>✔ Dual-Trigger Black Swan Alerts</li>
+              <li>✔ Pre-Baked 30m Global Sinks</li>
+              <li>✔ Automated Emergency Webhooks</li>
+              <li>✔ Direct Founder Escalation</li>
+            </ul>
+          </div>
+          <button class="btn-main" style="width:100%; margin-top:1.5rem;" onclick="openUpi('ultra', 149)">Subscribe with UPI (₹149)</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 2: STORYTELLING -->
+    <section id="view-story" class="view-pane">
+      <div class="hero">
+        <h1 class="hero-title">The Physics of the <span>Urban Deluge</span></h1>
+        <p class="hero-sub">Why 85% of drownings happen on concrete, and how FloodLock's 14-feature neural net predicts street inundation in 12ms.</p>
+      </div>
+      <div style="background:var(--c-card); border:1px solid var(--c-border); border-radius:24px; padding:3rem; line-height:1.8; color:var(--c-cream);">
+        <h3 style="font-family:var(--font-display); font-size:2rem; color:var(--c-linen); margin-bottom:1rem;">What Are Urban Floods?</h3>
+        <p style="margin-bottom:1.5rem;">
+          Urban floods are flash-hydraulic events driven by 90%+ impervious asphalt and coastal tidal choking. Unlike slow river overflows, street water levels rise to dangerous heights in under 30 minutes.
+        </p>
+        <h3 style="font-family:var(--font-display); font-size:2rem; color:var(--c-linen); margin-bottom:1rem;">Why AI Over Traditional CFD?</h3>
+        <p>
+          2D hydrodynamic differential equations take 14 hours to solve for a single city ward. FloodLock's physics-informed neural network computes the exact depth trajectory in <strong>12 milliseconds</strong> on the edge.
+        </p>
+      </div>
+    </section>
+
+    <!-- VIEW 3: MODEL ZOO -->
+    <section id="view-models" class="view-pane">
+      <div class="hero">
+        <h1 class="hero-title">Open Hydrological <span>Zoo</span></h1>
+        <p class="hero-sub">Download compiled TorchScript binaries and simulation datasets.</p>
+      </div>
+      <div style="display:flex; justify-content:center; gap:1.5rem;">
+        <a href="../data/floodlock_global_hydrology_trained.pt" download class="btn-main" style="text-decoration:none;">Download Trained Weights (.pt)</a>
+        <a href="../data/floodlock_calibrated_physics_dataset.csv" download class="btn-main" style="text-decoration:none; background:var(--c-umber);">Download Physics Benchmark (.csv)</a>
+      </div>
+    </section>
+
+    <!-- VIEW 4: LEGAL -->
+    <section id="view-legal" class="view-pane">
+      <div class="hero">
+        <h1 class="hero-title">Legal & <span>TOS Charter</span></h1>
+        <p class="hero-sub">Certified Google Gemini API GA compliance, DPDP data protection, and 5-day 50% escrow guarantee terms.</p>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Bottom Liquid Dock -->
+  <div class="liquid-dock">
+    <button class="dock-btn active" onclick="switchView('pricing', this)">💳 Pricing & Escrow</button>
+    <button class="dock-btn" onclick="switchView('story', this)">📖 Science Story</button>
+    <button class="dock-btn" onclick="switchView('models', this)">🔬 Model Zoo</button>
+    <button class="dock-btn" onclick="switchView('legal', this)">⚖️ Legal Charter</button>
+  </div>
+
+  <!-- AUTH MODAL -->
+  <div class="modal-overlay" id="auth-modal">
+    <div class="modal-box">
+      <h2 style="font-family:var(--font-display); font-size:2rem; margin-bottom:1rem;">Sign In (18+ Verified)</h2>
+      <button class="btn-main" style="width:100%; background:#fff; color:#000; margin-bottom:0.75rem;" onclick="doLogin('Google')">Continue with Google</button>
+      <button class="btn-main" style="width:100%; background:#24292e; color:#fff; margin-bottom:1.5rem;" onclick="doLogin('GitHub')">Continue with GitHub</button>
+      <label style="display:flex; gap:0.5rem; font-size:0.75rem; color:var(--c-cream); text-align:left; cursor:pointer;">
+        <input type="checkbox" id="age-check">
+        <span>I certify that I am <strong>18+ years of age</strong> per Google Gemini API policies.</span>
+      </label>
+      <button class="btn-main" style="background:var(--c-umber); width:100%; margin-top:1.5rem;" onclick="closeAuth()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- UPI ESCROW MODAL -->
+  <div class="modal-overlay" id="upi-modal">
+    <div class="modal-box">
+      <h2 style="font-family:var(--font-display); font-size:2rem; margin-bottom:0.2rem;">Instant UPI Escrow</h2>
+      <div style="font-family:var(--font-mono); font-size:0.8rem; color:var(--c-cream); margin-bottom:1rem;">
+        PLAN: <strong id="upi-plan" style="color:var(--c-cognac);">PRO (₹49)</strong> | T+5 LOCK
+      </div>
+      <div style="background:#fff; width:160px; height:160px; margin:0 auto 1rem; padding:0.5rem; border-radius:12px;">
+        <img id="qr-img" src="" style="width:100%; height:100%;">
+      </div>
+      <div style="font-size:0.75rem; color:var(--c-cream); margin-bottom:1rem;">
+        Scan via Google Pay, PhonePe, or Paytm.<br>
+        <span style="color:#f59e0b;">5-Day 50% Partial Refund Guarantee Active.</span>
+      </div>
+      <input type="text" id="utr-input" placeholder="Enter 12-Digit UPI UTR No." style="width:100%; padding:0.8rem; border-radius:8px; border:1px solid var(--c-border); background:#0d0906; color:#fff; font-family:var(--font-mono); font-size:0.85rem; text-align:center; margin-bottom:1rem;">
+      <button class="btn-main" style="width:100%;" onclick="submitUpi()">Confirm Escrow Deposit</button>
+      <button class="btn-main" style="width:100%; background:var(--c-umber); margin-top:0.5rem;" onclick="closeUpi()">Cancel</button>
+    </div>
+  </div>
+
+  <script>
+    function switchView(id, btn) {
+      document.querySelectorAll('.view-pane').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.dock-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(`view-${id}`).classList.add('active');
+      if (btn) btn.classList.add('active');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    const slider = document.getElementById('vol-slider');
+    const disp = document.getElementById('calc-display');
+    const cardPro = document.getElementById('card-pro');
+    const cardUltra = document.getElementById('card-ultra');
+
+    slider.addEventListener('input', (e) => {
+      const v = parseInt(e.target.value);
+      disp.textContent = `${v.toLocaleString()} Requests/Day`;
+      if (v <= 2500) {
+        cardPro.classList.add('featured');
+        cardUltra.classList.remove('featured');
+      } else {
+        cardPro.classList.remove('featured');
+        cardUltra.classList.add('featured');
+      }
+    });
+
+    function openAuth() { document.getElementById('auth-modal').classList.add('active'); }
+    function closeAuth() { document.getElementById('auth-modal').classList.remove('active'); }
+    function doLogin(p) {
+      if (!document.getElementById('age-check').checked) { alert("18+ Age verification required."); return; }
+      alert(`Authenticated with ${p}!`);
+      closeAuth();
+    }
+
+    let curPlan = 'pro', curAmt = 49;
+    function openUpi(plan, amt) {
+      curPlan = plan; curAmt = amt;
+      document.getElementById('upi-plan').textContent = `${plan.toUpperCase()} (₹${amt})`;
+      document.getElementById('qr-img').src = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=upi://pay?pa=dakshdahore1995@okhdfcbank&pn=FloodLock&am=${amt}&cu=INR`;
+      document.getElementById('upi-modal').classList.add('active');
+    }
+    function closeUpi() { document.getElementById('upi-modal').classList.remove('active'); }
+    function submitUpi() {
+      const u = document.getElementById('utr-input').value.trim();
+      if (!u || u.length < 8) { alert("Enter valid 12-digit UTR."); return; }
+      alert(`✔ Payment Received into T+5 Escrow!\nUTR: ${u}\nAmount: ₹${curAmt}\n50% Refund Guarantee Active.\nAlert dispatched to: lantern.mech@gmail.com`);
+      closeUpi();
+    }
+  </script>
+</body>
+</html>
+

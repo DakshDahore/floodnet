@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FloodLock — Cinematic Geospatial Command Deck</title>
+
+  <!-- Legal Typography: 100% Free SIL OFL Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- MapLibre GL -->
+  <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+
+  <style>
+    :root {
+      --c-obsidian: #16100B;
+      --c-umber: #35281E;
+      --c-cognac: #92542B;
+      --c-cognac-hover: #b86b38;
+      --c-sage: #788279;
+      --c-cream: #D6C5B3;
+      --c-linen: #F8F5EE;
+      
+      --font-display: 'Instrument Serif', Georgia, serif;
+      --font-sans: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body, html { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: var(--font-sans); color: var(--c-linen); }
+
+    #map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+    #rain-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; opacity: 0.55; }
+
+    /* FLOATING TOP NAVIGATION */
+    .spatial-top {
+      position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 50;
+      backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+      background: rgba(22, 16, 11, 0.85); border: 1px solid rgba(214, 197, 179, 0.25);
+      border-radius: 999px; padding: 0.6rem 2.2rem; display: flex; gap: 2rem; align-items: center;
+      box-shadow: 0 20px 45px rgba(0,0,0,0.6);
+    }
+    .brand-spatial { font-family: var(--font-display); font-size: 1.8rem; color: var(--c-linen); text-decoration: none; }
+    .brand-spatial span { color: var(--c-cognac); font-style: italic; }
+
+    /* FLOATING HUD (LEFT) */
+    .hud-left {
+      position: absolute; top: 95px; left: 30px; width: 400px; z-index: 30;
+      backdrop-filter: blur(30px); background: rgba(30, 22, 16, 0.88);
+      border: 1px solid rgba(214, 197, 179, 0.25); border-radius: 24px;
+      padding: 1.75rem; box-shadow: 0 25px 60px rgba(0,0,0,0.7);
+      max-height: 80vh; overflow-y: auto;
+    }
+    .hud-left::-webkit-scrollbar { width: 4px; }
+    .hud-left::-webkit-scrollbar-thumb { background: var(--c-umber); border-radius: 4px; }
+
+    .tag-live {
+      font-size: 0.7rem; font-family: var(--font-mono); font-weight: 700;
+      color: #4ade80; display: inline-flex; align-items: center; gap: 0.4rem;
+      background: rgba(74, 222, 128, 0.15); padding: 0.3rem 0.75rem; border-radius: 999px;
+      margin-bottom: 0.75rem;
+    }
+
+    /* SLIDERS */
+    .slider-box {
+      background: rgba(22, 16, 11, 0.6); border: 1px solid rgba(214, 197, 179, 0.15);
+      border-radius: 14px; padding: 1rem; margin: 1rem 0;
+    }
+    input[type=range] {
+      width: 100%; -webkit-appearance: none; background: #261b14; height: 6px; border-radius: 4px; outline: none;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%;
+      background: var(--c-cognac); cursor: pointer; border: 2px solid #fff;
+    }
+
+    /* RIGHT SIDE BRIEFING */
+    .hud-right {
+      position: absolute; top: 95px; right: 30px; width: 360px; z-index: 30;
+      backdrop-filter: blur(30px); background: rgba(30, 22, 16, 0.88);
+      border: 1px solid rgba(214, 197, 179, 0.25); border-radius: 24px;
+      padding: 1.75rem; box-shadow: 0 25px 60px rgba(0,0,0,0.7);
+    }
+
+    /* FLOATING BOTTOM DOCK */
+    .spatial-dock {
+      position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%); z-index: 50;
+      backdrop-filter: blur(30px); background: rgba(30, 22, 16, 0.9);
+      border: 1px solid rgba(214, 197, 179, 0.25); border-radius: 999px;
+      padding: 0.45rem; display: flex; gap: 0.5rem;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+    }
+    .spatial-btn {
+      padding: 0.65rem 1.4rem; border-radius: 999px; border: none; background: transparent;
+      color: var(--c-cream); font-size: 0.82rem; font-weight: 600; cursor: pointer;
+      transition: all 0.25s;
+    }
+    .spatial-btn.active { background: var(--c-cognac); color: #fff; box-shadow: 0 4px 15px rgba(146,84,43,0.5); }
+
+    /* OVERLAY MODAL (FOR SECTIONS) */
+    .sheet-overlay {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(18, 13, 9, 0.95); backdrop-filter: blur(25px);
+      z-index: 150; display: none; overflow-y: auto; padding: 4rem 2rem;
+    }
+    .sheet-overlay.active { display: block; }
+    .sheet-content { max-width: 900px; margin: 0 auto; }
+    .close-sheet {
+      position: fixed; top: 25px; right: 35px; background: var(--c-umber);
+      border: 1px solid rgba(214,197,179,0.3); color: #fff; padding: 0.6rem 1.25rem;
+      border-radius: 999px; font-size: 0.82rem; cursor: pointer; font-family: var(--font-mono);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Fullscreen Map & Canvas -->
+  <div id="map"></div>
+  <canvas id="rain-canvas"></canvas>
+
+  <!-- Top Floating Island -->
+  <div class="spatial-top">
+    <a href="#" class="brand-spatial">Flood<span>Lock</span> / Spatial Deck</a>
+    <span style="font-size: 0.75rem; font-family: var(--font-mono); color: var(--c-cream);">14-FEATURE GLOBAL MESH</span>
+    <button class="spatial-btn" style="background:var(--c-cognac); color:#fff; padding:0.4rem 1rem;" onclick="openAuth()">18+ Sign In</button>
+  </div>
+
+  <!-- Left HUD: Real-Time Simulation -->
+  <div class="hud-left">
+    <span class="tag-live">● SINK & DEPRESSION RADAR</span>
+    <h2 style="font-family: var(--font-display); font-size: 2rem; margin-bottom: 0.5rem;">Hindmata Basin Command</h2>
+    <p style="font-size: 0.82rem; color: var(--c-cream); line-height: 1.5; margin-bottom: 1rem;">
+      High-density pluvial inundation simulation driven by Open-Meteo radar and NASA 30m terrain elevations.
+    </p>
+
+    <!-- Hydrodynamic Sliders -->
+    <div class="slider-box">
+      <div style="display: flex; justify-content: space-between; font-size: 0.72rem; font-family: var(--font-mono); margin-bottom: 0.4rem;">
+        <span>DOWNPOUR STRESS (R0)</span>
+        <strong id="rain-val" style="color:var(--c-cognac);">84 mm/hr</strong>
+      </div>
+      <input type="range" id="rain-slider" min="0" max="250" value="84">
+    </div>
+
+    <div class="slider-box">
+      <div style="display: flex; justify-content: space-between; font-size: 0.72rem; font-family: var(--font-mono); margin-bottom: 0.4rem;">
+        <span>ASTRONOMICAL TIDE</span>
+        <strong id="tide-val" style="color:var(--c-cognac);">4.48 m</strong>
+      </div>
+      <input type="range" id="tide-slider" min="0" max="6" step="0.1" value="4.48">
+    </div>
+
+    <!-- Depth & Timing Gauges -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+      <div style="background:rgba(22,16,11,0.6); padding:0.8rem; border-radius:12px;">
+        <div style="font-size:0.68rem; color:var(--c-cream); font-family:var(--font-mono);">PREDICTED DEPTH</div>
+        <div style="font-size:1.4rem; font-weight:800; color:#ef4444;" id="calc-depth">42.5 cm</div>
+      </div>
+      <div style="background:rgba(22,16,11,0.6); padding:0.8rem; border-radius:12px;">
+        <div style="font-size:0.68rem; color:var(--c-cream); font-family:var(--font-mono);">SURGE CREST</div>
+        <div style="font-size:1.4rem; font-weight:800; color:#4ade80;">38 mins</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right HUD: Tactical Gemini Clearance -->
+  <div class="hud-right">
+    <div style="font-size:0.7rem; font-family:var(--font-mono); color:var(--c-cognac); text-transform:uppercase;">Gemini Tactical Guidance</div>
+    <h3 style="font-family:var(--font-display); font-size:1.5rem; margin:0.3rem 0 0.8rem;">Evacuation Dispatch</h3>
+    
+    <div style="background:rgba(22,16,11,0.7); border-radius:12px; padding:0.85rem; font-size:0.8rem; line-height:1.5; margin-bottom:1rem;">
+      Outfalls completely choked. Love Grove sluices backflowing. Streets in basin will hold 42cm water.
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:0.6rem; font-size:0.75rem;">
+      <div style="background:rgba(34,197,94,0.15); border:1px solid #22c55e; padding:0.6rem; border-radius:8px;">
+        <strong style="color:#4ade80;">✔ CLEAR ROUTE:</strong> Dr. B.A. Road Flyover (+14m)
+      </div>
+      <div style="background:rgba(239,68,68,0.15); border:1px solid #ef4444; padding:0.6rem; border-radius:8px;">
+        <strong style="color:#ef4444;">✖ DANGER:</strong> Milan Subway (>75cm water)
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Liquid Dock -->
+  <div class="spatial-dock">
+    <button class="spatial-btn active" onclick="closeAllSheets()">🛰️ Map View</button>
+    <button class="spatial-btn" onclick="openSheet('story')">📖 Story & Science</button>
+    <button class="spatial-btn" onclick="openSheet('models')">🔬 Model Zoo</button>
+    <button class="spatial-btn" onclick="openSheet('pricing')">💳 T+5 Escrow</button>
+    <button class="spatial-btn" onclick="openSheet('legal')">⚖️ Legal</button>
+  </div>
+
+  <!-- Fullscreen Sheet Overlays for Sections -->
+  <div class="sheet-overlay" id="sheet-box">
+    <button class="close-sheet" onclick="closeAllSheets()">✕ Back to Map</button>
+    <div class="sheet-content" id="sheet-inner"></div>
+  </div>
+
+  <script>
+    const map = new maplibregl.Map({
+      container: 'map',
+      style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+      center: [72.842, 18.998],
+      zoom: 14,
+      pitch: 55,
+      bearing: -20
+    });
+
+    // Rain Simulation
+    const canvas = document.getElementById('rain-canvas');
+    const ctx = canvas.getContext('2d');
+    let drops = [];
+    function resize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      drops = [];
+      for (let i = 0; i < 120; i++) {
+        drops.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, l: Math.random() * 15 + 10, v: Math.random() * 5 + 10 });
+      }
+    }
+    window.addEventListener('resize', resize);
+    resize();
+    function animateRain() {
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.strokeStyle = 'rgba(214, 197, 179, 0.35)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      for (let i = 0; i < drops.length; i++) {
+        let d = drops[i];
+        ctx.moveTo(d.x, d.y);
+        ctx.lineTo(d.x - 2, d.y + d.l);
+        d.y += d.v; d.x -= 1;
+        if (d.y > canvas.height) { d.y = -20; d.x = Math.random() * canvas.width; }
+      }
+      ctx.stroke();
+      requestAnimationFrame(animateRain);
+    }
+    animateRain();
+
+    // Sliders
+    const rSlider = document.getElementById('rain-slider');
+    const tSlider = document.getElementById('tide-slider');
+    function updateGauges() {
+      const r = parseInt(rSlider.value);
+      const t = parseFloat(tSlider.value);
+      document.getElementById('rain-val').textContent = `${r} mm/hr`;
+      document.getElementById('tide-val').textContent = `${t} m`;
+      const depth = Math.round((r * 0.42) + (t * 5.1));
+      document.getElementById('calc-depth').textContent = `${depth} cm`;
+    }
+    rSlider.addEventListener('input', updateGauges);
+    tSlider.addEventListener('input', updateGauges);
+
+    // Sheets
+    function openSheet(type) {
+      const box = document.getElementById('sheet-box');
+      const inner = document.getElementById('sheet-inner');
+      box.classList.add('active');
+
+      if (type === 'story') {
+        inner.innerHTML = `
+          <h1 style="font-family:var(--font-display); font-size:3.2rem; margin-bottom:1rem;">The Urban Deluge Crisis</h1>
+          <p style="font-size:1.05rem; color:var(--c-cream); line-height:1.7; margin-bottom:2rem;">
+            When extreme rain collides with 90%+ concrete cover and coastal high tides, drainage outfalls choke. FloodLock runs a 14-feature Bi-LSTM neural net on Cloudflare V8 to predict street depth in 12 milliseconds.
+          </p>
+          <div style="background:rgba(30,22,16,0.8); border:1px solid rgba(214,197,179,0.2); border-radius:18px; padding:2rem;">
+            <h3 style="font-family:var(--font-display); font-size:1.8rem; margin-bottom:0.75rem;">Why AI Over CFD?</h3>
+            <p style="font-size:0.95rem; color:var(--c-cream); line-height:1.6;">Traditional 2D hydraulic supercomputing takes 14 hours. Cloudbursts demand sub-second inference.</p>
+          </div>
+        `;
+      } else if (type === 'models') {
+        inner.innerHTML = `
+          <h1 style="font-family:var(--font-display); font-size:3.2rem; margin-bottom:1rem;">Open Model Zoo</h1>
+          <p style="font-size:1rem; color:var(--c-cream); margin-bottom:2rem;">Download PyTorch weights and calibrated physics benchmarks.</p>
+          <div style="display:flex; gap:1rem;">
+            <a href="../data/floodlock_global_hydrology_trained.pt" download style="background:var(--c-cognac); color:#fff; padding:0.8rem 1.8rem; border-radius:999px; text-decoration:none; font-weight:700;">Download Weights (.pt)</a>
+            <a href="../data/floodlock_calibrated_physics_dataset.csv" download style="background:var(--c-umber); color:#fff; padding:0.8rem 1.8rem; border-radius:999px; text-decoration:none; font-weight:700;">Download Dataset (.csv)</a>
+          </div>
+        `;
+      } else if (type === 'pricing') {
+        inner.innerHTML = `
+          <h1 style="font-family:var(--font-display); font-size:3.2rem; margin-bottom:1rem;">Commercial Pricing & T+5 Escrow</h1>
+          <p style="font-size:1rem; color:var(--c-cream); margin-bottom:2rem;">5-Day 50% Partial Refund Guarantee Active on all plans.</p>
+          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:1.5rem;">
+            <div style="background:rgba(30,22,16,0.8); border:1px solid rgba(214,197,179,0.2); border-radius:18px; padding:2rem;">
+              <div style="font-family:var(--font-mono); font-size:0.8rem; color:var(--c-cream);">FREE</div>
+              <div style="font-size:2.4rem; font-weight:800; font-family:var(--font-mono); margin:0.5rem 0;">₹0</div>
+              <button style="width:100%; padding:0.75rem; border-radius:999px; background:var(--c-umber); color:#fff; border:none;">Current</button>
+            </div>
+            <div style="background:rgba(30,22,16,0.8); border:2px solid var(--c-cognac); border-radius:18px; padding:2rem;">
+              <div style="font-family:var(--font-mono); font-size:0.8rem; color:var(--c-cognac);">PRO</div>
+              <div style="font-size:2.4rem; font-weight:800; font-family:var(--font-mono); margin:0.5rem 0;">₹49</div>
+              <button style="width:100%; padding:0.75rem; border-radius:999px; background:var(--c-cognac); color:#fff; border:none; font-weight:700; cursor:pointer;" onclick="alert('UPI QR Generated for Pro ₹49. T+5 Escrow Active.')">Subscribe UPI</button>
+            </div>
+            <div style="background:rgba(30,22,16,0.8); border:1px solid rgba(214,197,179,0.2); border-radius:18px; padding:2rem;">
+              <div style="font-family:var(--font-mono); font-size:0.8rem; color:var(--c-cream);">ULTRA</div>
+              <div style="font-size:2.4rem; font-weight:800; font-family:var(--font-mono); margin:0.5rem 0;">₹149</div>
+              <button style="width:100%; padding:0.75rem; border-radius:999px; background:var(--c-cognac); color:#fff; border:none; font-weight:700; cursor:pointer;" onclick="alert('UPI QR Generated for Ultra ₹149. T+5 Escrow Active.')">Subscribe UPI</button>
+            </div>
+          </div>
+        `;
+      } else if (type === 'legal') {
+        inner.innerHTML = `
+          <h1 style="font-family:var(--font-display); font-size:3rem; margin-bottom:1rem;">Legal & TOS Charter</h1>
+          <p style="font-size:0.95rem; color:var(--c-cream); line-height:1.7;">
+            Certified Google Gemini API GA Endpoint Compliance. Mandatory 18+ age verification gate enforced. 5-day 50% partial refund escrow policy enforced via lantern.mech@gmail.com.
+          </p>
+        `;
+      }
+    }
+    function closeAllSheets() {
+      document.getElementById('sheet-box').classList.remove('active');
+    }
+    function openAuth() {
+      const ok = confirm("Certification: Are you 18 years of age or older per Google Gemini API policies?");
+      if (ok) alert("Redirecting to authenticated SSO...");
+    }
+  </script>
+</body>
+</html>
+

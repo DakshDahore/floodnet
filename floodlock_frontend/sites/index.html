@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FloodLock — 5 Complete Production Frontend Designs</title>
+
+  <!-- Legal Typography: 100% Free SIL OFL Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --c-obsidian: #16100B;
+      --c-umber: #35281E;
+      --c-cognac: #92542B;
+      --c-cream: #D6C5B3;
+      --c-linen: #F8F5EE;
+      --font-display: 'Instrument Serif', Georgia, serif;
+      --font-sans: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body, html { width: 100%; height: 100%; overflow: hidden; background: #0c0806; font-family: var(--font-sans); color: var(--c-linen); }
+
+    /* TOP BAR */
+    .showcase-header {
+      height: 65px; background: rgba(22, 16, 11, 0.95);
+      border-bottom: 1px solid rgba(214, 197, 179, 0.2);
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0 2rem; z-index: 50; position: relative;
+    }
+
+    .brand { font-family: var(--font-display); font-size: 1.85rem; text-decoration: none; color: var(--c-linen); }
+    .brand span { color: var(--c-cognac); font-style: italic; }
+
+    /* DOCK SWITCHER */
+    .switcher-dock {
+      display: flex; gap: 0.5rem; background: rgba(53, 40, 30, 0.6);
+      padding: 0.35rem; border-radius: 999px; border: 1px solid rgba(214, 197, 179, 0.2);
+    }
+    .switch-btn {
+      padding: 0.5rem 1.1rem; border-radius: 999px; border: none; background: transparent;
+      color: var(--c-cream); font-size: 0.8rem; font-weight: 600; cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .switch-btn:hover { color: var(--c-linen); }
+    .switch-btn.active { background: var(--c-cognac); color: var(--c-linen); box-shadow: 0 2px 10px rgba(146,84,43,0.5); }
+
+    .open-external {
+      font-size: 0.78rem; font-family: var(--font-mono); color: var(--c-cream);
+      text-decoration: none; border: 1px solid rgba(214, 197, 179, 0.25);
+      padding: 0.45rem 1rem; border-radius: 999px; transition: all 0.2s;
+    }
+    .open-external:hover { background: var(--c-cognac); color: #fff; }
+
+    /* PREVIEW FRAME */
+    #preview-frame {
+      width: 100%; height: calc(100% - 65px); border: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Showcase Navigation -->
+  <div class="showcase-header">
+    <div style="display: flex; align-items: center; gap: 1.5rem;">
+      <a href="#" class="brand">Flood<span>Lock</span> / Design Lab</a>
+      <span style="font-size: 0.75rem; font-family: var(--font-mono); color: var(--c-cream);">5 Complete Websites</span>
+    </div>
+
+    <!-- Switcher -->
+    <div class="switcher-dock">
+      <button class="switch-btn active" onclick="loadSite(1, this)">1. Savile Executive</button>
+      <button class="switch-btn" onclick="loadSite(2, this)">2. Cupertino Glass</button>
+      <button class="switch-btn" onclick="loadSite(3, this)">3. Swiss Terminal</button>
+      <button class="switch-btn" onclick="loadSite(4, this)">4. Cinematic Spatial</button>
+      <button class="switch-btn" onclick="loadSite(5, this)">5. Sovereign SaaS</button>
+    </div>
+
+    <a id="external-link" href="site1_savile_executive.html" target="_blank" class="open-external">
+      ↗ Open Standalone in New Tab
+    </a>
+  </div>
+
+  <iframe id="preview-frame" src="site1_savile_executive.html"></iframe>
+
+  <script>
+    const sites = [
+      "",
+      "site1_savile_executive.html",
+      "site2_cupertino_glass.html",
+      "site3_swiss_terminal.html",
+      "site4_cinematic_spatial.html",
+      "site5_stripe_luxury_saas.html"
+    ];
+
+    function loadSite(id, btn) {
+      document.querySelectorAll('.switch-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('preview-frame').src = sites[id];
+      document.getElementById('external-link').href = sites[id];
+    }
+  </script>
+</body>
+</html>
+

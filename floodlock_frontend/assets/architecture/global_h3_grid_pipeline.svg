@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 500" width="100%" height="100%" style="background:#120D09; font-family:'Plus Jakarta Sans', system-ui, sans-serif;">
+  <defs>
+    <linearGradient id="gCard" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#35281E"/>
+      <stop offset="100%" stop-color="#16100B"/>
+    </linearGradient>
+  </defs>
+
+  <text x="50" y="50" fill="#F8F5EE" font-size="24" font-weight="700">Global Hierarchical Rainfall &amp; Weather Pipeline</text>
+  <text x="50" y="75" fill="#D6C5B3" font-size="13">Coarse 25km Macro-Scan $	o$ Trigger Condition $	o$ High-Resolution 1km Neural Inference</text>
+
+  <!-- Step 1 -->
+  <g transform="translate(50, 130)">
+    <rect width="280" height="300" rx="14" fill="url(#gCard)" stroke="#D6C5B3" stroke-opacity="0.2"/>
+    <rect x="20" y="25" width="80" height="24" rx="6" fill="#16100B" stroke="#788279"/>
+    <text x="30" y="41" fill="#D6C5B3" font-size="10" font-weight="700">PHASE 1</text>
+    <text x="20" y="85" fill="#F8F5EE" font-size="18" font-weight="600">Global 25km Macro Grid</text>
+    <text x="20" y="115" fill="#D6C5B3" font-size="13">Ingests ECMWF &amp; GFS global forecast feeds every 60 minutes across all world coastal coordinates.</text>
+    <rect x="20" y="180" width="240" height="85" rx="8" fill="#16100B"/>
+    <text x="35" y="215" fill="#788279" font-size="12">Spatial Cells: ~2.5 Million</text>
+    <text x="35" y="240" fill="#92542B" font-size="12" font-weight="600">Cost: ₹0 (Public Open APIs)</text>
+  </g>
+
+  <!-- Step 2 -->
+  <g transform="translate(410, 130)">
+    <rect width="280" height="300" rx="14" fill="url(#gCard)" stroke="#92542B" stroke-width="2"/>
+    <rect x="20" y="25" width="80" height="24" rx="6" fill="#92542B"/>
+    <text x="30" y="41" fill="#F8F5EE" font-size="10" font-weight="700">PHASE 2</text>
+    <text x="20" y="85" fill="#F8F5EE" font-size="18" font-weight="600">Anomaly Trigger Filter</text>
+    <text x="20" y="115" fill="#D6C5B3" font-size="13">Lightweight edge regex tests each cell:</text>
+    <rect x="20" y="160" width="240" height="110" rx="8" fill="#16100B" stroke="#92542B"/>
+    <text x="30" y="195" fill="#F8F5EE" font-size="12" font-weight="600">Rain &gt; 15 mm/hr  OR</text>
+    <text x="30" y="220" fill="#F8F5EE" font-size="12" font-weight="600">CAPE &gt; 1200 J/kg  OR</text>
+    <text x="30" y="245" fill="#F8F5EE" font-size="12" font-weight="600">Surge &gt; +0.7m</text>
+  </g>
+
+  <!-- Step 3 -->
+  <g transform="translate(770, 130)">
+    <rect width="280" height="300" rx="14" fill="url(#gCard)" stroke="#D6C5B3" stroke-opacity="0.2"/>
+    <rect x="20" y="25" width="80" height="24" rx="6" fill="#16100B" stroke="#788279"/>
+    <text x="30" y="41" fill="#D6C5B3" font-size="10" font-weight="700">PHASE 3</text>
+    <text x="20" y="85" fill="#F8F5EE" font-size="18" font-weight="600">1km Micro-Basin Inundation</text>
+    <text x="20" y="115" fill="#D6C5B3" font-size="13">Only active threat clusters execute the deep neural net. Evaluates street-level depth in 12ms.</text>
+    <rect x="20" y="180" width="240" height="85" rx="8" fill="#16100B"/>
+    <text x="35" y="215" fill="#788279" font-size="12">Output: Vector Map Layers</text>
+    <text x="35" y="240" fill="#92542B" font-size="12" font-weight="600">Compute Saved: 99.4%</text>
+  </g>
+</svg>

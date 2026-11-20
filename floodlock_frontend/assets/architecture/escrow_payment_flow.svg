@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 520" width="100%" height="100%" style="background:#120D09; font-family:'Plus Jakarta Sans', system-ui, sans-serif;">
+  <defs>
+    <linearGradient id="eCard" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#35281E"/>
+      <stop offset="100%" stop-color="#16100B"/>
+    </linearGradient>
+  </defs>
+
+  <text x="50" y="50" fill="#F8F5EE" font-size="24" font-weight="700">Automated T+5 Escrow Settlement &amp; 50% Refund Engine</text>
+  <text x="50" y="75" fill="#D6C5B3" font-size="13">Protects Founder From Infrastructure Costs • Seamless Bank Settlement • Real-Time Email Dispatch</text>
+
+  <!-- Flow Block 1 -->
+  <g transform="translate(50, 120)">
+    <rect width="220" height="320" rx="12" fill="url(#eCard)" stroke="#D6C5B3" stroke-opacity="0.2"/>
+    <text x="20" y="40" fill="#92542B" font-size="11" font-weight="700">STAGE 1</text>
+    <text x="20" y="75" fill="#F8F5EE" font-size="16" font-weight="600">Universal Payment</text>
+    <text x="20" y="105" fill="#D6C5B3" font-size="12">User pays ₹49 or ₹149 via any app (GPay, PhonePe, Paytm, Cards).</text>
+    <rect x="15" y="150" width="190" height="75" rx="8" fill="#16100B"/>
+    <text x="25" y="180" fill="#F8F5EE" font-size="11" font-weight="600">Funds Enter Escrow Vault</text>
+    <text x="25" y="200" fill="#788279" font-size="10">Settlement Lock = 5 Days</text>
+    <text x="20" y="270" fill="#D6C5B3" font-size="11">Webhook logs to Supabase:</text>
+    <text x="20" y="290" fill="#92542B" font-size="11" font-weight="700">status: 'escrow_hold'</text>
+  </g>
+
+  <!-- Flow Block 2: Day 0 to 5 Window -->
+  <g transform="translate(320, 120)">
+    <rect width="460" height="320" rx="12" fill="url(#eCard)" stroke="#92542B" stroke-width="2"/>
+    <text x="25" y="40" fill="#D6C5B3" font-size="11" font-weight="700">STAGE 2: THE 5-DAY CONDITIONAL ESCROW WINDOW</text>
+    
+    <!-- Path A: Cancellation within 5 Days -->
+    <rect x="25" y="70" width="410" height="105" rx="8" fill="#16100B" stroke="#92542B"/>
+    <text x="45" y="98" fill="#F8F5EE" font-size="14" font-weight="600">IF USER CANCELS WITHIN 5 DAYS:</text>
+    <text x="45" y="125" fill="#D6C5B3" font-size="12">→ 50% automatically refunded to customer</text>
+    <text x="45" y="145" fill="#F8F5EE" font-size="12" font-weight="700" fill="#92542B">→ 50% retained by Daksh (covers edge compute/radar costs)</text>
+    <text x="45" y="165" fill="#788279" font-size="11">Instant refund email alert $	o$ lantern.mech@gmail.com</text>
+
+    <!-- Path B: Day 5 Matures -->
+    <rect x="25" y="195" width="410" height="105" rx="8" fill="#16100B" stroke="#D6C5B3" stroke-opacity="0.3"/>
+    <text x="45" y="225" fill="#F8F5EE" font-size="14" font-weight="600">IF 5 DAYS PASS WITHOUT CANCELLATION:</text>
+    <text x="45" y="250" fill="#D6C5B3" font-size="12">→ Escrow unlocks 100% of the funds</text>
+    <text x="45" y="270" fill="#F8F5EE" font-size="13" font-weight="700" fill="#4ade80">→ Automated direct payout deposit into bank account</text>
+    <text x="45" y="290" fill="#788279" font-size="11">No further refunds permitted</text>
+  </g>
+
+  <!-- Flow Block 3: Settlement -->
+  <g transform="translate(830, 120)">
+    <rect width="220" height="320" rx="12" fill="url(#eCard)" stroke="#D6C5B3" stroke-opacity="0.2"/>
+    <text x="20" y="40" fill="#92542B" font-size="11" font-weight="700">STAGE 3</text>
+    <text x="20" y="75" fill="#F8F5EE" font-size="16" font-weight="600">Bank Deposit</text>
+    <text x="20" y="105" fill="#D6C5B3" font-size="12">Funds arrive in bank via NEFT/IMPS with zero manual effort.</text>
+    <rect x="15" y="150" width="190" height="75" rx="8" fill="#16100B"/>
+    <text x="25" y="180" fill="#4ade80" font-size="13" font-weight="700">₹ Deposit Confirmed</text>
+    <text x="25" y="200" fill="#788279" font-size="10">Settled via Escrow Engine</text>
+    <text x="20" y="270" fill="#D6C5B3" font-size="11">Final settlement alert dispatched to:</text>
+    <text x="20" y="290" fill="#F8F5EE" font-size="11" font-weight="700">lantern.mech@gmail.com</text>
+  </g>
+</svg>

@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 650" width="100%" height="100%" style="background:#120D09; font-family:'Plus Jakarta Sans', system-ui, sans-serif;">
+  <defs>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#35281E"/>
+      <stop offset="100%" stop-color="#16100B"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#B86B38"/>
+      <stop offset="100%" stop-color="#92542B"/>
+    </linearGradient>
+  </defs>
+
+  <text x="50" y="50" fill="#F8F5EE" font-size="24" font-weight="700">FloodLock™ Deep Hydrological Neural Topology</text>
+  <text x="50" y="75" fill="#D6C5B3" font-size="13">Multi-Sensor Atmospheric Input $	o$ 1D Temporal Convolution &amp; LSTM $	o$ Inundation &amp; Sluice Probability</text>
+
+  <!-- Inputs Column -->
+  <g transform="translate(50, 120)">
+    <rect width="240" height="480" rx="12" fill="url(#cardGrad)" stroke="#D6C5B3" stroke-opacity="0.2"/>
+    <text x="20" y="35" fill="#92542B" font-size="12" font-weight="700">ATMOSPHERIC INPUT VECTOR (X)</text>
+
+    <!-- Node 1 -->
+    <rect x="15" y="60" width="210" height="65" rx="8" fill="#16100B" stroke="#D6C5B3" stroke-opacity="0.3"/>
+    <text x="30" y="88" fill="#F8F5EE" font-size="14" font-weight="600">Precipitation Rate (R)</text>
+    <text x="30" y="108" fill="#788279" font-size="11">Radar Radar mm/hr (0 - 250 mm)</text>
+
+    <!-- Node 2 -->
+    <rect x="15" y="140" width="210" height="65" rx="8" fill="#16100B" stroke="#D6C5B3" stroke-opacity="0.3"/>
+    <text x="30" y="168" fill="#F8F5EE" font-size="14" font-weight="600">Atmospheric CAPE</text>
+    <text x="30" y="188" fill="#788279" font-size="11">Convective Instability J/kg</text>
+
+    <!-- Node 3 -->
+    <rect x="15" y="220" width="210" height="65" rx="8" fill="#16100B" stroke="#D6C5B3" stroke-opacity="0.3"/>
+    <text x="30" y="248" fill="#F8F5EE" font-size="14" font-weight="600">Soil Saturation Index (S)</text>
+    <text x="30" y="268" fill="#788279" font-size="11">Antecedent Moisture (0.0 - 1.0)</text>
+
+    <!-- Node 4 -->
+    <rect x="15" y="300" width="210" height="65" rx="8" fill="#16100B" stroke="#D6C5B3" stroke-opacity="0.3"/>
+    <text x="30" y="328" fill="#F8F5EE" font-size="14" font-weight="600">Astronomical Tide (T)</text>
+    <text x="30" y="348" fill="#788279" font-size="11">Outfall Sea Surge (+0.0m to +5.2m)</text>
+
+    <!-- Node 5 -->
+    <rect x="15" y="380" width="210" height="65" rx="8" fill="#16100B" stroke="#D6C5B3" stroke-opacity="0.3"/>
+    <text x="30" y="408" fill="#F8F5EE" font-size="14" font-weight="600">Pressure Gradient (ΔP)</text>
+    <text x="30" y="428" fill="#788279" font-size="11">Barometric Drop (hPa / hr)</text>
+  </g>
+
+  <!-- Hidden Layers Column -->
+  <g transform="translate(370, 120)">
+    <rect width="360" height="480" rx="12" fill="url(#cardGrad)" stroke="#92542B" stroke-width="1.5"/>
+    <text x="20" y="35" fill="#D6C5B3" font-size="12" font-weight="700">TEMPORAL RECURRENT ARCHITECTURE</text>
+
+    <rect x="25" y="70" width="310" height="85" rx="10" fill="#16100B" stroke="#92542B"/>
+    <text x="45" y="105" fill="#F8F5EE" font-size="15" font-weight="600">1D Temporal Convolution (Conv1D)</text>
+    <text x="45" y="130" fill="#D6C5B3" font-size="12">Kernel=3, Filters=64 • Multi-scale Feature Extraction</text>
+
+    <path d="M 180 155 L 180 185" stroke="#92542B" stroke-width="2"/>
+
+    <rect x="25" y="185" width="310" height="95" rx="10" fill="#16100B" stroke="#92542B"/>
+    <text x="45" y="220" fill="#F8F5EE" font-size="15" font-weight="600">Bidirectional LSTM (Bi-LSTM)</text>
+    <text x="45" y="245" fill="#D6C5B3" font-size="12">Hidden Dim=128, Layers=2 • Rolling 12-Hour History</text>
+    <text x="45" y="265" fill="#788279" font-size="11">Models Soil Absorption Delay &amp; Catchment Inflow</text>
+
+    <path d="M 180 280 L 180 310" stroke="#92542B" stroke-width="2"/>
+
+    <rect x="25" y="310" width="310" height="75" rx="10" fill="#16100B" stroke="#92542B"/>
+    <text x="45" y="345" fill="#F8F5EE" font-size="15" font-weight="600">Self-Attention Temporal Pooling</text>
+    <text x="45" y="370" fill="#D6C5B3" font-size="12">Weights Peak Cloudburst Seconds Over Steady Rain</text>
+
+    <path d="M 180 385 L 180 410" stroke="#92542B" stroke-width="2"/>
+
+    <rect x="25" y="410" width="310" height="55" rx="10" fill="#16100B" stroke="#D6C5B3" stroke-opacity="0.3"/>
+    <text x="45" y="442" fill="#F8F5EE" font-size="14" font-weight="600">Dense Output Heads (Linear 128 $	o$ 3)</text>
+  </g>
+
+  <!-- Output Column -->
+  <g transform="translate(810, 120)">
+    <rect width="240" height="480" rx="12" fill="url(#cardGrad)" stroke="#D6C5B3" stroke-opacity="0.2"/>
+    <text x="20" y="35" fill="#92542B" font-size="12" font-weight="700">PREDICTIVE TARGETS (Y)</text>
+
+    <rect x="15" y="80" width="210" height="100" rx="8" fill="url(#accentGrad)"/>
+    <text x="25" y="115" fill="#F8F5EE" font-size="15" font-weight="700">Inundation Depth</text>
+    <text x="25" y="140" fill="#F8F5EE" font-size="22" font-weight="800">h(t + 1h, 3h, 6h)</text>
+    <text x="25" y="165" fill="#F8F5EE" font-size="11" font-weight="500">Street Water Elevation in cm</text>
+
+    <rect x="15" y="210" width="210" height="100" rx="8" fill="#16100B" stroke="#92542B" stroke-width="2"/>
+    <text x="25" y="245" fill="#F8F5EE" font-size="15" font-weight="700">Sluice Lock Probability</text>
+    <text x="25" y="270" fill="#D6C5B3" font-size="22" font-weight="800">P(Backflow) %</text>
+    <text x="25" y="295" fill="#788279" font-size="11">Tidal Backflow Over Sluice Lip</text>
+
+    <rect x="15" y="340" width="210" height="100" rx="8" fill="#16100B" stroke="#D6C5B3" stroke-opacity="0.3"/>
+    <text x="25" y="375" fill="#F8F5EE" font-size="15" font-weight="700">Evacuation Urgency</text>
+    <text x="25" y="400" fill="#D6C5B3" font-size="18" font-weight="800">Safe Route Index</text>
+    <text x="25" y="425" fill="#788279" font-size="11">Piped into Gemini LLM Dispatch</text>
+  </g>
+</svg>

@@ -1,0 +1,14 @@
+{
+  "name": "floodlock-backend-cloudflare",
+  "version": "3.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "secrets:guide": "echo 'Set secrets via: wrangler secret put MASTER_SECRET | PII_ENCRYPTION_KEY | GROQ_API_KEY | GEMINI_API_KEY | PAYMENT_WEBHOOK_SECRET | EMAILJS_PRIVATE_KEY'"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

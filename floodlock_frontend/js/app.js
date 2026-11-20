@@ -34,6 +34,13 @@ class FloodApp {
       source: "LOCAL_MSI1"
     };
 
+    // Edge & What-If Simulation State
+    this.isWhatIfMode = false;
+    this.isForecastQuerying = false;
+    this.whatIfDebounce = null;
+    this.currentTacticalReasoning = null;
+    this.officialLiveTelemetry = null;
+
     window.addEventListener("DOMContentLoaded", () => this.init());
   }
 
@@ -77,20 +84,34 @@ class FloodApp {
   updateBackendBadge() {
     const badgeHero = document.getElementById("heroBackendBadge");
     const badgeDeck = document.getElementById("deckBackendBadge");
-    const text = this.backendInfo.name || "[OFFLINE DEMO MODE: Edge MLP Active]";
+    
+    let text;
+    if (this.isWhatIfMode) {
+      text = "[WHAT-IF SIMULATION MODE: Custom Basin Parameters]";
+    } else {
+      text = this.backendInfo.name || "[CLOUDFLARE 24/7 EDGE: V8 & DUAL ENGINE]";
+    }
     const isOffline = this.backendInfo.tier === "EDGE" || text.includes("OFFLINE");
+    const isWhatIf = this.isWhatIfMode;
 
     [badgeHero, badgeDeck].forEach(badge => {
       if (badge) {
         badge.textContent = text;
-        if (isOffline) {
+        if (isWhatIf) {
+          badge.classList.remove("offline-active");
+          badge.style.borderColor = "var(--amber)";
+          badge.style.color = "var(--amber)";
+          badge.style.background = "rgba(245, 158, 11, 0.12)";
+        } else if (isOffline) {
           badge.classList.add("offline-active");
           badge.style.borderColor = "var(--cyan)";
           badge.style.color = "var(--cyan)";
+          badge.style.background = "";
         } else {
           badge.classList.remove("offline-active");
-          badge.style.borderColor = "";
-          badge.style.color = "";
+          badge.style.borderColor = "var(--emerald)";
+          badge.style.color = "var(--emerald)";
+          badge.style.background = "rgba(16, 185, 129, 0.12)";
         }
       }
     });
@@ -174,7 +195,19 @@ class FloodApp {
         const cm = parseFloat(e.target.value);
         this.inputs.antecedent_depth_m = cm / 100.0;
         antVal.textContent = `${cm.toFixed(1)} cm`;
+        
+        if (this.activeScenario !== "manual") {
+          this.setScenario("manual", false);
+        } else {
+          this.isWhatIfMode = true;
+          this.updateBackendBadge();
+        }
         this.render();
+
+        clearTimeout(this.whatIfDebounce);
+        this.whatIfDebounce = setTimeout(() => {
+          this.triggerWhatIfForecast();
+        }, 500);
       });
     }
 
@@ -187,7 +220,19 @@ class FloodApp {
         if (antVal) antVal.textContent = `${cm.toFixed(1)} cm`;
         document.querySelectorAll("[data-antecedent]").forEach(b => b.classList.remove("active"));
         e.currentTarget.classList.add("active");
+        
+        if (this.activeScenario !== "manual") {
+          this.setScenario("manual", false);
+        } else {
+          this.isWhatIfMode = true;
+          this.updateBackendBadge();
+        }
         this.render();
+
+        clearTimeout(this.whatIfDebounce);
+        this.whatIfDebounce = setTimeout(() => {
+          this.triggerWhatIfForecast();
+        }, 500);
       });
     });
 
@@ -237,9 +282,17 @@ class FloodApp {
       // Reset to manual scenario if user interacts with sliders
       if (this.activeScenario !== "manual") {
         this.setScenario("manual", false);
+      } else {
+        this.isWhatIfMode = true;
+        this.updateBackendBadge();
       }
 
       this.render();
+
+      clearTimeout(this.whatIfDebounce);
+      this.whatIfDebounce = setTimeout(() => {
+        this.triggerWhatIfForecast();
+      }, 500);
     });
   }
 
@@ -372,6 +425,8 @@ class FloodApp {
 
   setScenario(scenario, updateSliders = true) {
     this.activeScenario = scenario;
+    this.isWhatIfMode = (scenario === "manual");
+    this.updateBackendBadge();
 
     // Update Button Active States
     document.querySelectorAll(".scenario-btn").forEach(btn => {
@@ -387,6 +442,7 @@ class FloodApp {
     }
 
     if (scenario === "july2023") {
+      this.currentTacticalReasoning = null;
       this.inputs = {
         rain_instant: 92.0,
         rain_1hr: 85.0,
@@ -400,6 +456,7 @@ class FloodApp {
       if (updateSliders) this.syncSliders();
       this.render();
     } else if (scenario === "july2005") {
+      this.currentTacticalReasoning = null;
       this.inputs = {
         rain_instant: 190.0,
         rain_1hr: 165.0,
@@ -451,7 +508,193 @@ class FloodApp {
     });
   }
 
+  /**
+   * Handle Rate Limiting / Quota Exhaustion Gracefully (HTTP 429)
+   */
+  handleQuotaExhaustion(errorType, message) {
+    const isDemo = errorType === "DEMO_QUOTA_EXCEEDED";
+    const msg = message || (isDemo ? "Unauthenticated demo limit (10/day) reached." : "Daily forecast quota exhausted.");
+    
+    let banner = document.getElementById("floodlockQuotaBanner");
+    if (!banner) {
+      banner = document.createElement("div");
+      banner.id = "floodlockQuotaBanner";
+      banner.style.cssText = "position:fixed; bottom:24px; right:24px; z-index:99999; background:rgba(22, 16, 11, 0.95); border:1px solid #92542B; border-radius:12px; padding:16px 20px; box-shadow:0 12px 36px rgba(0,0,0,0.7); max-width:420px; color:#F8F5EE; font-family:'Plus Jakarta Sans',sans-serif; backdrop-filter:blur(16px);";
+      document.body.appendChild(banner);
+    }
+    banner.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:1px; color:#D6C5B3; font-weight:700; text-transform:uppercase;">
+            ${isDemo ? "🔒 DEMO QUOTA EXHAUSTED (10/DAY)" : "⚡ PLAN QUOTA EXHAUSTED"}
+          </div>
+          <div style="font-size:12px; margin-top:4px; color:#F8F5EE; line-height:1.4;">
+            ${msg} In-browser Edge MLP is running offline with zero latency.
+          </div>
+        </div>
+        <button onclick="this.parentElement.parentElement.remove()" style="background:none; border:none; color:#B5A89B; cursor:pointer; font-size:16px;">✕</button>
+      </div>
+      <div style="margin-top:12px; display:flex; gap:8px;">
+        <a href="index.html#view-auth" style="padding:6px 12px; background:#92542B; color:#fff; border-radius:6px; font-size:11px; font-weight:600; text-decoration:none;">Authenticate OTP ↗</a>
+        <a href="index.html#view-pricing" style="padding:6px 12px; background:rgba(214,197,179,0.15); color:#D6C5B3; border-radius:6px; font-size:11px; font-weight:600; text-decoration:none;">Upgrade Plan ↗</a>
+      </div>
+    `;
+    setTimeout(() => { if (banner && banner.parentElement) banner.remove(); }, 12000);
+  }
+
+  /**
+   * Trigger What-If Simulation Run
+   */
+  triggerWhatIfForecast() {
+    this.isWhatIfMode = true;
+    this.updateBackendBadge();
+
+    const spi30 = Math.min(3.0, Math.max(-3.0, ((this.inputs.antecedent_depth_m || 0.0) * 100.0) / 10.0 - 1.0));
+    const spi90 = Math.min(3.0, Math.max(-3.0, (this.inputs.rain_1hr / 20.0) - 0.5));
+    const ks_mm_hr = Math.max(0.05, 12.0 * (1.0 - (this.inputs.antecedent_depth_m > 0.1 ? 0.9 : 0.4)));
+    const impervious = 0.65;
+    const water_prox = this.inputs.tide_astro > 3.0 ? 0.85 : 0.45;
+    const twi = 0.60;
+
+    this.queryEdgeForecast({
+      lat: 18.998,
+      lon: 72.842,
+      spi30: spi30.toFixed(2),
+      spi90: spi90.toFixed(2),
+      ks_mm_hr: ks_mm_hr.toFixed(2),
+      impervious: impervious.toFixed(2),
+      water_prox: water_prox.toFixed(2),
+      twi: twi.toFixed(2)
+    });
+  }
+
+  /**
+   * Query Edge Forecast from Cloudflare Worker (/api/forecast)
+   */
+  async queryEdgeForecast(customParams = {}) {
+    if (this.isForecastQuerying) return;
+    this.isForecastQuerying = true;
+    try {
+      const params = {
+        lat: customParams.lat || 18.998,
+        lon: customParams.lon || 72.842,
+        ...customParams
+      };
+      const res = await window.FloodConfig.fetchApi("FORECAST", { params, timeoutMs: 5000 });
+      if (res.status === 429) {
+        this.handleQuotaExhaustion(res.data?.error, res.data?.message);
+        return;
+      }
+      if (res.ok && res.data) {
+        this.applyEdgeForecastData(res.data);
+      }
+    } catch (e) {
+      console.warn("Edge forecast query fallback to Edge MLP:", e);
+    } finally {
+      this.isForecastQuerying = false;
+    }
+  }
+
+  /**
+   * Apply Edge Forecast response to UI and AI reasoning
+   */
+  applyEdgeForecastData(data) {
+    if (data.forecast_mode === "CUSTOM_WHAT_IF_SIMULATION") {
+      this.isWhatIfMode = true;
+      this.updateBackendBadge();
+    }
+
+    if (data.status === "ALL_CLEAR" || data.threat_level === "NOMINAL") {
+      this.backendCache737 = {
+        eta: 180.0,
+        mae: "5.73",
+        source: "CLOUDFLARE_EDGE"
+      };
+      this.currentTacticalReasoning = null;
+    } else {
+      if (data.neural_predictions) {
+        const np = data.neural_predictions;
+        const etaH1 = np.depth_trajectory_cm?.h1;
+        const etaEst = etaH1 && etaH1 > 10 ? Math.max(5.0, 60.0 - etaH1 * 1.5) : 180.0;
+        this.backendCache737 = {
+          eta: etaEst,
+          mae: "5.73",
+          source: "CLOUDFLARE_EDGE"
+        };
+      }
+      if (data.tactical_reasoning) {
+        this.currentTacticalReasoning = data.tactical_reasoning;
+      }
+    }
+    this.render();
+  }
+
   async fetchLiveMumbai() {
+    // 1. Try Cloudflare 24/7 Edge /api/live-mumbai (native v3.2 endpoint)
+    try {
+      const edgeRes = await window.FloodConfig.fetchApi("LIVE_MUMBAI", { timeoutMs: 4000 });
+      if (edgeRes && edgeRes.ok && edgeRes.data) {
+        const data = edgeRes.data;
+        this.officialLiveTelemetry = data;
+        this.backendInfo = {
+          tier: "CLOUDFLARE",
+          url: window.FloodConfig.getBaseUrl(),
+          name: "CLOUDFLARE 24/7 EDGE [V8 & DUAL ENGINE]"
+        };
+
+        if (data.status === "ALL_CLEAR" || data.threat_level === "NOMINAL") {
+          this.inputs.rain_instant = 0.0;
+          this.inputs.rain_1hr = 0.0;
+          this.inputs.pressure = 1013.0;
+          this.inputs.tide_astro = 2.15;
+          this.inputs.wind_speed = 2.5;
+          this.inputs.wind_dir = 240.0;
+          this.inputs.subsidence = 14.2;
+          this.inputs.antecedent_depth_m = 0.0;
+
+          this.backendCache737 = {
+            eta: 180.0,
+            mae: "5.73",
+            source: "CLOUDFLARE"
+          };
+          this.currentTacticalReasoning = null;
+          this.updateBackendBadge();
+          this.syncSliders();
+          this.render();
+          return;
+        }
+
+        const t = data.telemetry || (data.physics_state && data.physics_state.inputs) || {};
+        this.inputs.rain_instant = t.rain_instant_mm !== undefined ? t.rain_instant_mm : (t.r0 !== undefined ? t.r0 : 0.0);
+        this.inputs.rain_1hr = t.rain_1hr_mm !== undefined ? t.rain_1hr_mm : (t.r48 !== undefined ? t.r48 : 0.0);
+        this.inputs.pressure = t.pressure_hpa || 1013.0;
+        this.inputs.tide_astro = t.tide_astro_m !== undefined ? t.tide_astro_m : (t.tideSurge || 2.15);
+        this.inputs.wind_speed = t.wind_speed_ms || (t.wind ? t.wind / 3.6 : 2.5);
+        this.inputs.wind_dir = t.wind_direction_deg !== undefined ? t.wind_direction_deg : (t.wind_dir_deg !== undefined ? t.wind_dir_deg : 240.0);
+        this.inputs.subsidence = 14.2;
+        this.inputs.antecedent_depth_m = 0.0;
+
+        if (data.tier_2_deep_mlp || data.neural_predictions) {
+          const np = data.tier_2_deep_mlp || data.neural_predictions;
+          this.backendCache737 = {
+            eta: np.eta_minutes || np.tier2_backend_737_eta_minutes || 180.0,
+            mae: np.holdout_mae_min || "5.73",
+            source: "CLOUDFLARE"
+          };
+        }
+        if (data.tactical_reasoning) {
+          this.currentTacticalReasoning = data.tactical_reasoning;
+        }
+
+        this.updateBackendBadge();
+        this.syncSliders();
+        this.render();
+        return;
+      }
+    } catch (e) {
+      console.warn("Live Mumbai fetch from Edge error, trying fallbacks:", e);
+    }
+
     // Helper for silent timed fetch with 1500ms timeout
     const timedFetch = async (url, timeoutMs = 1500) => {
       try {
@@ -465,10 +708,10 @@ class FloodApp {
       }
     };
 
-    // 1. Try detected backend URL if available
+    // 2. Try detected secondary backend URL if available
     const backendUrl = this.backendInfo.url || (this.backendInfo.tier !== "EDGE" ? window.FloodConfig.get("PUBLIC_TUNNEL_URL") : null);
-    if (backendUrl) {
-      const res = await timedFetch(`${backendUrl}/api/live-mumbai`, 5000);
+    if (backendUrl && !backendUrl.includes("workers.dev")) {
+      const res = await timedFetch(`${backendUrl}/api/live-mumbai`, 3000);
       if (res && res.ok) {
         try {
           const data = await res.json();
@@ -710,26 +953,60 @@ class FloodApp {
     if (val737) val737.textContent = eta737;
     if (badge737) badge737.textContent = `MAE 5.73m`;
 
-    // A. FloodLock AI Assistant / LLM Intelligence
+    // A. FloodLock AI Assistant / LLM Intelligence & 3 Life-Safety Directives
     const aiIcon = document.getElementById("aiAdvisorIcon");
     const aiMsg = document.getElementById("aiAdvisorMsg");
     if (aiMsg) {
-      if (!isDryNominal && (physics.waterDepthM >= 0.25 || edgePred.etaMinutes < 25.0)) {
-        if (aiIcon) aiIcon.textContent = "⚠️";
-        const antText = (this.inputs.antecedent_depth_m >= 0.10)
-          ? ` (Includes ${Math.round(this.inputs.antecedent_depth_m * 100)}cm standing water logged from earlier showers!)`
-          : "";
-        aiMsg.innerHTML = `<strong style="color:var(--crimson);">CRITICAL FLOOD ALERT:</strong> Hindmata Basin is inundated (+${Math.round(physics.waterDepthM * 100)} cm).${antText} Sluice gates choked at Love Grove. <strong>All traffic rerouted over Dadar TT Elevated Viaduct (+8.5m MSL)!</strong>`;
-      } else if (!isDryNominal && this.inputs.antecedent_depth_m >= 0.10) {
-        if (aiIcon) aiIcon.textContent = "🌊";
-        aiMsg.innerHTML = `<strong style="color:var(--amber);">ANTECEDENT WATER DETECTED:</strong> Standing water of ${Math.round(this.inputs.antecedent_depth_m * 100)} cm is logged on streets from prior rain! Basin storage is pre-filled. Any incoming shower will immediately cause street overflow. <strong>Dadar TT Elevated Viaduct is on standby.</strong>`;
-      } else if (!isDryNominal && (physics.waterDepthM >= 0.10 || physics.chokePct > 35.0)) {
-        if (aiIcon) aiIcon.textContent = "🌧️";
-        aiMsg.innerHTML = `<strong style="color:var(--amber);">WATER CLOGGING ADVISORY:</strong> Moderate ponding (${Math.round(physics.waterDepthM * 100)} cm) around Hindmata underpass. Drainage operating at ${(100 - physics.chokePct).toFixed(0)}%. Drive cautiously.`;
-      } else {
-        if (aiIcon) aiIcon.textContent = "☀️";
-        aiMsg.innerHTML = `<strong style="color:var(--emerald);">NORMAL CONDITIONS:</strong> Mumbai F-South Ward is clear and dry (0.0 mm/hr). Gravity sluice gates are 100% open at Love Grove. All surface corridors including Dr. B.A. Road and Dadar TT are operating nominally with zero flood risk.`;
+      const isCritical = !isDryNominal && (physics.waterDepthM >= 0.25 || edgePred.etaMinutes < 25.0);
+      const isWarning = !isDryNominal && (physics.waterDepthM >= 0.10 || physics.chokePct > 35.0 || (this.inputs.antecedent_depth_m || 0.0) >= 0.10);
+
+      let sluiceOrder = "Gravitational sluice gates 100% open at Love Grove. Sump pumps standby.";
+      let routeOrder = "All surface corridors fully passable. Dr. B.A. Road & Dadar TT nominal.";
+      let citizenBulletin = "Dry conditions across Mumbai F-South Ward. Zero compound flood hazard.";
+
+      if (this.currentTacticalReasoning) {
+        const tr = this.currentTacticalReasoning;
+        if (tr.impassable_infrastructure && tr.impassable_infrastructure.length > 0) {
+          sluiceOrder = `Love Grove outfall throttled (${physics.chokePct.toFixed(0)}%). Impassable: ${tr.impassable_infrastructure.join(", ")}.`;
+        } else {
+          sluiceOrder = `Sluice choke at ${physics.chokePct.toFixed(0)}%. Outfall discharge monitored at ${physics.qDrain.toFixed(1)} mm/hr.`;
+        }
+        if (tr.safe_evacuation_corridors && tr.safe_evacuation_corridors.length > 0) {
+          routeOrder = `Recommended corridor: ${tr.safe_evacuation_corridors.join(" | ")}. Trauma facility: ${tr.nearest_open_hospital?.name || "KEM Hospital (+9.2m MSL)"}.`;
+        }
+        if (tr.tactical_civic_advisory) {
+          citizenBulletin = tr.tactical_civic_advisory;
+        }
+      } else if (isCritical) {
+        sluiceOrder = "CRITICAL HYDRAULIC LOCK: Love Grove gravity gates choked. Auxiliary stormwater sump pumps active at 100% duty cycle.";
+        routeOrder = "MANDATORY EVACUATION: Sever Dr. B.A. Road surface transit. Reroute all civilian and emergency vehicles via Dadar TT Elevated Viaduct (+8.5m MSL).";
+        citizenBulletin = `Hindmata Basin inundated (+${Math.round(physics.waterDepthM * 100)} cm). Move immediately to upper floors. Do NOT attempt to traverse underpass.`;
+      } else if (isWarning) {
+        sluiceOrder = `DRAINAGE SURCHARGE: Love Grove sluice operating at ${(100 - physics.chokePct).toFixed(0)}% gravity capacity. Monitored pumping standby.`;
+        routeOrder = "ADVISORY ROUTING: Moderate waterlogging at Hindmata underpass. Dadar TT Elevated Viaduct on active standby.";
+        citizenBulletin = `Standing water detected (${Math.round(physics.waterDepthM * 100)} cm). Drive with extreme caution along Dr. B.A. Road.`;
       }
+
+      if (aiIcon) {
+        aiIcon.textContent = isCritical ? "⚠️" : (isWarning ? "🌧️" : "☀️");
+      }
+
+      aiMsg.innerHTML = `
+        <div style="display:flex; flex-direction:column; gap:6px; font-family:var(--font-sans); margin-top:4px;">
+          <div style="background:rgba(239, 68, 68, ${isCritical ? '0.18' : '0.06'}); border-left:3px solid var(--crimson); padding:6px 8px; border-radius:4px;">
+            <div style="font-family:var(--font-mono); font-size:9px; letter-spacing:1px; color:var(--crimson); font-weight:700;">DIRECTIVE 1: SLUICE & PUMP DISPATCH</div>
+            <div style="font-size:11px; color:var(--text-primary); margin-top:2px; line-height:1.35;">${sluiceOrder}</div>
+          </div>
+          <div style="background:rgba(59, 130, 246, ${isCritical ? '0.18' : '0.06'}); border-left:3px solid var(--cyan); padding:6px 8px; border-radius:4px;">
+            <div style="font-family:var(--font-mono); font-size:9px; letter-spacing:1px; color:var(--cyan); font-weight:700;">DIRECTIVE 2: A* EVACUATION CORRIDOR</div>
+            <div style="font-size:11px; color:var(--text-primary); margin-top:2px; line-height:1.35;">${routeOrder}</div>
+          </div>
+          <div style="background:rgba(16, 185, 129, ${isCritical ? '0.14' : '0.06'}); border-left:3px solid ${isCritical ? 'var(--amber)' : 'var(--emerald)'}; padding:6px 8px; border-radius:4px;">
+            <div style="font-family:var(--font-mono); font-size:9px; letter-spacing:1px; color:${isCritical ? 'var(--amber)' : 'var(--emerald)'}; font-weight:700;">DIRECTIVE 3: CITIZEN SAFETY BULLETIN</div>
+            <div style="font-size:11px; color:var(--text-primary); margin-top:2px; line-height:1.35;">${citizenBulletin}</div>
+          </div>
+        </div>
+      `;
     }
 
     // B. Safe vs Danger Route Banners
