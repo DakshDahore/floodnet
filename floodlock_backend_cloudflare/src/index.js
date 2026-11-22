@@ -786,10 +786,119 @@ export default {
         if (!clientId) {
           return jsonResponse(request, env, { error: "OAUTH_UNCONFIGURED", message: "Google Client ID not configured on Worker." }, 500);
         }
-        const workerOrigin = new URL(request.url).origin;
-        const redirectUri = `${workerOrigin}/api/auth/oauth/callback?provider=google`;
-        const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=openid%20email%20profile&prompt=select_account`;
+        const frontendUrl = env.FRONTEND_URL || "https://floodlock.pages.dev";
+        // Pre-authorized Google OAuth callback (whitelisted in Google Cloud Console)
+        const redirectUri = env.GOOGLE_REDIRECT_URI || "https://antigravity-token-tracker.netlify.app/auth/callback";
+        const stateObj = { origin: frontendUrl, provider: "google", ts: Date.now() };
+        const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=openid%20email%20profile&prompt=select_account&state=${encodeURIComponent(JSON.stringify(stateObj))}`;
         return Response.redirect(googleAuthUrl, 302);
+      }
+
+      // ── POST /api/auth/oauth/exchange (Direct OAuth Code Exchange) ──
+      if (path === "/api/auth/oauth/exchange" && method === "POST") {
+        let body = {};
+        try { body = await request.json(); } catch { body = {}; }
+        const code = body.code;
+        const provider = body.provider || "google";
+        if (!code) {
+          return jsonResponse(request, env, { error: "MISSING_CODE", message: "OAuth authorization code required." }, 400);
+        }
+
+        try {
+          let userEmail = "";
+          let userName = "";
+
+          if (provider === "google") {
+            const redirectUri = body.redirect_uri || env.GOOGLE_REDIRECT_URI || "https://antigravity-token-tracker.netlify.app/auth/callback";
+            const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+              method: "POST",
+              headers: { "Content-Type": "application/x-www-form-urlencoded" },
+              body: new URLSearchParams({
+                code,
+                client_id: env.GOOGLE_CLIENT_ID || "",
+                client_secret: env.GOOGLE_CLIENT_SECRET || "",
+                redirect_uri: redirectUri,
+                grant_type: "authorization_code",
+              }),
+            });
+            if (!tokenRes.ok) {
+              const errTxt = await tokenRes.text();
+              console.error("Google token exchange error:", errTxt);
+              return jsonResponse(request, env, { error: "TOKEN_EXCHANGE_FAILED", message: "Google token exchange failed.", detail: errTxt }, 400);
+            }
+            const tokenData = await tokenRes.json();
+            const userRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+              headers: { Authorization: `Bearer ${tokenData.access_token}` },
+            });
+            if (!userRes.ok) {
+              return jsonResponse(request, env, { error: "USERINFO_FAILED", message: "Failed to fetch Google user profile." }, 400);
+            }
+            const userData = await userRes.json();
+            userEmail = String(userData.email || "").toLowerCase().trim();
+            userName = String(userData.name || "").trim();
+          }
+
+          if (!userEmail || !isValidIdentity(userEmail)) {
+            return jsonResponse(request, env, { error: "INVALID_EMAIL", message: "OAuth identity has invalid email." }, 400);
+          }
+
+          const idKey = await deriveDomainSecret(env.MASTER_SECRET, "identity-hash");
+          const identityHash = await hmacSha256Hex(idKey, `id:${userEmail}`);
+
+          let profile = null;
+          if (env.FLOODLOCK_KV) {
+            const encryptedBlob = await env.FLOODLOCK_KV.get(`user_enc:${identityHash}`);
+            if (encryptedBlob) profile = await decryptPiiAtRest(env.PII_ENCRYPTION_KEY, encryptedBlob, identityHash);
+          }
+
+          const isAdmin = ADMIN_EMAILS.has(userEmail);
+          const assignedPlan = isAdmin ? "ultra" : (profile?.plan || "free");
+          const dailyQuota = isAdmin ? 500 : (profile?.daily_quota || 10);
+
+          if (!profile) {
+            const rawId = userEmail.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+            profile = {
+              user_id: `USR_${rawId}`,
+              identity: userEmail,
+              identity_masked: maskIdentity(userEmail),
+              plan: assignedPlan,
+              daily_quota: dailyQuota,
+              is_admin: isAdmin,
+              created_at: new Date().toISOString(),
+              name: userName,
+              provider: "google",
+            };
+            if (env.FLOODLOCK_KV) {
+              const blob = await encryptPiiAtRest(env.PII_ENCRYPTION_KEY, profile, identityHash);
+              await env.FLOODLOCK_KV.put(`user_enc:${identityHash}`, blob);
+            }
+          }
+
+          const sessionToken = await createSessionToken(env.MASTER_SECRET, {
+            sub: profile.user_id,
+            idh: identityHash,
+            plan: profile.plan,
+            isAdmin,
+          });
+
+          return jsonResponse(request, env, {
+            success: true,
+            session_token: sessionToken,
+            token: sessionToken,
+            user: {
+              user_id: profile.user_id,
+              identity_masked: profile.identity_masked,
+              identity: userEmail,
+              email: userEmail,
+              plan: profile.plan,
+              daily_quota: profile.daily_quota,
+              is_admin: isAdmin,
+              created_at: profile.created_at,
+            },
+          });
+        } catch (err) {
+          return jsonResponse(request, env, { error: "OAUTH_EXCEPTION", message: err.message }, 500);
+        }
       }
 
       // ── GET /api/auth/oauth/github (1-Click GitHub OAuth Entrypoint) ──
@@ -820,8 +929,7 @@ export default {
           let userName = "";
 
           if (provider === "google") {
-            const workerOrigin = new URL(request.url).origin;
-            const redirectUri = `${workerOrigin}/api/auth/oauth/callback?provider=google`;
+            const redirectUri = env.GOOGLE_REDIRECT_URI || "https://antigravity-token-tracker.netlify.app/auth/callback";
             const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
               method: "POST",
               headers: { "Content-Type": "application/x-www-form-urlencoded" },

@@ -43,6 +43,7 @@ const FLOODLOCK_ENDPOINTS = {
   AUTH_VERIFY_OTP: "/api/auth/verify-otp",
   AUTH_OAUTH_GOOGLE: "/api/auth/oauth/google",
   AUTH_OAUTH_GITHUB: "/api/auth/oauth/github",
+  AUTH_OAUTH_EXCHANGE: "/api/auth/oauth/exchange",
   USER_PROFILE: "/api/user/profile",
   BILLING_WEBHOOK: "/api/billing/webhook",
   BILLING_REFUND: "/api/billing/refund",
@@ -174,7 +175,7 @@ class ConfigManager {
       const url = `${base}${path}`;
 
       const controller = new AbortController();
-      const timeoutMs = options.timeoutMs || 4500;
+      const timeoutMs = options.timeoutMs || 15000;
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
       try {

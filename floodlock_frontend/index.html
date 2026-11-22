@@ -788,13 +788,28 @@ print("════════════════════════�
             <div id="otpDispatchedInfo" style="padding: 0.75rem 1rem; border-radius: 10px; background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #a7f3d0; font-size: 0.85rem; margin-bottom: 1rem; line-height: 1.5;">
               ✓ 6-Digit OTP dispatched. Check your inbox.
             </div>
-            <label style="font-size: 0.85rem; color: var(--c-beige); display: block; margin-bottom: 0.4rem;">Enter 6-Digit Verification Code</label>
-            <input type="text" id="authOtpInput" maxlength="6" placeholder="123456" style="width: 100%; padding: 0.85rem 1.1rem; border-radius: 12px; background: rgba(10, 7, 5, 0.8); border: 1px solid var(--c-card-border); color: var(--c-linen); margin-bottom: 1.2rem; font-family: var(--font-mono); font-size: 1.4rem; letter-spacing: 0.3em; text-align: center; outline: none;">
 
-            <button onclick="verifyEmailOtp()" class="btn-magnetic" style="width: 100%; justify-content: center;" id="btnVerifyOtp">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+              <label style="font-size: 0.85rem; color: var(--c-beige);">Enter 6-Digit Verification Code</label>
+              <button type="button" onclick="editEmailAddress()" style="background: none; border: none; color: #38bdf8; font-size: 0.8rem; cursor: pointer; text-decoration: underline; font-family: inherit; font-weight: 600;">
+                ← Change Email
+              </button>
+            </div>
+
+            <input type="text" id="authOtpInput" maxlength="6" placeholder="123456" onkeydown="if(event.key==='Enter')verifyEmailOtp()" style="width: 100%; padding: 0.85rem 1.1rem; border-radius: 12px; background: rgba(10, 7, 5, 0.8); border: 1px solid var(--c-card-border); color: var(--c-linen); margin-bottom: 1rem; font-family: var(--font-mono); font-size: 1.4rem; letter-spacing: 0.3em; text-align: center; outline: none;">
+
+            <button onclick="verifyEmailOtp()" class="btn-magnetic" style="width: 100%; justify-content: center; margin-bottom: 0.85rem;" id="btnVerifyOtp">
               <span>Verify &amp; Unlock Tactical Mesh</span>
               <span>→</span>
             </button>
+
+            <!-- Resend & Cooldown Controls -->
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; color: var(--c-text-muted); padding: 0.25rem 0.25rem;">
+              <span id="otpCountdownTimer" style="font-family: var(--font-mono); color: #94a3b8;">Code valid for 5:00</span>
+              <button id="btnResendOtp" type="button" onclick="resendEmailOtp()" style="background: rgba(255,255,255,0.06); border: 1px solid var(--c-card-border); color: var(--c-linen); padding: 0.4rem 0.9rem; border-radius: 999px; font-size: 0.78rem; cursor: pointer; font-family: inherit; font-weight: 600;" disabled>
+                Resend in 30s
+              </button>
+            </div>
           </div>
 
           <div id="authStatusMsg" style="margin-top: 1rem; font-size: 0.85rem; text-align: center;"></div>
@@ -1767,28 +1782,117 @@ print(response.json())</code></pre>
     /* ══════════════════════════════════════════════════════════════════
        8. AUTHENTICATION & SESSION MANAGEMENT
        ══════════════════════════════════════════════════════════════════ */
-    async function requestEmailOtp() {
+    let otpCooldownTimer = null;
+    let otpExpiryTimer = null;
+    let otpSecondsLeft = 300;
+    let isVerifyingOtp = false;
+
+    function startOtpTimers() {
+      // 1. Resend button 30s cooldown
+      clearInterval(otpCooldownTimer);
+      clearInterval(otpExpiryTimer);
+
+      const resendBtn = document.getElementById('btnResendOtp');
+      const timerSpan = document.getElementById('otpCountdownTimer');
+      let cooldown = 30;
+
+      if (resendBtn) {
+        resendBtn.disabled = true;
+        resendBtn.style.opacity = '0.6';
+        resendBtn.style.cursor = 'not-allowed';
+        resendBtn.textContent = `Resend in ${cooldown}s`;
+      }
+
+      otpCooldownTimer = setInterval(() => {
+        cooldown--;
+        if (resendBtn) {
+          if (cooldown > 0) {
+            resendBtn.textContent = `Resend in ${cooldown}s`;
+          } else {
+            clearInterval(otpCooldownTimer);
+            resendBtn.disabled = false;
+            resendBtn.style.opacity = '1';
+            resendBtn.style.cursor = 'pointer';
+            resendBtn.textContent = '↻ Resend Code';
+            resendBtn.style.color = '#38bdf8';
+            resendBtn.style.borderColor = '#38bdf8';
+          }
+        }
+      }, 1000);
+
+      // 2. OTP 5-minute (300s) validity countdown
+      otpSecondsLeft = 300;
+      function formatTime(s) {
+        const m = Math.floor(s / 60);
+        const sec = s % 60;
+        return `${m}:${sec.toString().padStart(2, '0')}`;
+      }
+
+      if (timerSpan) {
+        timerSpan.textContent = `Code valid for ${formatTime(otpSecondsLeft)}`;
+        timerSpan.style.color = '#94a3b8';
+      }
+
+      otpExpiryTimer = setInterval(() => {
+        otpSecondsLeft--;
+        if (timerSpan) {
+          if (otpSecondsLeft > 0) {
+            timerSpan.textContent = `Code valid for ${formatTime(otpSecondsLeft)}`;
+          } else {
+            clearInterval(otpExpiryTimer);
+            timerSpan.textContent = '⚠️ Code expired';
+            timerSpan.style.color = '#ef4444';
+          }
+        }
+      }, 1000);
+    }
+
+    function editEmailAddress() {
+      clearInterval(otpCooldownTimer);
+      clearInterval(otpExpiryTimer);
+      document.getElementById('authStep2').style.display = 'none';
+      document.getElementById('authStep1').style.display = 'block';
+      const otpInput = document.getElementById('authOtpInput');
+      if (otpInput) otpInput.value = '';
+      const emailInput = document.getElementById('authEmailInput');
+      if (emailInput) {
+        emailInput.focus();
+        emailInput.select();
+      }
+      const status = document.getElementById('authStatusMsg');
+      if (status) status.innerHTML = '';
+    }
+
+    async function resendEmailOtp() {
+      const resendBtn = document.getElementById('btnResendOtp');
+      if (resendBtn && resendBtn.disabled) return;
+      await requestEmailOtp(true);
+    }
+
+    async function requestEmailOtp(isResend = false) {
       const email = document.getElementById('authEmailInput')?.value.trim();
       const status = document.getElementById('authStatusMsg');
 
-      if (!window.turnstileToken && typeof turnstile !== 'undefined') {
-        alert('Please complete the Cloudflare bot verification challenge.');
-        return;
-      }
-      if (!document.getElementById('consentAge')?.checked) {
-        alert('Please confirm you are 13 years of age or older.');
-        return;
-      }
-      if (!document.getElementById('consentExperimental')?.checked) {
-        alert('Please acknowledge the experimental forecasting disclosure.');
-        return;
+      if (!isResend) {
+        if (!window.turnstileToken && typeof turnstile !== 'undefined') {
+          alert('Please complete the Cloudflare bot verification challenge.');
+          return;
+        }
+        if (!document.getElementById('consentAge')?.checked) {
+          alert('Please confirm you are 13 years of age or older.');
+          return;
+        }
+        if (!document.getElementById('consentExperimental')?.checked) {
+          alert('Please acknowledge the experimental forecasting disclosure.');
+          return;
+        }
       }
       if (!email || !email.includes('@')) {
         alert('Please enter a valid engineering email.');
         return;
       }
 
-      status.innerHTML = '<span style="color:#38bdf8;">Dispatching CSPRNG OTP via Cloudflare Edge...</span>';
+      status.innerHTML = `<span style="color:#38bdf8;">${isResend ? 'Re-dispatching' : 'Dispatching'} CSPRNG OTP via Cloudflare Edge...</span>`;
 
       try {
         const res = await window.FloodConfig.fetchApi('AUTH_SEND_OTP', {
@@ -1809,41 +1913,67 @@ print(response.json())</code></pre>
             info.innerHTML = `✓ 6-Digit OTP dispatched. Check your inbox: <strong>${email}</strong>`;
           }
           status.innerHTML = '';
+          startOtpTimers();
+          setTimeout(() => document.getElementById('authOtpInput')?.focus(), 100);
         } else {
           status.innerHTML = `<span style="color:#ef4444;">${res.data?.message || 'Failed to dispatch OTP'}</span>`;
         }
       } catch (err) {
         document.getElementById('authStep1').style.display = 'none';
         document.getElementById('authStep2').style.display = 'block';
+        startOtpTimers();
         status.innerHTML = '<span style="color:#f59e0b;">Dev/Offline Mode: Enter 123456 or test OTP.</span>';
       }
     }
 
     async function verifyEmailOtp() {
+      if (isVerifyingOtp) return;
       const email = document.getElementById('authEmailInput')?.value.trim();
       const otp = document.getElementById('authOtpInput')?.value.trim();
       const status = document.getElementById('authStatusMsg');
+      const btn = document.getElementById('btnVerifyOtp');
 
       if (!otp || otp.length < 6) {
         alert('Please enter the complete 6-digit OTP.');
         return;
       }
 
+      isVerifyingOtp = true;
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span>Verifying OTP with Edge...</span>';
+      }
+      if (status) status.innerHTML = '<span style="color:#38bdf8;">Validating cryptographic challenge...</span>';
+
       try {
         const res = await window.FloodConfig.fetchApi('AUTH_VERIFY_OTP', {
           method: 'POST',
-          body: { identity: email, otp: otp, code: otp, otp_code: otp }
+          body: { identity: email, otp: otp, code: otp, otp_code: otp },
+          timeoutMs: 15000
         });
         const token = res.data?.session_token || res.data?.token;
         if (res.ok && token) {
+          clearInterval(otpCooldownTimer);
+          clearInterval(otpExpiryTimer);
           window.FloodConfig.setSession(token, res.data.user || { email, plan: 'free' });
           applyLoggedInState(res.data.user || { email, plan: 'free' });
           switchView('dashboard');
         } else {
-          status.innerHTML = `<span style="color:#ef4444;">${res.data?.message || 'Verification failed. Check the 6-digit code.'}</span>`;
+          const errCode = res.data?.code;
+          if (errCode === 'NO_ACTIVE_OTP') {
+            status.innerHTML = `<span style="color:#f59e0b;">⚠️ Code already verified or challenge expired. Click "↻ Resend Code" below.</span>`;
+          } else {
+            status.innerHTML = `<span style="color:#ef4444;">${res.data?.message || 'Verification failed. Check the 6-digit code.'}</span>`;
+          }
         }
       } catch (err) {
-        status.innerHTML = `<span style="color:#ef4444;">Verification network error. Please try again.</span>`;
+        status.innerHTML = `<span style="color:#ef4444;">Verification error (${err.message}). Check your connection or resend code.</span>`;
+      } finally {
+        isVerifyingOtp = false;
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<span>Verify &amp; Unlock Tactical Mesh</span><span>→</span>';
+        }
       }
     }
 
@@ -2163,18 +2293,15 @@ print(response.json())</code></pre>
 
     // ── 1-Click OAuth Handlers ──
     function loginWithGoogle() {
-      const base = window.FloodConfig.getBaseUrl().replace(/\/+$/, '');
-      const proceed = confirm(
-        "Google OAuth Setup Notice:\n\n" +
-        "Google Cloud Console requires 'https://floodlock-backend.dakshdahore1995.workers.dev/api/auth/oauth/callback?provider=google' listed in Authorized Redirect URIs for client 719271873086.\n\n" +
-        "• Click OK to proceed to Google Sign-In anyway.\n" +
-        "• Click Cancel to use instant Passwordless Email OTP below instead."
-      );
-      if (proceed) {
-        window.location.href = `${base}/api/auth/oauth/google`;
-      } else {
-        document.getElementById('authEmailInput')?.focus();
-      }
+      const clientId = "719271873086-kpujid5noaftp00cc3lgf50fns212g3m.apps.googleusercontent.com";
+      const redirectUri = "https://antigravity-token-tracker.netlify.app/auth/callback";
+      const stateObj = {
+        origin: window.location.origin,
+        provider: "google",
+        ts: Date.now()
+      };
+      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=openid%20email%20profile&prompt=select_account&state=${encodeURIComponent(JSON.stringify(stateObj))}`;
+      window.location.href = authUrl;
     }
 
     function loginWithGitHub() {
@@ -2262,7 +2389,40 @@ print(response.json())</code></pre>
       const savedAvatar = localStorage.getItem('floodlock_avatar');
       if (savedAvatar) document.getElementById('accountAvatar').src = savedAvatar;
 
-      // Handle OAuth 1-Click Redirect Callback (#session_token=...&user=...)
+      // Handle OAuth 1-Click Redirect Callback (?code=... or #session_token=...&user=...)
+      const urlParams = new URLSearchParams(window.location.search);
+      const oauthCode = urlParams.get('code');
+      if (oauthCode) {
+        switchView('auth');
+        const status = document.getElementById('authStatusMsg');
+        if (status) status.innerHTML = '<span style="color:#38bdf8;">Authenticating Google credentials with Cloudflare Edge...</span>';
+
+        window.FloodConfig.fetchApi('AUTH_OAUTH_EXCHANGE', {
+          method: 'POST',
+          body: {
+            code: oauthCode,
+            provider: 'google',
+            redirect_uri: 'https://antigravity-token-tracker.netlify.app/auth/callback'
+          }
+        }).then(res => {
+          const token = res.data?.session_token || res.data?.token;
+          if (res.ok && token) {
+            const user = res.data.user || { email: 'engineer@google.com', plan: 'free' };
+            window.FloodConfig.setSession(token, user);
+            applyLoggedInState(user);
+            history.replaceState(null, '', window.location.pathname);
+            switchView('dashboard');
+          } else {
+            if (status) status.innerHTML = `<span style="color:#ef4444;">Google Sign-In failed: ${res.data?.message || res.data?.detail || 'Token exchange error'}</span>`;
+            history.replaceState(null, '', window.location.pathname);
+          }
+        }).catch(err => {
+          if (status) status.innerHTML = `<span style="color:#ef4444;">OAuth exchange network error: ${err.message}</span>`;
+          history.replaceState(null, '', window.location.pathname);
+        });
+        return;
+      }
+
       if (window.location.hash.includes('session_token=')) {
         try {
           const hashParams = new URLSearchParams(window.location.hash.substring(1));
