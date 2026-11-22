@@ -657,7 +657,7 @@ export default {
         let body = {};
         try { body = await request.json(); } catch { body = {}; }
         const rawIdentity = String(body.identity || body.email || body.phone || "").trim().toLowerCase();
-        const submittedOtp = String(body.otp || body.code || "").trim();
+        const submittedOtp = String(body.otp || body.code || body.otp_code || "").trim();
         if (!isValidIdentity(rawIdentity) || !/^\d{6}$/.test(submittedOtp)) {
           return jsonResponse(request, env, { error: "INVALID_INPUT", message: "Valid identity and 6-digit OTP required." }, 400);
         }
@@ -710,6 +710,7 @@ export default {
         return jsonResponse(request, env, {
           success: true,
           session_token: sessionToken,
+          token: sessionToken,
           token_type: "Bearer",
           expires_in_seconds: 86400 * 7,
           user: {
