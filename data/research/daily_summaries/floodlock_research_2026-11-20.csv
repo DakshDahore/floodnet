@@ -1,0 +1,6 @@
+timestamp_utc,basin_id,basin_name,lat,lon,dem_elevation_m,impervious_pct,twi,obs_rain_instant_mm,obs_pressure_hpa,obs_wind_kmh,obs_soil_saturation,pred_depth_h1_m,pred_velocity_m_s,pred_urgency_index,flood_hazard_score,hazard_category,alert_level,residual_depth_error_m,mass_conservation_delta
+2026-11-20T11:43:41.621181+00:00,mumbai_f_south_hindmata,Hindmata / F-South Basin,18.998,72.842,4.2,0.92,11.2,0.0,1009.3,13.6,0.08,0.0,0.45,0.12,2.2,CAT-0 NORMAL (Clear Drainage),GREEN,0.0,0.0
+2026-11-20T11:43:41.621181+00:00,mumbai_l_ward_kurla,Kurla / Mithi River Basin,19.066,72.883,3.1,0.88,13.8,0.0,1011.0,11.1,0.084,0.0,0.45,0.12,2.26,CAT-0 NORMAL (Clear Drainage),GREEN,0.0,0.0
+2026-11-20T11:43:41.621181+00:00,mumbai_k_west_andheri,Andheri Subway / K-West,19.119,72.847,2.4,0.94,12.5,0.0,1010.2,11.1,0.084,0.0,0.45,0.12,2.26,CAT-0 NORMAL (Clear Drainage),GREEN,0.0,0.0
+2026-11-20T11:43:41.621181+00:00,mumbai_h_west_milan,Milan Subway / H-West,19.083,72.843,2.8,0.91,12.1,0.0,1010.0,11.1,0.084,0.0,0.45,0.12,2.26,CAT-0 NORMAL (Clear Drainage),GREEN,0.0,0.0
+2026-11-20T11:43:41.621181+00:00,mumbai_g_north_dharavi,Dharavi / Mahim Creek / G-North,19.043,72.855,2.9,0.95,14.1,0.0,1010.6,13.6,0.08,0.0,0.45,0.12,2.2,CAT-0 NORMAL (Clear Drainage),GREEN,0.0,0.0

@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FloodLock — Production UI/UX Architecture & Legal Blueprint</title>
+  
+  <!-- Safe Commercial Luxury Typography (Google Fonts - SIL Open Font License) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      /* Coat & Leather Palette (From Uploaded Image) */
+      --c-obsidian: #16100B;
+      --c-umber: #35281E;
+      --c-cognac: #92542B;
+      --c-sage: #788279;
+      --c-beige: #D6C5B3;
+      --c-linen: #F8F5EE;
+      
+      --c-bg: #120D09;
+      --c-card: rgba(30, 22, 16, 0.75);
+      --c-card-border: rgba(214, 197, 179, 0.15);
+      --c-text: #F8F5EE;
+      --c-text-muted: #B5A89B;
+      
+      --font-display: 'Instrument Serif', Georgia, serif;
+      --font-sans: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--c-bg);
+      color: var(--c-text);
+      font-family: var(--font-sans);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      padding-bottom: 120px;
+    }
+
+    /* Top Navigation / Status Header */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(20px);
+      background: rgba(18, 13, 9, 0.85);
+      border-bottom: 1px solid var(--c-card-border);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand {
+      font-family: var(--font-display);
+      font-size: 1.85rem;
+      color: var(--c-linen);
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .brand span {
+      color: var(--c-cognac);
+      font-style: italic;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(146, 84, 43, 0.15);
+      border: 1px solid rgba(146, 84, 43, 0.4);
+      color: var(--c-beige);
+      padding: 0.35rem 0.85rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      background-color: #4ade80;
+      border-radius: 50%;
+      box-shadow: 0 0 10px #4ade80;
+    }
+
+    /* Container */
+    .container {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem;
+    }
+
+    /* Color Swatch Panel */
+    .swatches {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem;
+      margin-bottom: 3rem;
+      background: var(--c-card);
+      border: 1px solid var(--c-card-border);
+      padding: 1.5rem;
+      border-radius: 16px;
+    }
+
+    .swatch-card {
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .swatch-color {
+      height: 65px;
+    }
+
+    .swatch-meta {
+      padding: 0.75rem;
+      background: rgba(0,0,0,0.3);
+      font-size: 0.8rem;
+    }
+
+    .swatch-meta strong {
+      display: block;
+      color: var(--c-linen);
+    }
+
+    .swatch-meta span {
+      font-family: var(--font-mono);
+      color: var(--c-beige);
+      font-size: 0.75rem;
+    }
+
+    /* Page Section Cards */
+    .view-section {
+      display: none;
+      animation: fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .view-section.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Hero Styling */
+    .hero {
+      text-align: center;
+      padding: 4rem 1rem 3rem;
+      max-width: 860px;
+      margin: 0 auto;
+    }
+
+    .hero-eyebrow {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--c-beige);
+      margin-bottom: 1rem;
+      font-weight: 600;
+    }
+
+    .hero h1 {
+      font-family: var(--font-display);
+      font-size: 3.75rem;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      color: var(--c-linen);
+      margin-bottom: 1.5rem;
+    }
+
+    .hero h1 em {
+      font-style: italic;
+      color: var(--c-cognac);
+    }
+
+    .hero p {
+      font-size: 1.15rem;
+      color: var(--c-text-muted);
+      max-width: 680px;
+      margin: 0 auto 2.5rem;
+    }
+
+    .btn-magnetic {
+      background: linear-gradient(135deg, var(--c-cognac), #6f3b19);
+      color: var(--c-linen);
+      border: 1px solid rgba(214, 197, 179, 0.3);
+      padding: 1rem 2.25rem;
+      font-size: 1rem;
+      font-weight: 600;
+      border-radius: 999px;
+      cursor: pointer;
+      box-shadow: 0 10px 25px -5px rgba(146, 84, 43, 0.4);
+      transition: all 0.25s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      text-decoration: none;
+    }
+
+    .btn-magnetic:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 15px 30px -5px rgba(146, 84, 43, 0.6);
+      border-color: var(--c-beige);
+    }
+
+    /* Q&A Editorial Blocks */
+    .qa-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+      margin-top: 3rem;
+    }
+
+    .qa-card {
+      background: var(--c-card);
+      border: 1px solid var(--c-card-border);
+      border-radius: 16px;
+      padding: 2.25rem;
+      position: relative;
+    }
+
+    .qa-card h3 {
+      font-family: var(--font-display);
+      font-size: 2rem;
+      color: var(--c-linen);
+      margin-bottom: 0.75rem;
+    }
+
+    .qa-card p {
+      color: var(--c-text-muted);
+      font-size: 1.05rem;
+      margin-bottom: 1rem;
+    }
+
+    .qa-tag {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      background: rgba(214, 197, 179, 0.1);
+      color: var(--c-beige);
+      padding: 0.2rem 0.6rem;
+      border-radius: 6px;
+      margin-bottom: 1rem;
+    }
+
+    /* Interactive Map Mockup */
+    .map-frame {
+      background: #1a221f;
+      border: 1px solid var(--c-card-border);
+      border-radius: 16px;
+      height: 480px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 1.5rem;
+    }
+
+    .map-grid-overlay {
+      position: absolute;
+      inset: 0;
+      background-image: 
+        radial-gradient(circle at 50% 50%, rgba(146, 84, 43, 0.1) 0%, transparent 70%),
+        linear-gradient(to right, rgba(214, 197, 179, 0.05) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(214, 197, 179, 0.05) 1px, transparent 1px);
+      background-size: 100% 100%, 40px 40px, 40px 40px;
+      pointer-events: none;
+    }
+
+    .map-controls {
+      display: flex;
+      gap: 0.75rem;
+      z-index: 2;
+    }
+
+    .filter-pill {
+      background: rgba(22, 16, 11, 0.85);
+      border: 1px solid var(--c-card-border);
+      color: var(--c-beige);
+      padding: 0.5rem 1rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      transition: all 0.2s ease;
+    }
+
+    .filter-pill.active {
+      background: var(--c-cognac);
+      color: var(--c-linen);
+      border-color: var(--c-beige);
+    }
+
+    .map-report-card {
+      z-index: 2;
+      background: rgba(22, 16, 11, 0.9);
+      border: 1px solid var(--c-card-border);
+      border-radius: 12px;
+      padding: 1.25rem;
+      max-width: 480px;
+      backdrop-filter: blur(16px);
+    }
+
+    .map-report-card h4 {
+      font-family: var(--font-display);
+      font-size: 1.35rem;
+      color: var(--c-linen);
+      margin-bottom: 0.5rem;
+    }
+
+    /* Pricing Table */
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      margin-top: 2.5rem;
+    }
+
+    .price-card {
+      background: var(--c-card);
+      border: 1px solid var(--c-card-border);
+      border-radius: 18px;
+      padding: 2.5rem 2rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      transition: all 0.25s ease;
+    }
+
+    .price-card.featured {
+      border: 2px solid var(--c-cognac);
+      background: linear-gradient(180deg, rgba(53, 40, 30, 0.6) 0%, rgba(22, 16, 11, 0.8) 100%);
+      box-shadow: 0 15px 35px -10px rgba(146, 84, 43, 0.35);
+    }
+
+    .price-badge {
+      position: absolute;
+      top: -12px;
+      right: 24px;
+      background: var(--c-cognac);
+      color: var(--c-linen);
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      padding: 0.3rem 0.75rem;
+      border-radius: 999px;
+      text-transform: uppercase;
+    }
+
+    .price-header h3 {
+      font-family: var(--font-display);
+      font-size: 1.9rem;
+      color: var(--c-linen);
+      margin-bottom: 0.5rem;
+    }
+
+    .price-val {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--c-linen);
+      margin: 1rem 0;
+    }
+
+    .price-val small {
+      font-size: 1rem;
+      font-weight: 400;
+      color: var(--c-text-muted);
+    }
+
+    .price-features {
+      list-style: none;
+      margin: 1.5rem 0 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      font-size: 0.95rem;
+      color: var(--c-text-muted);
+    }
+
+    .price-features li {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .price-features li::before {
+      content: "✓";
+      color: var(--c-beige);
+      font-weight: bold;
+    }
+
+    /* Apple-Style Floating Liquid Dock */
+    .liquid-dock {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(22, 16, 11, 0.82);
+      backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid rgba(214, 197, 179, 0.25);
+      padding: 0.45rem;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.6);
+      z-index: 1000;
+    }
+
+    .dock-item {
+      background: transparent;
+      border: none;
+      color: var(--c-text-muted);
+      padding: 0.65rem 1.15rem;
+      border-radius: 999px;
+      font-family: var(--font-sans);
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      white-space: nowrap;
+    }
+
+    .dock-item:hover {
+      color: var(--c-linen);
+      background: rgba(214, 197, 179, 0.08);
+    }
+
+    .dock-item.active {
+      background: var(--c-cognac);
+      color: var(--c-linen);
+      box-shadow: 0 4px 15px rgba(146, 84, 43, 0.4);
+    }
+
+    /* Disclaimer / Legal Alert */
+    .legal-alert {
+      background: rgba(146, 84, 43, 0.1);
+      border-left: 3px solid var(--c-cognac);
+      padding: 1rem 1.25rem;
+      border-radius: 0 8px 8px 0;
+      font-size: 0.85rem;
+      color: var(--c-beige);
+      margin: 2rem 0;
+    }
+
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 2.5rem; }
+      .liquid-dock {
+        width: 92%;
+        overflow-x: auto;
+        justify-content: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Brand Bar -->
+  <header>
+    <div class="brand">Flood<span>Lock</span></div>
+    <div class="status-badge">
+      <span class="status-dot"></span>
+      <span>Hydrology Engine Active • GA Tier</span>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <!-- Swatch Cards (From Daksh's Uploaded Leather/Coat Photo) -->
+    <div class="swatches">
+      <div class="swatch-card">
+        <div class="swatch-color" style="background-color: #16100B;"></div>
+        <div class="swatch-meta">
+          <strong>Obsidian Coat</strong>
+          <span>#16100B</span>
+        </div>
+      </div>
+      <div class="swatch-card">
+        <div class="swatch-color" style="background-color: #35281E;"></div>
+        <div class="swatch-meta">
+          <strong>Smoked Umber</strong>
+          <span>#35281E</span>
+        </div>
+      </div>
+      <div class="swatch-card">
+        <div class="swatch-color" style="background-color: #92542B;"></div>
+        <div class="swatch-meta">
+          <strong>Saddle Cognac</strong>
+          <span>#92542B</span>
+        </div>
+      </div>
+      <div class="swatch-card">
+        <div class="swatch-color" style="background-color: #788279;"></div>
+        <div class="swatch-meta">
+          <strong>Slate Sage</strong>
+          <span>#788279</span>
+        </div>
+      </div>
+      <div class="swatch-card">
+        <div class="swatch-color" style="background-color: #D6C5B3;"></div>
+        <div class="swatch-meta">
+          <strong>Beige Leather</strong>
+          <span>#D6C5B3</span>
+        </div>
+      </div>
+      <div class="swatch-card">
+        <div class="swatch-color" style="background-color: #F8F5EE;"></div>
+        <div class="swatch-meta">
+          <strong>Linen White</strong>
+          <span>#F8F5EE</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW 1: WELCOME & NARRATIVE SCIENTIFIC LANDING -->
+    <section id="view-welcome" class="view-section active">
+      <div class="hero">
+        <div class="hero-eyebrow">Atmospheric Neural Intelligence</div>
+        <h1>FloodLock: Predictive Resilience for <em>Urban Basins</em></h1>
+        <p>A multi-tier neural framework forecasting flash floods, convective cloudbursts, and tidal outfall backflow with sub-minute precision.</p>
+        <button class="btn-magnetic" onclick="switchTab('dashboard')">
+          <span>Enter Tactical Command</span>
+          <span>→</span>
+        </button>
+      </div>
+
+      <div class="legal-alert">
+        <strong>⚠️ Experimental Beta & Data Policy Notice:</strong> FloodLock is an early-stage research and operational decision-support tool. Simulation metrics and user interactions may be inspected by developers for model calibration. In the event of payment gateway latency, automatic reconciliation and 24/7 founder support are provided.
+      </div>
+
+      <div class="qa-stack">
+        <div class="qa-card">
+          <span class="qa-tag">QUESTION 01</span>
+          <h3>What are urban floods?</h3>
+          <p>Urban floods occur when extreme precipitation collides with impervious city concrete, overwhelming artificial stormwater conduits and locking gravity-fed ocean outfalls during high astronomical tides.</p>
+        </div>
+
+        <div class="qa-card">
+          <span class="qa-tag">QUESTION 02</span>
+          <h3>Why do I need to monitor them?</h3>
+          <p>Urban flash inundations cost thousands of lives and billions in infrastructure damage annually. Traditional municipal weather stations update once every few hours—failing to capture hyper-localized convective cloudbursts that submerge streets in under 20 minutes.</p>
+        </div>
+
+        <div class="qa-card">
+          <span class="qa-tag">QUESTION 03</span>
+          <h3>How does FloodLock solve this?</h3>
+          <p>Our 3-stage pipeline ingests live atmospheric instability metrics (CAPE, Soil Moisture, Tide), routes them through a custom temporal neural network running in milliseconds, and uses Google Gemini to generate actionable evacuation and municipal sluice-gate advisories.</p>
+        </div>
+
+        <div class="qa-card">
+          <span class="qa-tag">QUESTION 04</span>
+          <h3>Why is AI revolutionary here?</h3>
+          <p>Standard computational fluid dynamics (CFD) require 14 hours on supercomputers to simulate a single storm surge. FloodLock's trained neural network predicts water depth and backflow resistance across thousands of city blocks in <strong>12 milliseconds</strong>.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 2: AUTHENTICATION GATE -->
+    <section id="view-auth" class="view-section">
+      <div class="hero">
+        <div class="hero-eyebrow">Identity & Security</div>
+        <h1>Access Tactical Deck</h1>
+        <p>Sign in with your verified developer or institutional identity.</p>
+      </div>
+
+      <div class="qa-card" style="max-width: 480px; margin: 0 auto; text-align: center;">
+        <button class="btn-magnetic" style="width: 100%; justify-content: center; margin-bottom: 1rem;">
+          Continue with Google
+        </button>
+        <button class="btn-magnetic" style="width: 100%; justify-content: center; background: #24292e; margin-bottom: 1.5rem;">
+          Continue with GitHub
+        </button>
+
+        <div style="font-size: 0.8rem; color: var(--c-beige); text-align: left; background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px;">
+          <label style="display: flex; gap: 0.5rem; align-items: flex-start; cursor: pointer;">
+            <input type="checkbox" checked style="margin-top: 3px;">
+            <span>I verify that I am <strong>18 years of age or older</strong> and agree to FloodLock's Terms of Service and Privacy Policy.</span>
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 3: TACTICAL MAP & AI REPORT -->
+    <section id="view-dashboard" class="view-section">
+      <div class="hero">
+        <div class="hero-eyebrow">Real-Time Telemetry</div>
+        <h1>Tactical Command Deck</h1>
+      </div>
+
+      <div class="map-frame">
+        <div class="map-grid-overlay"></div>
+        <div class="map-controls">
+          <button class="filter-pill active">Rainfall Intensity (Radar)</button>
+          <button class="filter-pill">Atmospheric CAPE</button>
+          <button class="filter-pill">Soil Saturation</button>
+          <button class="filter-pill">Sluice Gates</button>
+          <button class="filter-pill">Elevation Contours</button>
+        </div>
+
+        <div class="map-report-card">
+          <span class="qa-tag">AI LIVE TACTICAL BRIEFING</span>
+          <h4>Basin Delta: High Astronomical Surcharge</h4>
+          <p style="font-size: 0.9rem; color: var(--c-text-muted);">
+            Precipitation rate: <strong>38 mm/hr</strong>. Current astronomical tide at Love Grove outfall is +3.4m. Gravitational discharge blocked. Water retention tanks at 72% capacity. Recommend closing secondary sluice gates in 14 minutes.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 4: OPEN SOURCE & MODEL ZOO -->
+    <section id="view-models" class="view-section">
+      <div class="hero">
+        <div class="hero-eyebrow">Open Science & Weights</div>
+        <h1>Model Zoo & Benchmark Datasets</h1>
+        <p>Download our verified hydrological model weights and high-precision physics simulation datasets.</p>
+      </div>
+
+      <div class="qa-stack">
+        <div class="qa-card">
+          <span class="qa-tag">MODEL ARTIFACT • 1.2B PARAMETER</span>
+          <h3>Hydrological-Temporal-Transformer (GGUF / ONNX)</h3>
+          <p>Trained on 25 years of coastal monsoon disasters. Squeezes into 2.8 GB RAM and runs client-side over WebGL or CPU inference.</p>
+          <button class="btn-magnetic" style="font-size: 0.85rem; padding: 0.6rem 1.2rem;">
+            Download Model Binary (.onnx)
+          </button>
+        </div>
+
+        <div class="qa-card">
+          <span class="qa-tag">BENCHMARK DATASET</span>
+          <h3>Mumbai 2005 & 2023 Calibrated Simulation Data</h3>
+          <p>Multi-sensor meteorological series with ground truth soil saturation and flood marker elevations.</p>
+          <button class="btn-magnetic" style="font-size: 0.85rem; padding: 0.6rem 1.2rem;">
+            Download Dataset (.csv)
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 5: API PLAYGROUND -->
+    <section id="view-developers" class="view-section">
+      <div class="hero">
+        <div class="hero-eyebrow">Developer Integration</div>
+        <h1>Hydrology API Playground</h1>
+        <p>Integrate sub-second flood intelligence into municipal and logistics software.</p>
+      </div>
+
+      <div class="qa-card" style="font-family: var(--font-mono); background: #0c0805;">
+        <span class="qa-tag" style="background: var(--c-cognac); color: var(--c-linen);">POST /api/v1/basin/backflow</span>
+        <pre style="color: var(--c-beige); margin-top: 1rem; overflow-x: auto;">
+curl -X POST https://api.floodlock.org/v1/basin/backflow \
+  -H "Authorization: Bearer fl_live_994a3bc7e1" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "coordinates": {"lat": 18.987, "lon": 72.825},
+    "soil_saturation": 0.88,
+    "precipitation_rate_mm": 45.2,
+    "tide_height_m": 3.6
+  }'
+        </pre>
+      </div>
+    </section>
+
+    <!-- VIEW 6: COMMERCIAL PRICING & UPI GPAY -->
+    <section id="view-pricing" class="view-section">
+      <div class="hero">
+        <div class="hero-eyebrow">Transparent Pricing</div>
+        <h1>Accessible Hydrological Tiers</h1>
+        <p>Zero hidden fees. Backed by an unconditional 5-day money-back guarantee.</p>
+      </div>
+
+      <div class="pricing-grid">
+        <!-- Community Tier -->
+        <div class="price-card">
+          <div class="price-header">
+            <h3>Community</h3>
+            <p style="color: var(--c-text-muted); font-size: 0.9rem;">For citizens and researchers</p>
+          </div>
+          <div class="price-val">₹0 <small>/ month</small></div>
+          <ul class="price-features">
+            <li>50 API calls / day</li>
+            <li>Standard map telemetry</li>
+            <li>Read-only AI briefing</li>
+            <li>Community support</li>
+          </ul>
+          <button class="btn-magnetic" style="width: 100%; justify-content: center;">Current Plan</button>
+        </div>
+
+        <!-- Pro Tier (Double Digit INR) -->
+        <div class="price-card featured">
+          <div class="price-badge">Most Popular</div>
+          <div class="price-header">
+            <h3>Pro Hydrology</h3>
+            <p style="color: var(--c-beige); font-size: 0.9rem;">For developers & civil engineers</p>
+          </div>
+          <div class="price-val">₹49 <small>/ month</small></div>
+          <ul class="price-features">
+            <li>2,500 API calls / day</li>
+            <li>3 Production API Keys</li>
+            <li>50 Interactive AI Chat Queries</li>
+            <li>All Map Layers & Contours</li>
+            <li>5-Day Money-Back Guarantee</li>
+          </ul>
+          <button class="btn-magnetic" style="width: 100%; justify-content: center;">
+            Upgrade via GPay / UPI
+          </button>
+        </div>
+
+        <!-- Ultra Tier -->
+        <div class="price-card">
+          <div class="price-header">
+            <h3>Ultra Enterprise</h3>
+            <p style="color: var(--c-text-muted); font-size: 0.9rem;">For municipal & IoT operators</p>
+          </div>
+          <div class="price-val">₹149 <small>/ month</small></div>
+          <ul class="price-features">
+            <li>15,000 API calls / day</li>
+            <li>10 Production API Keys</li>
+            <li>300 Interactive AI Queries</li>
+            <li>Automated Alert Webhooks</li>
+            <li>Priority 12-hr Support</li>
+          </ul>
+          <button class="btn-magnetic" style="width: 100%; justify-content: center;">
+            Upgrade via GPay / UPI
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 7: LEGAL & COMPLIANCE -->
+    <section id="view-legal" class="view-section">
+      <div class="hero">
+        <div class="hero-eyebrow">Governance & Terms</div>
+        <h1>Legal Charter & Policy</h1>
+      </div>
+
+      <div class="qa-stack">
+        <div class="qa-card">
+          <h3>5-Day Refund Policy</h3>
+          <p>Any paid subscription is eligible for a 50% partial refund within 5 calendar days of purchase (50% retained for instant cloud compute & telemetry provisioning). Automated alert sent to lantern.mech@gmail.com.</p>
+        </div>
+
+        <div class="qa-card">
+          <h3>Google Gemini AI Compliance</h3>
+          <p>FloodLock uses stable Generally Available (GA) models. All prompt data undergoes PII sanitization. Predictions are advisory and must not replace government disaster evacuation directives.</p>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Apple-Style Liquid Dock -->
+  <nav class="liquid-dock">
+    <button class="dock-item active" onclick="switchTab('welcome')">Home</button>
+    <button class="dock-item" onclick="switchTab('dashboard')">Tactical Map</button>
+    <button class="dock-item" onclick="switchTab('models')">Models</button>
+    <button class="dock-item" onclick="switchTab('developers')">API</button>
+    <button class="dock-item" onclick="switchTab('pricing')">Pricing</button>
+    <button class="dock-item" onclick="switchTab('legal')">Legal</button>
+  </nav>
+
+  <script>
+    function switchTab(viewId) {
+      document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.dock-item').forEach(el => el.classList.remove('active'));
+      
+      const targetView = document.getElementById('view-' + viewId);
+      if (targetView) targetView.classList.add('active');
+
+      const activeBtn = Array.from(document.querySelectorAll('.dock-item')).find(b => b.getAttribute('onclick').includes(viewId));
+      if (activeBtn) activeBtn.classList.add('active');
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  </script>
+</body>
+</html>
+

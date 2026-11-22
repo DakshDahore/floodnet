@@ -1,0 +1,55 @@
+{
+  "timestamp": "2026-11-20T11:43:41.621181+00:00",
+  "basins": {
+    "mumbai_f_south_hindmata": {
+      "name": "Hindmata / F-South Basin",
+      "hazard_score": 2.2,
+      "category": "CAT-0 NORMAL (Clear Drainage)",
+      "alert_level": "GREEN",
+      "predicted_depth_m": 0.0,
+      "rainfall_mm": 0.0,
+      "soil_saturation": 0.08,
+      "residual_depth_error_m": 0.0
+    },
+    "mumbai_l_ward_kurla": {
+      "name": "Kurla / Mithi River Basin",
+      "hazard_score": 2.26,
+      "category": "CAT-0 NORMAL (Clear Drainage)",
+      "alert_level": "GREEN",
+      "predicted_depth_m": 0.0,
+      "rainfall_mm": 0.0,
+      "soil_saturation": 0.084,
+      "residual_depth_error_m": 0.0
+    },
+    "mumbai_k_west_andheri": {
+      "name": "Andheri Subway / K-West",
+      "hazard_score": 2.26,
+      "category": "CAT-0 NORMAL (Clear Drainage)",
+      "alert_level": "GREEN",
+      "predicted_depth_m": 0.0,
+      "rainfall_mm": 0.0,
+      "soil_saturation": 0.084,
+      "residual_depth_error_m": 0.0
+    },
+    "mumbai_h_west_milan": {
+      "name": "Milan Subway / H-West",
+      "hazard_score": 2.26,
+      "category": "CAT-0 NORMAL (Clear Drainage)",
+      "alert_level": "GREEN",
+      "predicted_depth_m": 0.0,
+      "rainfall_mm": 0.0,
+      "soil_saturation": 0.084,
+      "residual_depth_error_m": 0.0
+    },
+    "mumbai_g_north_dharavi": {
+      "name": "Dharavi / Mahim Creek / G-North",
+      "hazard_score": 2.2,
+      "category": "CAT-0 NORMAL (Clear Drainage)",
+      "alert_level": "GREEN",
+      "predicted_depth_m": 0.0,
+      "rainfall_mm": 0.0,
+      "soil_saturation": 0.08,
+      "residual_depth_error_m": 0.0
+    }
+  }
+}

@@ -2085,6 +2085,12 @@ print(response.json())</code></pre>
       }
     }
 
+    // ── XSS-safe HTML escaper (RED-1 fix) ──
+    function esc(s) {
+      return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
     function openAdminModal() {
       document.getElementById('adminModal')?.classList.add('open');
       loadAdminInquiries();
@@ -2101,15 +2107,15 @@ print(response.json())</code></pre>
         const res = await window.FloodConfig.fetchApi('ADMIN_INQUIRIES', { method: 'GET' });
         if (res.ok && Array.isArray(res.data?.inquiries) && res.data.inquiries.length > 0) {
           list.innerHTML = res.data.inquiries.map(inq => `
-            <div id="card_${inq.id}" style="background: rgba(10, 7, 5, 0.8); border: 1px solid var(--c-card-border); border-radius: 14px; padding: 1.25rem;">
+            <div id="card_${esc(inq.id)}" style="background: rgba(10, 7, 5, 0.8); border: 1px solid var(--c-card-border); border-radius: 14px; padding: 1.25rem;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                <strong style="color: #38bdf8; font-size: 1.05rem;">${inq.email}</strong>
-                <span style="background: rgba(245, 158, 11, 0.2); color: #f59e0b; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">${inq.plan.toUpperCase()} REQUEST</span>
+                <strong style="color: #38bdf8; font-size: 1.05rem;">${esc(inq.email)}</strong>
+                <span style="background: rgba(245, 158, 11, 0.2); color: #f59e0b; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">${esc((inq.plan || '').toUpperCase())} REQUEST</span>
               </div>
-              <div style="font-size: 0.85rem; color: var(--c-text-muted); margin-bottom: 1rem;">Notes: ${inq.notes || 'No extra notes provided.'}</div>
+              <div style="font-size: 0.85rem; color: var(--c-text-muted); margin-bottom: 1rem;">Notes: ${esc(inq.notes || 'No extra notes provided.')}</div>
               <div style="display: flex; gap: 0.75rem;">
-                <button onclick="adminApproveInquiry('${inq.id}', '${inq.email}', '${inq.plan}')" class="btn-magnetic" style="padding: 0.45rem 1rem; font-size: 0.8rem;">✓ Approve & Shift to ${inq.plan.toUpperCase()}</button>
-                <button onclick="adminDismissInquiry('${inq.id}', '${inq.email}')" class="btn-water" style="padding: 0.45rem 1rem; font-size: 0.8rem; background: rgba(239, 68, 68, 0.15); border-color: #ef4444; color: #fca5a5;">Dismiss</button>
+                <button data-id="${esc(inq.id)}" data-email="${esc(inq.email)}" data-plan="${esc(inq.plan)}" onclick="adminApproveInquiry(this.dataset.id, this.dataset.email, this.dataset.plan)" class="btn-magnetic" style="padding: 0.45rem 1rem; font-size: 0.8rem;">✓ Approve &amp; Shift to ${esc((inq.plan || '').toUpperCase())}</button>
+                <button data-id="${esc(inq.id)}" data-email="${esc(inq.email)}" onclick="adminDismissInquiry(this.dataset.id, this.dataset.email)" class="btn-water" style="padding: 0.45rem 1rem; font-size: 0.8rem; background: rgba(239, 68, 68, 0.15); border-color: #ef4444; color: #fca5a5;">Dismiss</button>
               </div>
             </div>
           `).join('');
@@ -2129,7 +2135,7 @@ print(response.json())</code></pre>
         });
         const card = document.getElementById('card_' + id);
         if (card) {
-          card.innerHTML = `<div style="color: #10b981; font-weight: 700; text-align: center; padding: 1rem;">✓ Approved ${email} & shifted to ${plan.toUpperCase()}! Removed from list.</div>`;
+          card.innerHTML = `<div style="color: #10b981; font-weight: 700; text-align: center; padding: 1rem;">✓ Approved ${esc(email)} &amp; shifted to ${esc(plan.toUpperCase())}! Removed from list.</div>`;
           setTimeout(() => card.remove(), 1200);
         }
       } catch (e) {

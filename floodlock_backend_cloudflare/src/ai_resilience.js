@@ -140,7 +140,7 @@ REQUIRED JSON SCHEMA:
   "tactical_civic_advisory": "1-2 actionable safety sentences"
 }`;
 
-  const groqModel = env.GROQ_MODEL || "qwen/qwen3.8-27b";
+  const groqModel = env.GROQ_MODEL || "llama-3.1-8b-instant";
   if (env.GROQ_API_KEY) {
     const groqTripped = cbStub ? await cbStub.isOpen("groq") : false;
     if (!groqTripped) {
@@ -181,7 +181,7 @@ REQUIRED JSON SCHEMA:
     }
   }
 
-  const geminiModel = env.GEMINI_MODEL || "gemini-3.8-flash";
+  const geminiModel = env.GEMINI_MODEL || "gemini-2.5-flash";
   if (env.GEMINI_API_KEY) {
     const geminiTripped = cbStub ? await cbStub.isOpen("gemini") : false;
     if (!geminiTripped) {
