@@ -62,7 +62,7 @@ const SCENARIO_PROFILES = {
 function buildCorsHeaders(request, env) {
   const origin = request.headers.get("Origin") || "";
   const allowed = (env.ALLOWED_ORIGINS || "").split(",").map((s) => s.trim()).filter(Boolean);
-  const allowOrigin = allowed.length === 0 || allowed.includes(origin) ? (origin || "*") : allowed[0];
+  const allowOrigin = allowed.length === 0 ? (origin || "*") : allowed.includes(origin) ? origin : "";
 
   return {
     "Access-Control-Allow-Origin": allowOrigin,
@@ -569,8 +569,8 @@ export default {
             admin_provision: "POST /api/admin/provision-user",
           },
           ai_pipeline: [
-            `Tier-1 Primary: ${env.GROQ_MODEL || "qwen/qwen3.8-27b"} (Groq LPU)`,
-            `Tier-2 Fallback: ${env.GEMINI_MODEL || "gemini-3.8-flash"} (Google Cloud GA)`,
+            `Tier-1 Primary: ${env.GROQ_MODEL || "llama-3.1-8b-instant"} (Groq LPU)`,
+            `Tier-2 Fallback: ${env.GEMINI_MODEL || "gemini-2.5-flash"} (Google Cloud GA)`,
             "Tier-3 Floor: Deterministic Edge Hydrological SOP",
           ],
           readiness: {
@@ -1250,6 +1250,16 @@ export default {
 
       // ── POST /api/inquiry (Direct GPay & Commercial Pilot Inquiry) ──
       if (path === "/api/inquiry" && method === "POST") {
+        // Rate-limit inquiry submissions: 5 per hour per IP
+        if (env.SECURITY_STATE_DO) {
+          const clientIp = request.headers.get("CF-Connecting-IP") || "unknown";
+          const inqStub = env.SECURITY_STATE_DO.get(env.SECURITY_STATE_DO.idFromName(`inq:${clientIp}`));
+          const rl = await inqStub.checkRateLimit(`inq:${clientIp}`, 5, 3600000);
+          if (!rl.allowed) {
+            return jsonResponse(request, env, { error: "RATE_LIMITED", message: "Too many inquiry submissions. Try again in 1 hour." }, 429);
+          }
+        }
+
         let body = {};
         try { body = await request.json(); } catch { body = {}; }
         const rawName = String(body.name || "");
