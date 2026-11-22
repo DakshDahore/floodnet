@@ -41,15 +41,20 @@ const FLOODLOCK_ENDPOINTS = {
   STATE_CACHE: "/api/state-cache",
   AUTH_SEND_OTP: "/api/auth/send-otp",
   AUTH_VERIFY_OTP: "/api/auth/verify-otp",
+  AUTH_OAUTH_GOOGLE: "/api/auth/oauth/google",
+  AUTH_OAUTH_GITHUB: "/api/auth/oauth/github",
   USER_PROFILE: "/api/user/profile",
   BILLING_WEBHOOK: "/api/billing/webhook",
   BILLING_REFUND: "/api/billing/refund",
   INQUIRY: "/api/inquiry",
   CONTRIBUTE: "/api/contribute",
   ADMIN_INQUIRIES: "/api/admin/inquiries",
+  ADMIN_USERS: "/api/admin/users",
   ADMIN_APPROVE: "/api/admin/approve-inquiry",
   ADMIN_DISMISS: "/api/admin/dismiss-inquiry",
+  ADMIN_REVOKE: "/api/admin/revoke-user",
   ADMIN_PROVISION: "/api/admin/provision-user",
+  ADMIN_SEND_EMAIL: "/api/admin/send-email",
 };
 
 class ConfigManager {

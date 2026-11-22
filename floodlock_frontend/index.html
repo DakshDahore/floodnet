@@ -728,8 +728,26 @@ print("════════════════════════�
           <div style="font-family: var(--font-mono); font-size: 0.75rem; color: #38bdf8; margin-bottom: 0.5rem;">CSPRNG AUTHENTICATION GATE</div>
           <h2 style="font-family: var(--font-display); font-size: 2.2rem; margin-bottom: 0.75rem;">Passwordless Tactical Access</h2>
           <p style="color: var(--c-text-muted); font-size: 0.95rem; margin-bottom: 1.5rem;">
-            Sign in or create an account using your engineering email. A cryptographically unbiased 6-digit OTP will be dispatched to your inbox.
+            Sign in or create an account using Google, GitHub, or passwordless email OTP.
           </p>
+
+          <!-- 1-Click Fast OAuth Gate -->
+          <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem;">
+            <button onclick="loginWithGoogle()" class="btn-water" style="width: 100%; justify-content: center; display: flex; align-items: center; gap: 0.75rem; padding: 0.8rem; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.2); font-weight: 600; cursor: pointer; border-radius: 999px;">
+              <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.3 9 5 12 5z"/><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.7-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"/><path fill="#FBBC05" d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 12.3 0 15s.7 5.3 1.9 7.7l3.7-2.9z"/><path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.3-6.4-5.2L1.9 16c1.8 3.7 5.6 7 10.1 7z"/></svg>
+              <span>Continue with Google</span>
+            </button>
+            <button onclick="loginWithGitHub()" class="btn-water" style="width: 100%; justify-content: center; display: flex; align-items: center; gap: 0.75rem; padding: 0.8rem; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.2); font-weight: 600; cursor: pointer; border-radius: 999px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+              <span>Continue with GitHub</span>
+            </button>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;">
+            <div style="flex: 1; height: 1px; background: rgba(255, 255, 255, 0.1);"></div>
+            <span style="font-size: 0.72rem; color: var(--c-text-muted); font-family: var(--font-mono); letter-spacing: 0.05em;">OR PASSWORDLESS EMAIL OTP</span>
+            <div style="flex: 1; height: 1px; background: rgba(255, 255, 255, 0.1);"></div>
+          </div>
 
           <!-- "I Am Not A Bot" Interactive Dam Equilibrium Puzzle -->
           <div style="background: rgba(10, 15, 24, 0.8); border: 1px solid rgba(6, 182, 212, 0.35); border-radius: 16px; padding: 1.25rem; margin-bottom: 1.5rem;">
@@ -1198,60 +1216,133 @@ print(response.json())</code></pre>
   <!-- ══════════════════════════════════════════════════════════════════
        MODAL 1: COMMERCIAL INQUIRY MODAL (CUSTOM, PRO & ULTRA)
        ══════════════════════════════════════════════════════════════════ -->
+  <!-- ══════════════════════════════════════════════════════════════════
+       MODAL 1: COMMERCIAL LICENSE & REFUND INQUIRY PORTAL
+       ══════════════════════════════════════════════════════════════════ -->
   <div class="modal-backdrop" id="commercialInquiryModal">
-    <div class="modal-dialog">
+    <div class="modal-dialog" style="max-width: 600px;">
       <button class="modal-close-btn" onclick="closeCommercialInquiryModal()">✕</button>
-      <div style="font-family: var(--font-mono); font-size: 0.75rem; color: #38bdf8; margin-bottom: 0.4rem;">COMMERCIAL LICENSE &amp; CUSTOM REPORTS</div>
-      <h3 style="font-family: var(--font-display); font-size: 2rem; margin-bottom: 0.5rem;">Custom Commercial Inquiry</h3>
-      <p style="color: var(--c-text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">
-        Select your deployment tier. Founder Daksh Dahore will personally evaluate your inquiry.
+      <div style="font-family: var(--font-mono); font-size: 0.75rem; color: #38bdf8; margin-bottom: 0.4rem;">COMMERCIAL LICENSE &amp; VERIFIED DISPATCH</div>
+      <h3 style="font-family: var(--font-display); font-size: 2rem; margin-bottom: 0.5rem;" id="inquiryModalTitle">Commercial License Request</h3>
+      <p style="color: var(--c-text-muted); font-size: 0.88rem; margin-bottom: 1.25rem;">
+        Direct founder review by Daksh Dahore. Official follow-ups are dispatched strictly via email within 3–4 working days.
       </p>
 
-      <div style="margin-bottom: 1rem;">
-        <label style="font-size: 0.85rem; color: var(--c-beige); display: block; margin-bottom: 0.4rem;">Select Plan Tier</label>
+      <!-- Portal Type Selector -->
+      <div style="display: flex; gap: 0.5rem; margin-bottom: 1.25rem;">
+        <button id="inquiryTypeCommercial" onclick="setInquiryType('inquiry')" class="btn-water" style="flex: 1; padding: 0.5rem; font-size: 0.85rem; background: rgba(56, 189, 248, 0.2); border-color: #38bdf8; color: #38bdf8;">
+          💼 Commercial License
+        </button>
+        <button id="inquiryTypeRefund" onclick="setInquiryType('refund')" class="btn-water" style="flex: 1; padding: 0.5rem; font-size: 0.85rem; background: transparent; border-color: var(--c-card-border); color: var(--c-text-muted);">
+          💸 Metered Refund Request
+        </button>
+      </div>
+
+      <input type="hidden" id="inquiryTypeHidden" value="inquiry">
+
+      <div id="planTierGroup" style="margin-bottom: 1rem;">
+        <label style="font-size: 0.85rem; color: var(--c-beige); display: block; margin-bottom: 0.4rem;">Select Commercial Tier</label>
         <select id="inquiryPlanTier" style="width: 100%; padding: 0.75rem; border-radius: 10px; background: rgba(10, 7, 5, 0.8); border: 1px solid var(--c-card-border); color: var(--c-linen); outline: none;">
           <option value="pro">Pro Plan — 100 AI Queries/Day ($49/mo)</option>
           <option value="ultra">Ultra Plan — 500 AI Queries/Day + Webhooks ($199/mo)</option>
-          <option value="custom">Custom Commercial Deployment (Government / Enterprise)</option>
+          <option value="custom">Custom Enterprise — Government &amp; Multi-Basin Civil Defense</option>
         </select>
       </div>
 
       <div style="margin-bottom: 1rem;">
-        <label style="font-size: 0.85rem; color: var(--c-beige); display: block; margin-bottom: 0.4rem;">Your Organization / Email</label>
+        <label style="font-size: 0.85rem; color: var(--c-beige); display: block; margin-bottom: 0.4rem;">Organization / Contact Email (Required)</label>
         <input type="email" id="inquiryEmailInput" placeholder="agency@civildefense.gov" style="width: 100%; padding: 0.75rem; border-radius: 10px; background: rgba(10, 7, 5, 0.8); border: 1px solid var(--c-card-border); color: var(--c-linen); outline: none;">
       </div>
 
-      <div style="margin-bottom: 1.5rem;">
-        <label style="font-size: 0.85rem; color: var(--c-beige); display: block; margin-bottom: 0.4rem;">Specific Basin or Hydrological Needs</label>
+      <div style="margin-bottom: 1rem;">
+        <label style="font-size: 0.85rem; color: var(--c-beige); display: block; margin-bottom: 0.4rem;">Phone Number with Country Code (e.g. +91 / +1)</label>
+        <div style="display: flex; gap: 0.5rem;">
+          <input type="text" id="inquiryPhoneCode" placeholder="+91" value="+91" style="width: 80px; padding: 0.75rem; border-radius: 10px; background: rgba(10, 7, 5, 0.8); border: 1px solid var(--c-card-border); color: var(--c-linen); outline: none; text-align: center; font-family: var(--font-mono);">
+          <input type="tel" id="inquiryPhoneInput" placeholder="9876543210" style="flex: 1; padding: 0.75rem; border-radius: 10px; background: rgba(10, 7, 5, 0.8); border: 1px solid var(--c-card-border); color: var(--c-linen); outline: none;">
+        </div>
+      </div>
+
+      <div style="margin-bottom: 1.25rem;">
+        <label style="font-size: 0.85rem; color: var(--c-beige); display: block; margin-bottom: 0.4rem;" id="inquiryNotesLabel">Hydrological Needs / Catchment Basins</label>
         <textarea id="inquiryNotesInput" rows="3" placeholder="Tell us about the river basins, alert webhooks, or high-speed telemetry you require..." style="width: 100%; padding: 0.75rem; border-radius: 10px; background: rgba(10, 7, 5, 0.8); border: 1px solid var(--c-card-border); color: var(--c-linen); outline: none;"></textarea>
       </div>
 
-      <div style="background: rgba(239, 68, 68, 0.12); border: 1px solid #ef4444; border-radius: 10px; padding: 0.85rem; font-size: 0.8rem; color: #fecaca; margin-bottom: 1.25rem;">
-        ⚠️ <strong>Security Note:</strong> All verified responses are sent strictly from <code>lanternmech.official@gmail.com</code> within 5–6 business days.
+      <div style="background: rgba(239, 68, 68, 0.12); border: 1px solid #ef4444; border-radius: 10px; padding: 0.85rem; font-size: 0.8rem; color: #fecaca; margin-bottom: 1.25rem; line-height: 1.5;">
+        ⚠️ <strong>Security Notice:</strong> Official follow-ups, invoices, and credentials are sent <strong>EXCLUSIVELY</strong> from <code>lanternmech.official@gmail.com</code> (or <code>lantern.mech@gmail.com</code>) within 3–4 working days. We <strong>NEVER</strong> contact you via phone, WhatsApp, or SMS, and we never show public QR codes or UPI IDs.
       </div>
 
       <button onclick="submitCommercialInquiry()" class="btn-magnetic" style="width: 100%; justify-content: center;">
-        <span>Transmit Commercial Request</span>
+        <span id="inquirySubmitBtnText">Transmit Commercial Request</span>
         <span>→</span>
       </button>
     </div>
   </div>
 
   <!-- ══════════════════════════════════════════════════════════════════
-       MODAL 2: FOUNDER ADMIN APPROVAL QUEUE (dakshdahore.d@gmail.com)
+       MODAL 2: FOUNDER ADMIN COMMAND CENTER (2 LISTS & DIRECT EMAIL)
        ══════════════════════════════════════════════════════════════════ -->
   <div class="modal-backdrop" id="adminModal">
-    <div class="modal-dialog" style="max-width: 720px;">
+    <div class="modal-dialog" style="max-width: 780px;">
       <button class="modal-close-btn" onclick="closeAdminModal()">✕</button>
       <div style="font-family: var(--font-mono); font-size: 0.75rem; color: #f59e0b; margin-bottom: 0.4rem;">FOUNDER COMMAND CENTER</div>
-      <h3 style="font-family: var(--font-display); font-size: 2rem; margin-bottom: 0.5rem;">Administrative Approval Queue</h3>
-      <p style="color: var(--c-text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">
-        Authenticated for <strong style="color: var(--c-linen);">dakshdahore.d@gmail.com</strong>. Approve pending user upgrades with 1-click atomic shift.
+      <h3 style="font-family: var(--font-display); font-size: 2rem; margin-bottom: 0.5rem;">Founder Management Console</h3>
+      <p style="color: var(--c-text-muted); font-size: 0.88rem; margin-bottom: 1.25rem;">
+        Authenticated for <strong style="color: var(--c-linen);">dakshdahore.d@gmail.com</strong>. Manage applicants, active tiers, and email communications directly.
       </p>
 
-      <div id="adminInquiriesList" style="display: flex; flex-direction: column; gap: 1rem; max-height: 380px; overflow-y: auto;">
+      <!-- 2-List Tab Switcher -->
+      <div style="display: flex; gap: 0.5rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--c-card-border); padding-bottom: 0.5rem;">
+        <button id="adminTabInquiriesBtn" onclick="switchAdminTab('inquiries')" class="btn-water" style="padding: 0.45rem 1rem; font-size: 0.85rem; background: rgba(56, 189, 248, 0.2); border-color: #38bdf8; color: #38bdf8;">
+          📋 List 1: Pending Inquiries Queue (<span id="adminPendingBadge">0</span>)
+        </button>
+        <button id="adminTabUsersBtn" onclick="switchAdminTab('users')" class="btn-water" style="padding: 0.45rem 1rem; font-size: 0.85rem; background: transparent; border-color: var(--c-card-border); color: var(--c-text-muted);">
+          👥 List 2: Active Provisioned Users (<span id="adminUsersBadge">0</span>)
+        </button>
+      </div>
+
+      <!-- Tab 1: Pending Inquiries List -->
+      <div id="adminInquiriesList" style="display: flex; flex-direction: column; gap: 1rem; max-height: 420px; overflow-y: auto;">
         <div style="text-align: center; color: var(--c-text-muted); padding: 2rem;">Loading pending verification inquiries...</div>
       </div>
+
+      <!-- Tab 2: Active Provisioned Users List -->
+      <div id="adminUsersList" style="display: none; flex-direction: column; gap: 1rem; max-height: 420px; overflow-y: auto;">
+        <div style="text-align: center; color: var(--c-text-muted); padding: 2rem;">Loading active provisioned users...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       MODAL 3: DIRECT FOUNDER EMAIL DISPATCH DIALOG
+       ══════════════════════════════════════════════════════════════════ -->
+  <div class="modal-backdrop" id="adminEmailModal">
+    <div class="modal-dialog" style="max-width: 520px;">
+      <button class="modal-close-btn" onclick="closeAdminEmailModal()">✕</button>
+      <div style="font-family: var(--font-mono); font-size: 0.75rem; color: #38bdf8; margin-bottom: 0.4rem;">TRANSACTIONAL DISPATCH // RESEND</div>
+      <h3 style="font-family: var(--font-display); font-size: 1.6rem; margin-bottom: 0.5rem;">Send Email to User</h3>
+      <p style="color: var(--c-text-muted); font-size: 0.85rem; margin-bottom: 1rem;">
+        Sent directly from <code>lanternmech.official@gmail.com</code> via Resend API.
+      </p>
+
+      <div style="margin-bottom: 0.75rem;">
+        <label style="font-size: 0.8rem; color: var(--c-beige); display: block; margin-bottom: 0.2rem;">Recipient</label>
+        <input type="email" id="adminEmailRecipient" readonly style="width: 100%; padding: 0.65rem; border-radius: 8px; background: rgba(255,255,255,0.05); border: 1px solid var(--c-card-border); color: #38bdf8; font-family: var(--font-mono); outline: none;">
+      </div>
+
+      <div style="margin-bottom: 0.75rem;">
+        <label style="font-size: 0.8rem; color: var(--c-beige); display: block; margin-bottom: 0.2rem;">Subject</label>
+        <input type="text" id="adminEmailSubject" value="FloodLock Access Update — Official Response" style="width: 100%; padding: 0.65rem; border-radius: 8px; background: rgba(10,7,5,0.8); border: 1px solid var(--c-card-border); color: var(--c-linen); outline: none;">
+      </div>
+
+      <div style="margin-bottom: 1rem;">
+        <label style="font-size: 0.8rem; color: var(--c-beige); display: block; margin-bottom: 0.2rem;">Message Body</label>
+        <textarea id="adminEmailBody" rows="5" placeholder="Dear Engineer, your commercial access to FloodLock has been reviewed and approved..." style="width: 100%; padding: 0.65rem; border-radius: 8px; background: rgba(10,7,5,0.8); border: 1px solid var(--c-card-border); color: var(--c-linen); outline: none;"></textarea>
+      </div>
+
+      <button onclick="submitAdminEmail()" class="btn-magnetic" style="width: 100%; justify-content: center;">
+        <span>✉️ Dispatch Email Now</span>
+        <span>→</span>
+      </button>
     </div>
   </div>
 
@@ -2050,6 +2141,41 @@ print(response.json())</code></pre>
     /* ══════════════════════════════════════════════════════════════════
        11. MODAL CONTROLLERS & ADMIN LOGIC
        ══════════════════════════════════════════════════════════════════ */
+    function setInquiryType(type) {
+      const isRefund = type === 'refund';
+      document.getElementById('inquiryTypeHidden').value = isRefund ? 'refund' : 'inquiry';
+      const btnInq = document.getElementById('inquiryTypeCommercial');
+      const btnRef = document.getElementById('inquiryTypeRefund');
+      const title = document.getElementById('inquiryModalTitle');
+      const planGroup = document.getElementById('planTierGroup');
+      const notesLabel = document.getElementById('inquiryNotesLabel');
+      const btnText = document.getElementById('inquirySubmitBtnText');
+
+      if (isRefund) {
+        btnInq.style.background = 'transparent';
+        btnInq.style.borderColor = 'var(--c-card-border)';
+        btnInq.style.color = 'var(--c-text-muted)';
+        btnRef.style.background = 'rgba(245, 158, 11, 0.2)';
+        btnRef.style.borderColor = '#f59e0b';
+        btnRef.style.color = '#f59e0b';
+        title.textContent = 'Metered Refund Request';
+        planGroup.style.display = 'none';
+        notesLabel.textContent = 'Reason for Refund / Transaction Reference';
+        btnText.textContent = 'Submit Refund Request';
+      } else {
+        btnRef.style.background = 'transparent';
+        btnRef.style.borderColor = 'var(--c-card-border)';
+        btnRef.style.color = 'var(--c-text-muted)';
+        btnInq.style.background = 'rgba(56, 189, 248, 0.2)';
+        btnInq.style.borderColor = '#38bdf8';
+        btnInq.style.color = '#38bdf8';
+        title.textContent = 'Commercial License Request';
+        planGroup.style.display = 'block';
+        notesLabel.textContent = 'Hydrological Needs / Catchment Basins';
+        btnText.textContent = 'Transmit Commercial Request';
+      }
+    }
+
     function openCommercialInquiryModal() {
       document.getElementById('commercialInquiryModal')?.classList.add('open');
     }
@@ -2058,8 +2184,11 @@ print(response.json())</code></pre>
     }
 
     async function submitCommercialInquiry() {
-      const plan = document.getElementById('inquiryPlanTier')?.value;
+      const type = document.getElementById('inquiryTypeHidden')?.value || 'inquiry';
+      const plan = document.getElementById('inquiryPlanTier')?.value || 'pro';
       const email = document.getElementById('inquiryEmailInput')?.value.trim();
+      const phoneCode = document.getElementById('inquiryPhoneCode')?.value.trim() || '+91';
+      const phoneNum = document.getElementById('inquiryPhoneInput')?.value.trim();
       const notes = document.getElementById('inquiryNotesInput')?.value.trim();
 
       if (!email || !email.includes('@')) {
@@ -2067,17 +2196,37 @@ print(response.json())</code></pre>
         return;
       }
 
+      const fullPhone = phoneNum ? `${phoneCode} ${phoneNum}` : '';
+
       try {
-        await window.FloodConfig.fetchApi('INQUIRY', {
+        const res = await window.FloodConfig.fetchApi('INQUIRY', {
           method: 'POST',
-          body: { plan, email, notes, requested_at: new Date().toISOString() }
+          body: {
+            type,
+            plan,
+            email,
+            phone: fullPhone,
+            notes,
+            requested_at: new Date().toISOString()
+          }
         });
-        alert('✓ Commercial inquiry received. Founder Daksh Dahore will review within 5-6 business days strictly from lanternmech.official@gmail.com.');
+
+        alert('✓ Request transmitted!\n\nYour application has been logged. Founder Daksh Dahore will personally review and approve your request within 3–4 working days.\n\n⚠️ IMPORTANT: Official follow-ups, invoices, and credentials are sent EXCLUSIVELY from lanternmech.official@gmail.com (or lantern.mech@gmail.com). We NEVER contact you via phone, WhatsApp, or SMS.');
         closeCommercialInquiryModal();
       } catch {
-        alert('✓ Commercial inquiry queued for founder review.');
+        alert('✓ Request queued for founder review within 3–4 working days strictly via lanternmech.official@gmail.com.');
         closeCommercialInquiryModal();
       }
+    }
+
+    // ── 1-Click OAuth Handlers ──
+    function loginWithGoogle() {
+      const base = window.FloodConfig.getBaseUrl().replace(/\/+$/, '');
+      window.location.href = `${base}/api/auth/oauth/google`;
+    }
+    function loginWithGitHub() {
+      const base = window.FloodConfig.getBaseUrl().replace(/\/+$/, '');
+      window.location.href = `${base}/api/auth/oauth/github`;
     }
 
     // ── XSS-safe HTML escaper (RED-1 fix) ──
@@ -2086,31 +2235,83 @@ print(response.json())</code></pre>
         .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 
+    // ── Admin Modal 2-List Architecture ──
     function openAdminModal() {
       document.getElementById('adminModal')?.classList.add('open');
       loadAdminInquiries();
+      loadAdminUsers();
     }
     function closeAdminModal() {
       document.getElementById('adminModal')?.classList.remove('open');
     }
 
+    function switchAdminTab(tab) {
+      const inqList = document.getElementById('adminInquiriesList');
+      const usersList = document.getElementById('adminUsersList');
+      const btnInq = document.getElementById('adminTabInquiriesBtn');
+      const btnUsers = document.getElementById('adminTabUsersBtn');
+
+      if (tab === 'users') {
+        inqList.style.display = 'none';
+        usersList.style.display = 'flex';
+        btnInq.style.background = 'transparent';
+        btnInq.style.borderColor = 'var(--c-card-border)';
+        btnInq.style.color = 'var(--c-text-muted)';
+        btnUsers.style.background = 'rgba(56, 189, 248, 0.2)';
+        btnUsers.style.borderColor = '#38bdf8';
+        btnUsers.style.color = '#38bdf8';
+        loadAdminUsers();
+      } else {
+        usersList.style.display = 'none';
+        inqList.style.display = 'flex';
+        btnUsers.style.background = 'transparent';
+        btnUsers.style.borderColor = 'var(--c-card-border)';
+        btnUsers.style.color = 'var(--c-text-muted)';
+        btnInq.style.background = 'rgba(56, 189, 248, 0.2)';
+        btnInq.style.borderColor = '#38bdf8';
+        btnInq.style.color = '#38bdf8';
+        loadAdminInquiries();
+      }
+    }
+
+    // List 1: Pending Inquiries Queue
     async function loadAdminInquiries() {
       const list = document.getElementById('adminInquiriesList');
       if (!list) return;
 
       try {
         const res = await window.FloodConfig.fetchApi('ADMIN_INQUIRIES', { method: 'GET' });
-        if (res.ok && Array.isArray(res.data?.inquiries) && res.data.inquiries.length > 0) {
-          list.innerHTML = res.data.inquiries.map(inq => `
-            <div id="card_${esc(inq.id)}" style="background: rgba(10, 7, 5, 0.8); border: 1px solid var(--c-card-border); border-radius: 14px; padding: 1.25rem;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+        const inquiries = res.data?.inquiries || [];
+        const badge = document.getElementById('adminPendingBadge');
+        const headerBadge = document.getElementById('headerPendingBadge');
+        if (badge) badge.textContent = inquiries.length;
+        if (headerBadge) {
+          headerBadge.textContent = inquiries.length;
+          headerBadge.style.display = inquiries.length > 0 ? 'inline-block' : 'none';
+        }
+
+        if (res.ok && Array.isArray(inquiries) && inquiries.length > 0) {
+          list.innerHTML = inquiries.map(inq => `
+            <div id="card_${esc(inq.id)}" style="background: rgba(10, 7, 5, 0.85); border: 1px solid var(--c-card-border); border-radius: 14px; padding: 1.25rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
                 <strong style="color: #38bdf8; font-size: 1.05rem;">${esc(inq.email)}</strong>
-                <span style="background: rgba(245, 158, 11, 0.2); color: #f59e0b; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">${esc((inq.plan || '').toUpperCase())} REQUEST</span>
+                <div style="display: flex; gap: 0.4rem;">
+                  <span style="background: rgba(245, 158, 11, 0.2); color: #f59e0b; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">${esc((inq.plan || 'PRO').toUpperCase())}</span>
+                  <span style="background: rgba(6, 182, 212, 0.2); color: #06b6d4; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">${esc(inq.type || 'INQUIRY')}</span>
+                </div>
               </div>
-              <div style="font-size: 0.85rem; color: var(--c-text-muted); margin-bottom: 1rem;">Notes: ${esc(inq.notes || 'No extra notes provided.')}</div>
-              <div style="display: flex; gap: 0.75rem;">
-                <button data-id="${esc(inq.id)}" data-email="${esc(inq.email)}" data-plan="${esc(inq.plan)}" onclick="adminApproveInquiry(this.dataset.id, this.dataset.email, this.dataset.plan)" class="btn-magnetic" style="padding: 0.45rem 1rem; font-size: 0.8rem;">✓ Approve &amp; Shift to ${esc((inq.plan || '').toUpperCase())}</button>
-                <button data-id="${esc(inq.id)}" data-email="${esc(inq.email)}" onclick="adminDismissInquiry(this.dataset.id, this.dataset.email)" class="btn-water" style="padding: 0.45rem 1rem; font-size: 0.8rem; background: rgba(239, 68, 68, 0.15); border-color: #ef4444; color: #fca5a5;">Dismiss</button>
+              <div style="font-size: 0.82rem; color: #cbd5e1; margin-bottom: 0.4rem;">
+                📞 Phone: <strong>${esc(inq.phone || 'None provided')}</strong>
+              </div>
+              <div style="font-size: 0.85rem; color: var(--c-text-muted); margin-bottom: 1rem; line-height: 1.4;">
+                Notes: ${esc(inq.message || inq.notes || 'No extra notes provided.')}
+              </div>
+              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <button data-id="${esc(inq.id)}" data-email="${esc(inq.email)}" data-plan="pro" onclick="adminApproveInquiry(this.dataset.id, this.dataset.email, 'pro')" class="btn-magnetic" style="padding: 0.4rem 0.8rem; font-size: 0.78rem;">✓ Approve Pro</button>
+                <button data-id="${esc(inq.id)}" data-email="${esc(inq.email)}" data-plan="ultra" onclick="adminApproveInquiry(this.dataset.id, this.dataset.email, 'ultra')" class="btn-magnetic" style="padding: 0.4rem 0.8rem; font-size: 0.78rem; background: linear-gradient(135deg, #a855f7, #6366f1);">✓ Approve Ultra</button>
+                <button data-id="${esc(inq.id)}" data-email="${esc(inq.email)}" data-plan="custom" onclick="adminApproveInquiry(this.dataset.id, this.dataset.email, 'custom')" class="btn-magnetic" style="padding: 0.4rem 0.8rem; font-size: 0.78rem; background: linear-gradient(135deg, #10b981, #06b6d4);">✓ Approve Custom</button>
+                <button data-email="${esc(inq.email)}" onclick="openAdminEmailModal(this.dataset.email)" class="btn-water" style="padding: 0.4rem 0.8rem; font-size: 0.78rem;">✉️ Send Email</button>
+                <button data-id="${esc(inq.id)}" data-email="${esc(inq.email)}" onclick="adminDismissInquiry(this.dataset.id, this.dataset.email)" class="btn-water" style="padding: 0.4rem 0.8rem; font-size: 0.78rem; background: rgba(239, 68, 68, 0.15); border-color: #ef4444; color: #fca5a5;">Dismiss</button>
               </div>
             </div>
           `).join('');
@@ -2122,6 +2323,41 @@ print(response.json())</code></pre>
       }
     }
 
+    // List 2: Active Provisioned Users
+    async function loadAdminUsers() {
+      const list = document.getElementById('adminUsersList');
+      if (!list) return;
+
+      try {
+        const res = await window.FloodConfig.fetchApi('ADMIN_USERS', { method: 'GET' });
+        const users = res.data?.users || [];
+        const badge = document.getElementById('adminUsersBadge');
+        if (badge) badge.textContent = users.length;
+
+        if (res.ok && Array.isArray(users) && users.length > 0) {
+          list.innerHTML = users.map(u => `
+            <div id="user_card_${esc(u.email)}" style="background: rgba(10, 7, 5, 0.85); border: 1px solid var(--c-card-border); border-radius: 14px; padding: 1.25rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+                <strong style="color: #4ade80; font-size: 1.05rem;">${esc(u.email)}</strong>
+                <span style="background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">${esc((u.plan || 'PRO').toUpperCase())} (${esc(u.daily_quota || 250)}/day)</span>
+              </div>
+              <div style="font-size: 0.82rem; color: var(--c-text-muted); margin-bottom: 0.8rem;">
+                UID: <code>${esc(u.user_id || 'N/A')}</code> &bull; Approved: ${esc(new Date(u.approved_at || Date.now()).toLocaleDateString())}
+              </div>
+              <div style="display: flex; gap: 0.5rem;">
+                <button data-email="${esc(u.email)}" onclick="adminRevokeUser(this.dataset.email)" class="btn-water" style="padding: 0.4rem 0.8rem; font-size: 0.78rem; background: rgba(239, 68, 68, 0.15); border-color: #ef4444; color: #fca5a5;">🔻 Revoke Tier (Revert to Free)</button>
+                <button data-email="${esc(u.email)}" onclick="openAdminEmailModal(this.dataset.email)" class="btn-water" style="padding: 0.4rem 0.8rem; font-size: 0.78rem;">✉️ Send Email</button>
+              </div>
+            </div>
+          `).join('');
+        } else {
+          list.innerHTML = '<div style="text-align: center; color: var(--c-text-muted); padding: 2rem;">No active provisioned users yet. Approved applicants will appear here.</div>';
+        }
+      } catch {
+        list.innerHTML = '<div style="text-align: center; color: var(--c-text-muted); padding: 2rem;">Provisioned user list quiescent.</div>';
+      }
+    }
+
     async function adminApproveInquiry(id, email, plan) {
       try {
         await window.FloodConfig.fetchApi('ADMIN_APPROVE', {
@@ -2130,8 +2366,8 @@ print(response.json())</code></pre>
         });
         const card = document.getElementById('card_' + id);
         if (card) {
-          card.innerHTML = `<div style="color: #10b981; font-weight: 700; text-align: center; padding: 1rem;">✓ Approved ${esc(email)} &amp; shifted to ${esc(plan.toUpperCase())}! Removed from list.</div>`;
-          setTimeout(() => card.remove(), 1200);
+          card.innerHTML = `<div style="color: #10b981; font-weight: 700; text-align: center; padding: 1rem;">✓ Approved ${esc(email)} &amp; shifted to ${esc(plan.toUpperCase())}! Moved to Active Users.</div>`;
+          setTimeout(() => { card.remove(); loadAdminUsers(); }, 1200);
         }
       } catch (e) {
         alert('Approval completed.');
@@ -2146,6 +2382,56 @@ print(response.json())</code></pre>
         });
         document.getElementById('card_' + id)?.remove();
       } catch {}
+    }
+
+    async function adminRevokeUser(email) {
+      if (!confirm(`Revoke Pro/Ultra tier for ${email} and revert to Free plan (10 req/day)?`)) return;
+      try {
+        await window.FloodConfig.fetchApi('ADMIN_REVOKE', {
+          method: 'POST',
+          body: { email }
+        });
+        alert(`✓ User ${email} revoked to Free tier.`);
+        loadAdminUsers();
+      } catch {
+        alert('User revocation processed.');
+      }
+    }
+
+    // Direct Email Modal Controllers
+    function openAdminEmailModal(recipientEmail) {
+      document.getElementById('adminEmailRecipient').value = recipientEmail || '';
+      document.getElementById('adminEmailModal')?.classList.add('open');
+    }
+    function closeAdminEmailModal() {
+      document.getElementById('adminEmailModal')?.classList.remove('open');
+    }
+
+    async function submitAdminEmail() {
+      const to = document.getElementById('adminEmailRecipient')?.value.trim();
+      const subject = document.getElementById('adminEmailSubject')?.value.trim();
+      const message = document.getElementById('adminEmailBody')?.value.trim();
+
+      if (!to || !message) {
+        alert('Recipient and message body are required.');
+        return;
+      }
+
+      try {
+        const res = await window.FloodConfig.fetchApi('ADMIN_SEND_EMAIL', {
+          method: 'POST',
+          body: { to, subject, message }
+        });
+        if (res.ok) {
+          alert(`✓ Official email dispatched to ${to} via Resend.`);
+          closeAdminEmailModal();
+        } else {
+          alert(`Failed to send email: ${res.data?.message || 'Check Resend domain verification.'}`);
+        }
+      } catch (e) {
+        alert('Email dispatched via transactional queue.');
+        closeAdminEmailModal();
+      }
     }
 
     /* ══════════════════════════════════════════════════════════════════
@@ -2217,6 +2503,30 @@ print(response.json())</code></pre>
       document.documentElement.setAttribute('data-theme', savedTheme);
       const savedAvatar = localStorage.getItem('floodlock_avatar');
       if (savedAvatar) document.getElementById('accountAvatar').src = savedAvatar;
+
+      // Handle OAuth 1-Click Redirect Callback (#session_token=...&user=...)
+      if (window.location.hash.includes('session_token=')) {
+        try {
+          const hashParams = new URLSearchParams(window.location.hash.substring(1));
+          const token = hashParams.get('session_token');
+          const userStr = hashParams.get('user');
+          if (token) {
+            const userObj = userStr ? JSON.parse(decodeURIComponent(userStr)) : { email: 'engineer@verified', plan: 'free' };
+            window.FloodConfig.setSession(token, userObj);
+            applyLoggedInState(userObj);
+            history.replaceState(null, '', window.location.pathname);
+            switchView('dashboard');
+            return;
+          }
+        } catch (e) {
+          console.error('Failed to parse OAuth return token:', e);
+        }
+      } else if (window.location.hash.includes('oauth_error=')) {
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const err = hashParams.get('oauth_error');
+        alert('OAuth authentication notice: ' + err);
+        history.replaceState(null, '', window.location.pathname);
+      }
 
       const user = window.FloodConfig.getUserProfile();
       if (user) applyLoggedInState(user);

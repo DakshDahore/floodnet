@@ -479,7 +479,7 @@ function findClosestBasin(lat, lon) {
   return { basin: closest, distance_km: minDistance };
 }
 
-const ADMIN_EMAILS = new Set(["dakshdahore.d@gmail.com", "lantern.mech@gmail.com"]);
+const ADMIN_EMAILS = new Set(["dakshdahore.d@gmail.com", "lantern.mech@gmail.com", "lanternmech.official@gmail.com"]);
 
 async function verifyAdminAccess(env, request) {
   const authHeader = request.headers.get("Authorization") || "";
@@ -558,15 +558,21 @@ export default {
             forecast: "/api/forecast?lat=18.998&lon=72.842",
             send_otp: "POST /api/auth/send-otp",
             verify_otp: "POST /api/auth/verify-otp",
+            oauth_google: "GET /api/auth/oauth/google",
+            oauth_github: "GET /api/auth/oauth/github",
+            oauth_callback: "GET /api/auth/oauth/callback",
             user_profile: "GET /api/user/profile",
             billing_webhook: "POST /api/billing/webhook",
             billing_refund: "POST /api/billing/refund",
             inquiry: "POST /api/inquiry",
             contribute: "POST /api/contribute",
             admin_inquiries: "GET /api/admin/inquiries",
+            admin_users: "GET /api/admin/users",
             admin_approve: "POST /api/admin/approve-inquiry",
             admin_dismiss: "POST /api/admin/dismiss-inquiry",
+            admin_revoke: "POST /api/admin/revoke-user",
             admin_provision: "POST /api/admin/provision-user",
+            admin_send_email: "POST /api/admin/send-email",
           },
           ai_pipeline: [
             `Tier-1 Primary: ${env.GROQ_MODEL || "llama-3.1-8b-instant"} (Groq LPU)`,
@@ -723,6 +729,162 @@ export default {
             created_at: profile.created_at,
           },
         });
+      }
+
+      // ── GET /api/auth/oauth/google (1-Click Google OAuth Entrypoint) ──
+      if (path === "/api/auth/oauth/google" && method === "GET") {
+        const clientId = env.GOOGLE_CLIENT_ID;
+        if (!clientId) {
+          return jsonResponse(request, env, { error: "OAUTH_UNCONFIGURED", message: "Google Client ID not configured on Worker." }, 500);
+        }
+        const workerOrigin = new URL(request.url).origin;
+        const redirectUri = `${workerOrigin}/api/auth/oauth/callback?provider=google`;
+        const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=openid%20email%20profile&prompt=select_account`;
+        return Response.redirect(googleAuthUrl, 302);
+      }
+
+      // ── GET /api/auth/oauth/github (1-Click GitHub OAuth Entrypoint) ──
+      if (path === "/api/auth/oauth/github" && method === "GET") {
+        const clientId = env.GITHUB_CLIENT_ID;
+        if (!clientId) {
+          return jsonResponse(request, env, { error: "OAUTH_UNCONFIGURED", message: "GitHub Client ID not configured on Worker." }, 500);
+        }
+        const workerOrigin = new URL(request.url).origin;
+        const redirectUri = `${workerOrigin}/api/auth/oauth/callback?provider=github`;
+        const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=user:email`;
+        return Response.redirect(githubAuthUrl, 302);
+      }
+
+      // ── GET /api/auth/oauth/callback (Universal OAuth Token Exchange & Auto-Provision) ──
+      if (path === "/api/auth/oauth/callback" && method === "GET") {
+        const code = url.searchParams.get("code");
+        const provider = url.searchParams.get("provider") || "google";
+        const frontendUrl = env.FRONTEND_URL || "https://floodlock.pages.dev";
+
+        if (!code) {
+          return Response.redirect(`${frontendUrl}/#oauth_error=missing_code`, 302);
+        }
+
+        try {
+          let userEmail = "";
+          let userName = "";
+
+          if (provider === "google") {
+            const workerOrigin = new URL(request.url).origin;
+            const redirectUri = `${workerOrigin}/api/auth/oauth/callback?provider=google`;
+            const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+              method: "POST",
+              headers: { "Content-Type": "application/x-www-form-urlencoded" },
+              body: new URLSearchParams({
+                code,
+                client_id: env.GOOGLE_CLIENT_ID || "",
+                client_secret: env.GOOGLE_CLIENT_SECRET || "",
+                redirect_uri: redirectUri,
+                grant_type: "authorization_code",
+              }),
+            });
+            if (!tokenRes.ok) {
+              const errTxt = await tokenRes.text();
+              console.error("Google token exchange error:", errTxt);
+              return Response.redirect(`${frontendUrl}/#oauth_error=token_exchange_failed`, 302);
+            }
+            const tokenData = await tokenRes.json();
+            const userRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+              headers: { Authorization: `Bearer ${tokenData.access_token}` },
+            });
+            if (!userRes.ok) {
+              return Response.redirect(`${frontendUrl}/#oauth_error=userinfo_failed`, 302);
+            }
+            const userData = await userRes.json();
+            userEmail = String(userData.email || "").toLowerCase().trim();
+            userName = String(userData.name || "").trim();
+          } else if (provider === "github") {
+            const workerOrigin = new URL(request.url).origin;
+            const redirectUri = `${workerOrigin}/api/auth/oauth/callback?provider=github`;
+            const tokenRes = await fetch("https://github.com/login/oauth/access_token", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "Accept": "application/json" },
+              body: JSON.stringify({
+                client_id: env.GITHUB_CLIENT_ID || "",
+                client_secret: env.GITHUB_CLIENT_SECRET || "",
+                code,
+                redirect_uri: redirectUri,
+              }),
+            });
+            const tokenData = await tokenRes.json();
+            if (!tokenData.access_token) {
+              return Response.redirect(`${frontendUrl}/#oauth_error=github_token_failed`, 302);
+            }
+            const emailsRes = await fetch("https://api.github.com/user/emails", {
+              headers: {
+                Authorization: `Bearer ${tokenData.access_token}`,
+                "User-Agent": "FloodLock-Worker",
+              },
+            });
+            const emails = await emailsRes.json();
+            const primary = Array.isArray(emails) ? emails.find((e) => e.primary && e.verified) || emails[0] : null;
+            userEmail = primary?.email ? String(primary.email).toLowerCase().trim() : "";
+            userName = "GitHub User";
+          }
+
+          if (!userEmail || !isValidIdentity(userEmail)) {
+            return Response.redirect(`${frontendUrl}/#oauth_error=invalid_email`, 302);
+          }
+
+          // Provision or retrieve user profile in KV
+          const idKey = await deriveDomainSecret(env.MASTER_SECRET, "identity-hash");
+          const identityHash = await hmacSha256Hex(idKey, `id:${userEmail}`);
+
+          let profile = null;
+          if (env.FLOODLOCK_KV) {
+            const encryptedBlob = await env.FLOODLOCK_KV.get(`user_enc:${identityHash}`);
+            if (encryptedBlob) profile = await decryptPiiAtRest(env.PII_ENCRYPTION_KEY, encryptedBlob, identityHash);
+          }
+
+          const isAdmin = ADMIN_EMAILS.has(userEmail);
+
+          if (!profile) {
+            const randId = crypto.getRandomValues(new Uint8Array(6));
+            const uid = "USR_" + Array.from(randId).map((b) => b.toString(16).padStart(2, "0")).join("").toUpperCase();
+            profile = {
+              user_id: uid,
+              identity_raw: userEmail,
+              identity_masked: maskIdentity(userEmail),
+              name: userName || "Engineer",
+              plan: isAdmin ? "ultra" : "free",
+              daily_quota: isAdmin ? 500 : 10,
+              active_order_id: null,
+              created_at: new Date().toISOString(),
+            };
+            if (env.FLOODLOCK_KV) {
+              const cipher = await encryptPiiAtRest(env.PII_ENCRYPTION_KEY, profile, identityHash);
+              await env.FLOODLOCK_KV.put(`user_enc:${identityHash}`, cipher);
+              await env.FLOODLOCK_KV.put(`uid_map:${profile.user_id}`, identityHash);
+            }
+          }
+
+          const sessionToken = await issueSessionToken(env.MASTER_SECRET, {
+            userId: profile.user_id,
+            identityHash,
+            plan: profile.plan,
+            isAdmin,
+            ttlSec: 86400 * 7,
+          });
+
+          const userObj = encodeURIComponent(JSON.stringify({
+            user_id: profile.user_id,
+            identity: userEmail,
+            email: userEmail,
+            plan: profile.plan,
+            daily_quota: profile.daily_quota,
+            is_admin: isAdmin,
+          }));
+
+          return Response.redirect(`${frontendUrl}/#session_token=${encodeURIComponent(sessionToken)}&user=${userObj}`, 302);
+        } catch (err) {
+          console.error("OAuth callback fatal:", err);
+          return Response.redirect(`${frontendUrl}/#oauth_error=callback_exception`, 302);
+        }
       }
 
       // ── GET /api/user/profile ──
@@ -1264,10 +1426,11 @@ export default {
         let body = {};
         try { body = await request.json(); } catch { body = {}; }
         const rawName = String(body.name || "");
-        const rawEmail = String(body.email || "");
-        const rawPhone = String(body.phone || body.whatsapp || "");
+        const rawEmail = String(body.email || "").trim().toLowerCase();
+        const rawPhone = String(body.phone || body.whatsapp || "").trim();
         const rawPlan = String(body.plan || "pro").trim().toLowerCase();
-        const rawMessage = String(body.message || "");
+        const rawMessage = String(body.message || body.notes || "");
+        const inqType = String(body.type || "inquiry").trim().toUpperCase();
 
         if (
           containsMaliciousPayload(rawName) ||
@@ -1281,14 +1444,18 @@ export default {
           return jsonResponse(request, env, { error: "INVALID_EMAIL" }, 400);
         }
 
+        const validPlans = ["pro", "ultra", "custom"];
+        const planTier = validPlans.includes(rawPlan) ? rawPlan : "pro";
+
         const inqId = `inq_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
         const inquiryData = {
           id: inqId,
+          type: inqType,
           name: sanitizeText(rawName || "Client", 80),
-          email: rawEmail.trim().toLowerCase(),
+          email: rawEmail,
           phone: sanitizeText(rawPhone, 30),
-          plan: rawPlan === "ultra" ? "ultra" : "pro",
-          message: sanitizeText(rawMessage || "Direct GPay Pro Access Request", 500),
+          plan: planTier,
+          message: sanitizeText(rawMessage || "Commercial Access / Hydrological Request", 500),
           status: "PENDING",
           received_at: new Date().toISOString(),
         };
@@ -1313,11 +1480,13 @@ export default {
           } catch {}
         }
 
-        await dispatchFounderAlert(env, `Direct GPay Inquiry (${inquiryData.plan.toUpperCase()}) from ${maskIdentity(inquiryData.email)}`, inquiryData);
+        await dispatchFounderAlert(env, `Commercial ${inqType} (${inquiryData.plan.toUpperCase()}) from ${maskIdentity(inquiryData.email)}`, inquiryData);
         return jsonResponse(request, env, {
           success: true,
           inquiry_id: inqId,
-          message: "Commercial inquiry received! Founder Daksh Dahore will reach out directly with private GPay checkout details and your provisioned API credentials.",
+          message: inqType === "REFUND"
+            ? "Refund request received! Founder Daksh Dahore will review your case within 3–4 working days strictly via lanternmech.official@gmail.com."
+            : "Commercial inquiry received! Founder Daksh Dahore will review your application within 3–4 working days. Official confirmation is dispatched strictly from lanternmech.official@gmail.com. We never ask for payments or credentials via phone or SMS.",
         }, 201);
       }
 
@@ -1362,7 +1531,7 @@ export default {
         const targetEmail = String(body.email || "").trim().toLowerCase();
         const targetPlan = String(body.plan || "pro").trim().toLowerCase();
         const inqId = String(body.inquiry_id || body.id || "").trim();
-        const dailyQuota = targetPlan === "ultra" ? 500 : 250;
+        const dailyQuota = targetPlan === "custom" ? 1000 : targetPlan === "ultra" ? 500 : 250;
 
         if (!isValidIdentity(targetEmail)) {
           return jsonResponse(request, env, { error: "INVALID_EMAIL" }, 400);
@@ -1403,6 +1572,24 @@ export default {
           const reEnc = await encryptPiiAtRest(env.PII_ENCRYPTION_KEY, uProfile, identityHash);
           await env.FLOODLOCK_KV.put(`user_enc:${identityHash}`, reEnc);
           await env.FLOODLOCK_KV.put(`uid_map:${uProfile.user_id}`, identityHash);
+
+          // Update active provisioned users list in KV (List 2)
+          try {
+            const rawActive = await env.FLOODLOCK_KV.get("admin:active_users");
+            let activeList = rawActive ? JSON.parse(rawActive) : [];
+            if (!Array.isArray(activeList)) activeList = [];
+            activeList = activeList.filter((item) => item.email !== targetEmail);
+            activeList.unshift({
+              email: targetEmail,
+              user_id: uProfile.user_id,
+              plan: targetPlan,
+              daily_quota: dailyQuota,
+              approved_by: auth.admin_email,
+              approved_at: new Date().toISOString()
+            });
+            if (activeList.length > 500) activeList = activeList.slice(0, 500);
+            await env.FLOODLOCK_KV.put("admin:active_users", JSON.stringify(activeList));
+          } catch {}
 
           // Remove inquiry from pending queue & delete pending key
           try {
@@ -1464,6 +1651,143 @@ export default {
         }
 
         return jsonResponse(request, env, { success: true, message: "Inquiry dismissed and removed from pending queue." }, 200);
+      }
+
+      // ── GET /api/admin/users (Founder Queue: View Active Provisioned Users - List 2) ──
+      if (path === "/api/admin/users" && method === "GET") {
+        const auth = await verifyAdminAccess(env, request);
+        if (!auth.ok) {
+          return jsonResponse(request, env, { error: "UNAUTHORIZED", message: "Founder admin access required." }, 403);
+        }
+
+        let activeList = [];
+        if (env.FLOODLOCK_KV) {
+          try {
+            const rawActive = await env.FLOODLOCK_KV.get("admin:active_users");
+            if (rawActive) activeList = JSON.parse(rawActive);
+          } catch {}
+        }
+
+        return jsonResponse(request, env, {
+          success: true,
+          admin_user: auth.admin_email,
+          total_active: activeList.length,
+          users: activeList,
+        }, 200);
+      }
+
+      // ── POST /api/admin/revoke-user (Founder Queue: Downgrade User Back to Free) ──
+      if (path === "/api/admin/revoke-user" && method === "POST") {
+        const auth = await verifyAdminAccess(env, request);
+        if (!auth.ok) {
+          return jsonResponse(request, env, { error: "UNAUTHORIZED", message: "Founder admin access required." }, 403);
+        }
+
+        let body = {};
+        try { body = await request.json(); } catch { body = {}; }
+        const targetEmail = String(body.email || "").trim().toLowerCase();
+        if (!isValidIdentity(targetEmail)) {
+          return jsonResponse(request, env, { error: "INVALID_EMAIL" }, 400);
+        }
+
+        if (env.FLOODLOCK_KV && env.MASTER_SECRET && env.PII_ENCRYPTION_KEY) {
+          const idKey = await deriveDomainSecret(env.MASTER_SECRET, "identity-hash");
+          const identityHash = await hmacSha256Hex(idKey, `id:${targetEmail}`);
+
+          const encryptedBlob = await env.FLOODLOCK_KV.get(`user_enc:${identityHash}`);
+          if (encryptedBlob) {
+            let uProfile = await decryptPiiAtRest(env.PII_ENCRYPTION_KEY, encryptedBlob, identityHash);
+            if (uProfile) {
+              uProfile.plan = "free";
+              uProfile.daily_quota = 10;
+              uProfile.active_order_id = null;
+              uProfile.revoked_by = auth.admin_email;
+              uProfile.revoked_at = new Date().toISOString();
+              const reEnc = await encryptPiiAtRest(env.PII_ENCRYPTION_KEY, uProfile, identityHash);
+              await env.FLOODLOCK_KV.put(`user_enc:${identityHash}`, reEnc);
+            }
+          }
+
+          // Remove from admin:active_users list
+          try {
+            const rawActive = await env.FLOODLOCK_KV.get("admin:active_users");
+            if (rawActive) {
+              let activeList = JSON.parse(rawActive);
+              if (Array.isArray(activeList)) {
+                activeList = activeList.filter((u) => u.email !== targetEmail);
+                await env.FLOODLOCK_KV.put("admin:active_users", JSON.stringify(activeList));
+              }
+            }
+          } catch {}
+        }
+
+        return jsonResponse(request, env, {
+          success: true,
+          message: `User ${maskIdentity(targetEmail)} revoked and reverted to Free plan (10 req/day).`
+        }, 200);
+      }
+
+      // ── POST /api/admin/send-email (Founder Direct Dispatch to Applicant) ──
+      if (path === "/api/admin/send-email" && method === "POST") {
+        const auth = await verifyAdminAccess(env, request);
+        if (!auth.ok) {
+          return jsonResponse(request, env, { error: "UNAUTHORIZED", message: "Founder admin access required." }, 403);
+        }
+
+        let body = {};
+        try { body = await request.json(); } catch { body = {}; }
+        const toEmail = String(body.to || body.email || "").trim().toLowerCase();
+        const subject = String(body.subject || "FloodLock Account Update").trim();
+        const message = String(body.message || "").trim();
+
+        if (!isValidIdentity(toEmail)) {
+          return jsonResponse(request, env, { error: "INVALID_EMAIL", message: "Valid recipient email required." }, 400);
+        }
+        if (!message) {
+          return jsonResponse(request, env, { error: "EMPTY_MESSAGE", message: "Message content required." }, 400);
+        }
+
+        if (!env.OTP_DELIVERY_URL || !env.OTP_DELIVERY_API_KEY) {
+          return jsonResponse(request, env, { error: "MAILER_UNCONFIGURED", message: "Resend email delivery unconfigured." }, 500);
+        }
+
+        try {
+          const res = await fetch(env.OTP_DELIVERY_URL, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${env.OTP_DELIVERY_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              to: [toEmail],
+              from: env.OTP_FROM_ADDRESS || "FloodLock <onboarding@resend.dev>",
+              subject: subject,
+              text: message,
+              html: `<div style="font-family:system-ui,-apple-system,sans-serif;padding:32px 24px;background:#050811;color:#f1f5f9;border-radius:12px;max-width:540px;border:1px solid #1e293b;margin:0 auto">
+  <div style="font-size:20px;font-weight:700;color:#38bdf8;margin-bottom:8px">🌊 FloodLock — Planetary Intelligence</div>
+  <div style="font-size:13px;color:#94a3b8;margin-bottom:20px">Official Founder Communication (${auth.admin_email})</div>
+  <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:18px 20px;font-size:14px;color:#e2e8f0;line-height:1.6;margin-bottom:24px;white-space:pre-wrap;">
+${sanitizeText(message, 2000)}
+  </div>
+  <div style="font-size:12px;color:#64748b;line-height:1.4">
+    Notice: Official responses and invoices are dispatched exclusively from lanternmech.official@gmail.com. We never ask for payments or credentials via phone, WhatsApp, or SMS.
+  </div>
+</div>`,
+            }),
+          });
+
+          if (!res.ok) {
+            const errTxt = await res.text().catch(() => "");
+            return jsonResponse(request, env, { error: "DISPATCH_FAILED", message: errTxt }, 502);
+          }
+
+          return jsonResponse(request, env, {
+            success: true,
+            message: `Email dispatched to ${toEmail} via Resend.`,
+          }, 200);
+        } catch (err) {
+          return jsonResponse(request, env, { error: "DISPATCH_ERROR", message: err?.message || String(err) }, 500);
+        }
       }
 
       // ── POST /api/admin/provision-user (Protected by MASTER_SECRET / Admin Auth) ──

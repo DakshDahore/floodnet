@@ -44,6 +44,8 @@
     "EMAILJS_PUBLIC_KEY": "user_8yw2mtw",
     "OTP_DELIVERY_URL": "https://api.resend.com/emails",
     "OTP_FROM_ADDRESS": "FloodLock <onboarding@resend.dev>",
+    "GOOGLE_CLIENT_ID": "719271873086-kpujid5noaftp00cc3lgf50fns212g3m.apps.googleusercontent.com",
+    "FRONTEND_URL": "https://floodlock.pages.dev",
     "WORKER_SLOT": "HOT_STANDBY"
   }
 }
