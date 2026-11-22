@@ -3,488 +3,497 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FloodLock // Engineering Command Deck & Neural Admin</title>
-  <meta name="description" content="Municipal engineering crisis workstation, neural network node firing diagnostics, and hydrodynamic physics simulator.">
-
-  <!-- Typography -->
+  <title>FloodLock — Founder Command Center</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@1&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
-  <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-
-  <!-- Design System CSS -->
-  <link rel="stylesheet" href="css/dashboard.css">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --c-bg: #070503;
+      --c-card: #0f0b08;
+      --c-card-border: rgba(214, 197, 179, 0.14);
+      --c-cognac: #B56B36;
+      --c-cognac-hover: #D98243;
+      --c-linen: #FDFBF7;
+      --c-text-muted: #94a3b8;
+      --font-display: 'Cinzel', serif;
+      --font-sans: 'Plus Jakarta Sans', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--c-bg);
+      color: var(--c-linen);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .admin-header {
+      padding: 1.25rem 2rem;
+      background: rgba(15, 11, 8, 0.95);
+      border-bottom: 1px solid var(--c-card-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(20px);
+    }
+    .brand {
+      font-family: var(--font-display);
+      font-size: 1.4rem;
+      color: var(--c-linen);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .brand span { color: var(--c-cognac); font-style: italic; }
+    .badge-secure {
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid #f59e0b;
+      color: #fbbf24;
+      font-size: 0.72rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+    }
+    .container {
+      max-width: 960px;
+      margin: 2.5rem auto;
+      padding: 0 1.5rem;
+      width: 100%;
+      flex: 1;
+    }
+    .card {
+      background: var(--c-card);
+      border: 1px solid var(--c-card-border);
+      border-radius: 18px;
+      padding: 2rem;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+    }
+    .btn {
+      padding: 0.6rem 1.2rem;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+      font-family: var(--font-sans);
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--c-cognac), var(--c-cognac-hover));
+      color: #fff;
+    }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--c-card-border);
+      color: var(--c-linen);
+    }
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid #ef4444;
+      color: #fca5a5;
+    }
+    .tab-btn {
+      padding: 0.6rem 1.25rem;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--c-text-muted);
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: #38bdf8;
+      color: #38bdf8;
+    }
+    input, textarea, select {
+      background: rgba(7, 5, 3, 0.85);
+      border: 1px solid var(--c-card-border);
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
+      color: var(--c-linen);
+      font-family: inherit;
+      outline: none;
+      width: 100%;
+    }
+    input:focus, textarea:focus { border-color: #38bdf8; }
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      backdrop-filter: blur(12px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal-dialog {
+      background: var(--c-card);
+      border: 1px solid var(--c-card-border);
+      border-radius: 20px;
+      max-width: 540px;
+      width: 100%;
+      padding: 2rem;
+      position: relative;
+    }
+    .modal-close {
+      position: absolute;
+      top: 1.25rem;
+      right: 1.25rem;
+      background: none;
+      border: none;
+      color: var(--c-text-muted);
+      font-size: 1.25rem;
+      cursor: pointer;
+    }
+  </style>
 </head>
-<body style="overflow:hidden;">
+<body>
 
-  <!-- Security Gate Modal for Admin Console (Passcode 1416) -->
-  <div class="security-gate-overlay" id="adminGateOverlay" style="display:none;">
-    <div class="security-gate-box">
-      <div style="font-size:36px; margin-bottom:12px;">🔒</div>
-      <div style="font-family:var(--font-mono); font-size:11px; color:var(--purple); letter-spacing:1.5px; margin-bottom:6px;">
-        RESTRICTED MUNICIPAL CLEARANCE
-      </div>
-      <h3 style="font-size:20px; font-weight:700; margin-bottom:8px;">MCGM Engineering Console</h3>
-      <p style="font-size:12px; color:var(--text-secondary); line-height:1.5; margin-bottom:16px;">
-        This workstation provides live 60 FPS physics control and neural node visualizers. Please enter your municipal passcode to continue.
+  <header class="admin-header">
+    <div style="display: flex; align-items: center; gap: 1rem;">
+      <a href="index.html" class="brand">Flood<span>Lock</span></a>
+      <span class="badge-secure">FOUNDER PORTAL</span>
+    </div>
+    <div id="authHeaderAction" style="display: none;">
+      <button onclick="adminLogout()" class="btn btn-secondary">Log Out</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- GATE SCREEN: Master Secret / Password -->
+    <div id="adminGateScreen" class="card" style="max-width: 460px; margin: 4rem auto; text-align: center;">
+      <div style="font-size: 2.5rem; margin-bottom: 1rem;">🛡️</div>
+      <h2 style="font-family: var(--font-display); font-size: 2rem; margin-bottom: 0.5rem;">Founder Access</h2>
+      <p style="color: var(--c-text-muted); font-size: 0.88rem; margin-bottom: 1.5rem;">
+        Private administrative interface. Authenticate with your Founder Master Secret or Bearer Token.
       </p>
-      <div class="apple-code-pill admin-code-pill" onclick="document.getElementById('gatePassInput').value='1416'; document.getElementById('btnGateUnlock').click();" style="margin:0 auto 16px auto; cursor:pointer;" title="Click to auto-fill passcode 1416">
-        <span class="code-key-icon">🔑</span>
-        <span class="code-label">DEFAULT MUNICIPAL CODE:</span>
-        <span class="code-val">1416</span>
-        <span class="code-tap-hint">(Click to auto-fill)</span>
-      </div>
-      <div style="display:flex; gap:8px; margin-bottom:12px;">
-        <div class="passcode-input-wrapper">
-          <input type="text" id="gatePassInput" class="passcode-input" placeholder="Passcode (1416)" style="text-align:center; font-size:16px; letter-spacing:4px; width:100%;" maxlength="8">
-          <span class="passcode-watermark">1416</span>
-        </div>
-        <button id="btnGateUnlock" class="btn-gateway-action btn-gateway-admin" style="padding:10px 18px;">
-          Unlock ↗
-        </button>
-      </div>
-      <div id="gateErrorMsg" style="font-size:11px; color:var(--crimson); font-family:var(--font-mono); display:none; margin-bottom:12px;">
-        ✕ Invalid Passcode! (Default: 1416)
-      </div>
-      <a href="index.html" style="font-size:11px; color:var(--text-muted); text-decoration:none; font-family:var(--font-mono);">
-        &larr; Return to Intro Hub
-      </a>
+      <input type="password" id="adminSecretInput" placeholder="Enter Founder Master Secret..." style="margin-bottom: 1rem; text-align: center; font-family: var(--font-mono); font-size: 1rem;">
+      <button onclick="authenticateAdmin()" class="btn btn-primary" style="width: 100%; padding: 0.85rem;">
+        Unlock Founder Console →
+      </button>
+      <div id="adminGateError" style="color: #ef4444; font-size: 0.85rem; margin-top: 1rem; display: none;"></div>
     </div>
-  </div>
 
-  <!-- ══════════════════════════════════════════════════════════════════════════
-       ADMIN / ENGINEERING CRISIS WORKSTATION
-       ══════════════════════════════════════════════════════════════════════════ -->
-  <main id="deckView" style="display:flex; width:100vw; height:100vh;">
-    <!-- Top System Telemetry Bar (54px) -->
-    <header class="deck-top-bar">
-      <div class="deck-brand-precinct">
-        <a href="index.html" style="text-decoration:none; display:flex; align-items:center; gap:10px; color:inherit;">
-          <div class="brand-logo-icon" style="background:linear-gradient(135deg, var(--purple), var(--cyan));">⚙️</div>
-          <div>
-            <div class="precinct-title">MCGM F-SOUTH WARD // ENGINEERING COMMAND DECK</div>
-            <div style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono);">NEURAL SENTINEL &amp; ANTECEDENT HYDRODYNAMICS</div>
-          </div>
-        </a>
+    <!-- MAIN ADMIN DASHBOARD (Hidden until authenticated) -->
+    <div id="adminDashboard" style="display: none;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+        <div>
+          <div style="font-family: var(--font-mono); font-size: 0.75rem; color: #f59e0b;">FOUNDER COMMAND CENTER</div>
+          <h2 style="font-family: var(--font-display); font-size: 2.4rem;">Administrative Operations</h2>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+          <button id="tabInqBtn" class="tab-btn active" onclick="switchTab('inquiries')">
+            📋 List 1: Pending Inquiries (<span id="badgeInquiries">0</span>)
+          </button>
+          <button id="tabUsersBtn" class="tab-btn" onclick="switchTab('users')">
+            👥 List 2: Active Users (<span id="badgeUsers">0</span>)
+          </button>
+        </div>
       </div>
 
-      <!-- 4 Scenario Switcher Buttons -->
-      <div class="scenario-pill-group">
-        <button class="scenario-btn active live-active" data-scenario="live">🟢 LIVE MUMBAI API</button>
-        <button class="scenario-btn" data-scenario="july2023">🟠 JULY 2023 CLOUDBURST</button>
-        <button class="scenario-btn" data-scenario="july2005">🔴 JULY 2005 DISASTER</button>
-        <button class="scenario-btn" data-scenario="manual">🎛️ MANUAL SIMULATOR</button>
+      <!-- LIST 1: PENDING INQUIRIES -->
+      <div id="tabInquiriesView" style="display: flex; flex-direction: column; gap: 1rem;">
+        <div style="text-align: center; padding: 3rem; color: var(--c-text-muted);">Loading inquiries...</div>
       </div>
 
-      <!-- Deck Controls & Indicators -->
-      <div class="deck-controls">
-        <a href="index.html" class="status-pill" style="text-decoration:none; color:var(--text-secondary); border-color:var(--border); cursor:pointer;">← Intro Hub</a>
-        <a href="index.html" class="status-pill" style="text-decoration:none; color:var(--cyan); border-color:var(--cyan); background:rgba(6,182,212,0.08); cursor:pointer;">🎬 4K Genesis Story</a>
-        <a href="citizen.html" class="status-pill" style="text-decoration:none; color:var(--emerald); border-color:var(--emerald); cursor:pointer;">📱 Citizen View ↗</a>
-        <a href="monitor.html" class="status-pill" style="text-decoration:none; color:var(--cyan); border-color:var(--cyan); cursor:pointer;">📊 Monitor (2324)</a>
-        <div class="status-pill" id="deckBackendBadge">[OFFLINE DEMO MODE: Edge MLP Active]</div>
-        <button class="btn-icon" id="btnNotifToggle" title="Toggle Notifications & Audio HUD">🔔</button>
-        <button class="btn-icon api-modal-btn" title="API Keys & Hardware Node Config">🔑</button>
-        <button class="btn-icon theme-toggle-btn" title="Toggle Theme">🌓</button>
-      </div>
-    </header>
-
-    <!-- 3-Column Split Workstation Body -->
-    <div class="deck-body">
-      <!-- ── Left Panel (340px): Telemetry Controls & Precinct Nodes ── -->
-      <aside class="deck-left-panel">
-        <div class="panel-header">
-          <span>HYDRODYNAMIC CONTROLS (60 FPS)</span>
-          <span style="color:var(--cyan); font-family:var(--font-mono);">EDGE MLP</span>
-        </div>
-
-        <div class="panel-section">
-          <!-- Instant Rain Slider -->
-          <div class="slider-group">
-            <div class="slider-label-row">
-              <span>Instant Rainfall</span>
-              <span class="slider-value" id="valRainInstant">45.0 mm/hr</span>
-            </div>
-            <input type="range" id="sliderRainInstant" min="0" max="195" step="1" value="45">
-          </div>
-
-          <!-- 1-Hr Rain Slider -->
-          <div class="slider-group">
-            <div class="slider-label-row">
-              <span>1-Hr Rolling Rainfall</span>
-              <span class="slider-value" id="valRain1hr">38.0 mm/hr</span>
-            </div>
-            <input type="range" id="sliderRain1hr" min="0" max="180" step="1" value="38">
-          </div>
-
-          <!-- Antecedent Standing Water Slider (Memory Engine) -->
-          <div class="slider-group" style="background:rgba(168, 85, 247, 0.08); padding:8px; border-radius:6px; border:1px solid rgba(168, 85, 247, 0.25);">
-            <div class="slider-label-row">
-              <span style="color:var(--purple); font-weight:600;">Antecedent Standing Depth</span>
-              <span class="slider-value" id="valAntecedent" style="color:var(--purple);">0.0 cm</span>
-            </div>
-            <input type="range" id="sliderAntecedent" min="0" max="60" step="1" value="0">
-            <div style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono); margin-top:4px;">
-              Pre-saturation of municipal drainage basin prior to storm event.
-            </div>
-          </div>
-
-          <!-- Tide Slider -->
-          <div class="slider-group">
-            <div class="slider-label-row">
-              <span>Astronomical Tide</span>
-              <span class="slider-value" id="valTide">3.40 m MSL</span>
-            </div>
-            <input type="range" id="sliderTide" min="1.00" max="5.20" step="0.05" value="3.40">
-          </div>
-
-          <!-- Pressure Slider -->
-          <div class="slider-group">
-            <div class="slider-label-row">
-              <span>Barometric Pressure</span>
-              <span class="slider-value" id="valPressure">1004 hPa</span>
-            </div>
-            <input type="range" id="sliderPressure" min="960" max="1022" step="1" value="1004">
-          </div>
-
-          <!-- Wind Speed Slider -->
-          <div class="slider-group">
-            <div class="slider-label-row">
-              <span>Wind Speed</span>
-              <span class="slider-value" id="valWindSpeed">12.0 m/s</span>
-            </div>
-            <input type="range" id="sliderWindSpeed" min="0" max="35" step="0.5" value="12">
-          </div>
-
-          <!-- Wind Direction Slider -->
-          <div class="slider-group">
-            <div class="slider-label-row">
-              <span>Wind Direction (Onshore 250°)</span>
-              <span class="slider-value" id="valWindDir">250°</span>
-            </div>
-            <input type="range" id="sliderWindDir" min="0" max="360" step="5" value="250">
-          </div>
-
-          <!-- InSAR Subsidence Slider -->
-          <div class="slider-group">
-            <div class="slider-label-row">
-              <span>InSAR Land Subsidence</span>
-              <span class="slider-value" id="valSubsidence">14.2 mm/yr</span>
-            </div>
-            <input type="range" id="sliderSubsidence" min="0" max="35" step="0.5" value="14.2">
-          </div>
-        </div>
-
-        <!-- Active Sector Precinct Nodes -->
-        <div class="panel-header">
-          <span>PRECINCT NODES</span>
-          <span style="color:var(--emerald);">MONITORED</span>
-        </div>
-
-        <div class="panel-section sector-feed">
-          <div class="sector-row">
-            <div>
-              <div class="sector-name">Hindmata Saucer Basin</div>
-              <div style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono);">Elevation +1.8m MSL</div>
-            </div>
-            <div class="sector-status-pill" id="statusHindmata">NOMINAL</div>
-          </div>
-
-          <div class="sector-row">
-            <div>
-              <div class="sector-name">Love Grove Sluice Outfall</div>
-              <div style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono);">Invert +3.0m MSL</div>
-            </div>
-            <div class="sector-status-pill" id="statusLoveGrove">SLUICE OPEN</div>
-          </div>
-
-          <div class="sector-row">
-            <div>
-              <div class="sector-name">Dadar TT Elevated Viaduct</div>
-              <div style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono);">Elevation +8.5m MSL</div>
-            </div>
-            <div class="sector-status-pill" id="statusDadarTT">BYPASS ACTIVE</div>
-          </div>
-
-          <div class="sector-row">
-            <div>
-              <div class="sector-name">KEM Hospital Emergency</div>
-              <div style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono);">Elevation +4.5m MSL</div>
-            </div>
-            <div class="sector-status-pill" id="statusKemHospital">SURFACE ACCESS OK</div>
-          </div>
-
-          <div class="sector-row">
-            <div>
-              <div class="sector-name">Pramod Mahajan Sump Tank</div>
-              <div style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono);">Capacity 162,000 m³</div>
-            </div>
-            <div class="sector-status-pill" id="statusPramodMahajan">STANDBY</div>
-          </div>
-        </div>
-      </aside>
-
-      <!-- ── Center Viewport: Monochromatic Map + Bottom Bento Strip ── -->
-      <section class="deck-center-viewport">
-        <!-- Interactive Layer Filter Bar -->
-        <div class="map-filter-bar">
-          <button class="filter-btn active" data-layer="rain">🌧️ Rain Radar</button>
-          <button class="filter-btn active" data-layer="elevation">⛰️ Elevations</button>
-          <button class="filter-btn active" data-layer="flood">🌊 Flood Risk</button>
-          <button class="filter-btn active" data-layer="timing">⏱️ Water Depths</button>
-          <button class="filter-btn" id="btnLocateUser" style="border-color:var(--cyan); color:var(--cyan);">📍 Locate Me</button>
-        </div>
-
-        <!-- Interactive Leaflet Monochromatic Map (Zero API Key Watermark) -->
-        <div id="mapCanvas"></div>
-
-        <!-- Bottom 4-Card Bento Telemetry Strip (Ref Image 2) -->
-        <div class="bento-strip">
-          <!-- Bento Card 1: Ward Population Exposure -->
-          <div class="bento-cell">
-            <div class="bento-title">POPULATION EXPOSURE</div>
-            <div class="bento-value-row">
-              <span class="bento-main-metric" id="bento1Val">14,200</span>
-              <span class="bento-unit">RESIDENTS</span>
-            </div>
-            <div class="bento-subtext" id="bento1Sub">Hindmata Precinct // +0.18m Street Depth</div>
-            <div class="dot-matrix" id="bentoDotMatrix"></div>
-          </div>
-
-          <!-- Bento Card 2: Outfall Hydraulic Choke Gauge -->
-          <div class="bento-cell">
-            <div class="bento-title">SLUICE CHOKE GAUGE</div>
-            <div class="bento-value-row">
-              <span class="bento-main-metric" id="bento2Val" style="color:var(--emerald);">0.0%</span>
-            </div>
-            <div class="bento-subtext" id="bento2Sub">Drainage Rate: 25.0 mm/hr (Sill +3.0m)</div>
-          </div>
-
-          <!-- Bento Card 3: Compound Surge & Precipitation Amplification -->
-          <div class="bento-cell">
-            <div class="bento-title">COMPOUND SURGE & AMP</div>
-            <div class="bento-value-row">
-              <span class="bento-main-metric" id="bento3Val">+9.2 cm</span>
-            </div>
-            <div class="bento-subtext" id="bento3Sub">Tide: 3.49m MSL // Rain +7.2%</div>
-          </div>
-
-          <!-- Bento Card 4: Wind Vector Compass Dial -->
-          <div class="bento-cell">
-            <div class="bento-title">WIND VECTOR & DIAL</div>
-            <div class="bento-value-row" style="align-items:center;">
-              <span class="bento-main-metric" id="bento4Val">12.0 m/s</span>
-              <div style="width:24px; height:24px; border:1px solid var(--border); border-radius:50%; display:flex; align-items:center; justify-content:center; margin-left:8px;">
-                <div id="compassArrow" style="font-size:12px; transform:rotate(250deg); transition:transform 0.2s;">↑</div>
-              </div>
-            </div>
-            <div class="bento-subtext" id="bento4Sub">@ 250° // Onshore: 12.0 m/s</div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ── Right Panel (380px): Dual Neural Audit & Locked M2M LLM Terminal ── -->
-      <aside class="deck-right-panel">
-        <div class="panel-header">
-          <span>AI ADVISORY &amp; NEURAL AUDIT</span>
-          <span style="color:var(--cyan); font-family:var(--font-mono);">VERIFIED TELEMETRY</span>
-        </div>
-
-        <div class="panel-section">
-          <!-- FloodLock AI Assistant ("AI Says: ...") -->
-          <div class="ai-advisor-card" id="aiAdvisorCard">
-            <span class="ai-advisor-icon" id="aiAdvisorIcon">☀️</span>
-            <div class="ai-advisor-body">
-              <div class="ai-advisor-title">FLOODLOCK AI ADVISORY // QWEN2.5:0.5B</div>
-              <div class="ai-advisor-message" id="aiAdvisorMsg">
-                Weather in Mumbai F-South Ward is currently clear & sunny. Gravity sluices are operating normally. All surface roads including Dr. B.A. Road are 100% open. No flood risk detected.
-              </div>
-            </div>
-          </div>
-
-          <!-- Real Neural Network Node Firing Visualizer (Asserted 209-Param Architecture) -->
-          <div class="neural-visualizer">
-            <div class="neural-vis-header">
-              <span>REAL NEURAL NET NODE FIRING</span>
-              <span style="color:var(--cyan);">209-EDGE MLP</span>
-            </div>
-            <div class="neural-layers-grid">
-              <!-- Inputs (3) -->
-              <div class="neural-col">
-                <div class="neural-col-title">INPUTS</div>
-                <div class="neuron-node" title="Rainfall"><div class="neuron-fill" id="n_in_0" style="width:25%;"></div></div>
-                <div class="neuron-node" title="Effective Tide"><div class="neuron-fill" id="n_in_1" style="width:50%;"></div></div>
-                <div class="neuron-node" title="InSAR Subsidence"><div class="neuron-fill" id="n_in_2" style="width:35%;"></div></div>
-              </div>
-              <!-- Hidden Layer 1 (16 neurons) -->
-              <div class="neural-col">
-                <div class="neural-col-title">L1 (16N)</div>
-                <div id="layer1NodesContainer" style="display:flex; flex-direction:column; gap:2px;"></div>
-              </div>
-              <!-- Hidden Layer 2 (8 neurons) -->
-              <div class="neural-col">
-                <div class="neural-col-title">L2 (8N)</div>
-                <div id="layer2NodesContainer" style="display:flex; flex-direction:column; gap:2px;"></div>
-              </div>
-              <!-- Output (1) -->
-              <div class="neural-col">
-                <div class="neural-col-title">ETA</div>
-                <div class="neuron-node" style="height:100%;"><div class="neuron-fill" id="n_out" style="width:90%;"></div></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Countdown Box -->
-          <div class="countdown-box">
-            <div style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:4px;">
-              TIME TO SEVERE INUNDATION
-            </div>
-            <div class="countdown-digits" id="countdownDigits">48.2 MIN</div>
-            <div style="font-size:11px; color:var(--text-secondary); margin-top:4px;" id="countdownSubtext">
-              GRAVITY DRAINAGE STABLE ACROSS CORRIDORS
-            </div>
-
-            <!-- Dual Neural Net Comparison Tiles -->
-            <div class="dual-audit-row">
-              <div class="audit-tile">
-                <div class="audit-tile-label">TIER-1 EDGE MLP</div>
-                <div class="audit-tile-val" id="auditVal209" style="color:var(--cyan);">48.2m</div>
-                <div style="font-size:10px; color:var(--emerald); font-family:var(--font-mono);" id="auditBadge209">&lt;0.05 ms</div>
-              </div>
-
-              <div class="audit-tile">
-                <div class="audit-tile-label">TIER-2 DEEP MLP</div>
-                <div class="audit-tile-val" id="auditVal737" style="color:var(--purple);">46.8m</div>
-                <div style="font-size:10px; color:var(--emerald); font-family:var(--font-mono);" id="auditBadge737">MAE 5.73m</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Transit & Routing Corridor Card -->
-          <div style="background:var(--recessed); border:1px solid var(--border); border-radius:6px; padding:12px; margin-bottom:14px;">
-            <div class="citizen-safe-banner" id="safeRouteBanner">
-              <span>✓</span> <span>ALL SURFACE ROADS CLEAR: Normal traffic permitted (No detour needed)</span>
-            </div>
-            <div class="citizen-danger-banner" id="dangerRouteBanner">
-              <span>⚠️</span> <span>ACTIVE FLOOD CLOGGING: Dadar TT Elevated Bypass Active!</span>
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-              <span style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted);">AMBULANCE CORRIDOR</span>
-              <span class="status-pill" id="transitStatusBadge" style="font-size:10px; padding:2px 6px;">SURFACE NOMINAL</span>
-            </div>
-            <div style="font-size:12px; font-weight:600; margin-bottom:4px;" id="transitRoute">Surface Dr. B.A. Road (Normal)</div>
-            <div style="font-family:var(--font-mono); font-size:11px; color:var(--cyan); margin-bottom:8px;" id="transitDelay">0 min delay (Normal)</div>
-            <div style="font-size:11px; color:var(--text-secondary); line-height:1.5; margin-bottom:10px;" id="transitDirective">
-              Dr. B.A. Road surface corridor nominal. Normal traffic flow permitted.
-            </div>
-            <button class="btn-launch" id="btnHighlightBypass" style="width:100%; justify-content:center; padding:6px 12px; font-size:12px;">
-              Highlight Dadar TT Viaduct (+8.5m MSL) ↗
-            </button>
-          </div>
-
-          <!-- Locked M2M LLM Dispatch Terminal -->
-          <div class="dispatch-terminal">
-            <div class="dispatch-header">
-              <span>🔒</span>
-              <span>SYSTEM-ONLY M2M DISPATCH // QWEN2.5:0.5B (LOCKED)</span>
-            </div>
-            <pre class="dispatch-log" id="dispatchLogBox"></pre>
-          </div>
-        </div>
-      </aside>
-    </div>
-  </main>
-
-  <!-- In-App Hardware Node Modal -->
-  <div class="modal-overlay" id="apiModalOverlay">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3 style="font-size:15px; font-weight:700;">Hardware Ingress &amp; Network Tunnels</h3>
-        <button class="btn-icon" id="modalCloseBtn" style="width:28px; height:28px;">✕</button>
-      </div>
-
-      <div class="form-group">
-        <label>Cloudflare Public HTTPS Tunnel (Worldwide Access)</label>
-        <input type="text" id="inputTunnelUrl" placeholder="https://surveys-method-chris-aware.trycloudflare.com">
-      </div>
-
-      <div class="form-group">
-        <label>Local Compute Server URL (Home Wi-Fi LAN)</label>
-        <input type="text" id="inputMsiUrl" placeholder="http://192.168.1.109:8000">
-      </div>
-
-      <div class="form-group">
-        <label>Cloud Secondary Fallback URL (Render / GCP)</label>
-        <input type="text" id="inputCloudUrl" placeholder="https://floodlock-backend-cloud.onrender.com">
-      </div>
-
-      <div style="background:rgba(16, 185, 129, 0.1); border:1px solid var(--emerald); border-radius:6px; padding:10px 12px; margin-top:12px; font-size:11px; font-family:var(--font-mono); color:#cbd5e1; line-height:1.6;">
-        🔒 <strong style="color:var(--emerald);">SECURITY MANDATE VERIFIED:</strong><br>
-        Weather API keys (OpenWeather, Tomorrow.io, WorldTides) are safely isolated in the backend server's <code>.env</code> file. No keys are ever exposed in client code.
-      </div>
-
-      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
-        <button class="hero-cta-secondary" id="modalCancelBtn" onclick="window.FloodApp.closeApiModal()">Cancel</button>
-        <button class="btn-launch" id="modalSaveBtn">Save &amp; Re-Connect ↗</button>
+      <!-- LIST 2: ACTIVE USERS -->
+      <div id="tabUsersView" style="display: none; flex-direction: column; gap: 1rem;">
+        <div style="text-align: center; padding: 3rem; color: var(--c-text-muted);">Loading active provisioned users...</div>
       </div>
     </div>
   </div>
 
-  <!-- Scripts -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <!-- MODAL: DIRECT RESEND EMAIL SENDER -->
+  <div class="modal-backdrop" id="emailModal">
+    <div class="modal-dialog">
+      <button class="modal-close" onclick="closeEmailModal()">✕</button>
+      <div style="font-family: var(--font-mono); font-size: 0.75rem; color: #38bdf8; margin-bottom: 0.4rem;">TRANSACTIONAL DISPATCH // RESEND</div>
+      <h3 style="font-family: var(--font-display); font-size: 1.8rem; margin-bottom: 0.5rem;">Send Email to Applicant</h3>
+      <p style="color: var(--c-text-muted); font-size: 0.85rem; margin-bottom: 1.25rem;">
+        Dispatches official notice from <code>lanternmech.official@gmail.com</code> via Resend API.
+      </p>
+
+      <div style="margin-bottom: 0.8rem;">
+        <label style="font-size: 0.8rem; color: #94a3b8; display: block; margin-bottom: 0.2rem;">Recipient</label>
+        <input type="email" id="modalRecipient" readonly style="color: #38bdf8; font-family: var(--font-mono);">
+      </div>
+
+      <div style="margin-bottom: 0.8rem;">
+        <label style="font-size: 0.8rem; color: #94a3b8; display: block; margin-bottom: 0.2rem;">Subject</label>
+        <input type="text" id="modalSubject" value="FloodLock Access Application — Next Steps">
+      </div>
+
+      <div style="margin-bottom: 1.25rem;">
+        <label style="font-size: 0.8rem; color: #94a3b8; display: block; margin-bottom: 0.2rem;">Message Body</label>
+        <textarea id="modalMessage" rows="6" placeholder="Dear Engineer, your commercial access application has been received..."></textarea>
+      </div>
+
+      <button onclick="sendAdminEmail()" class="btn btn-primary" style="width: 100%; padding: 0.8rem;">
+        ✉️ Dispatch Email Now →
+      </button>
+    </div>
+  </div>
+
   <script src="js/config.js"></script>
-  <script src="js/inference.js"></script>
-  <script src="js/map_engine.js"></script>
-  <script src="js/app.js"></script>
   <script>
-    // Enforce Security Gate Check (Passcode: 1416)
-    const overlay = document.getElementById("adminGateOverlay");
-    const gateInput = document.getElementById("gatePassInput");
-    const gateBtn = document.getElementById("btnGateUnlock");
-    const gateErr = document.getElementById("gateErrorMsg");
+    function esc(s) {
+      return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
 
-    function checkAuth() {
-      if (sessionStorage.getItem("floodlock_auth_admin") === "1416") {
-        overlay.style.display = "none";
-      } else {
-        overlay.style.display = "flex";
+    const BACKEND_URL = window.FloodConfig ? window.FloodConfig.getBaseUrl().replace(/\/+$/, '') : 'https://floodlock-backend.dakshdahore1995.workers.dev';
+
+    function getAdminSecret() {
+      return sessionStorage.getItem('flk_admin_secret') || '';
+    }
+
+    async function authenticateAdmin() {
+      const secret = document.getElementById('adminSecretInput').value.trim();
+      const errBox = document.getElementById('adminGateError');
+      errBox.style.display = 'none';
+
+      if (!secret) {
+        errBox.textContent = 'Please enter your Founder Master Secret.';
+        errBox.style.display = 'block';
+        return;
       }
-    }
-    checkAuth();
 
-    function unlockFromGate() {
-      if (gateInput.value.trim() === "1416") {
-        sessionStorage.setItem("floodlock_auth_admin", "1416");
-        overlay.style.display = "none";
-      } else {
-        gateInput.classList.add("error");
-        gateErr.style.display = "block";
-        setTimeout(() => gateInput.classList.remove("error"), 600);
-      }
-    }
-    if (gateBtn) gateBtn.addEventListener("click", unlockFromGate);
-    if (gateInput) {
-      gateInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") unlockFromGate();
-      });
-    }
-
-    // Bind Antecedent Water Slider in Admin Console
-    window.addEventListener("DOMContentLoaded", () => {
-      const s = document.getElementById("sliderAntecedent");
-      const l = document.getElementById("valAntecedent");
-      if (s && l) {
-        s.addEventListener("input", (e) => {
-          const depthCm = parseFloat(e.target.value);
-          l.textContent = `${depthCm.toFixed(1)} cm`;
-          if (window.FloodApp) {
-            window.FloodApp.inputs.antecedent_depth_m = depthCm / 100.0;
-            window.FloodApp.antecedentDepthM = depthCm / 100.0;
-            window.FloodApp.render();
-          }
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/admin/inquiries`, {
+          headers: { 'Authorization': `Bearer ${secret}` }
         });
+        if (res.ok) {
+          sessionStorage.setItem('flk_admin_secret', secret);
+          showDashboard();
+        } else {
+          errBox.textContent = 'Unauthorized. Secret key rejected by Cloudflare Edge.';
+          errBox.style.display = 'block';
+        }
+      } catch (e) {
+        errBox.textContent = 'Network error connecting to Cloudflare Edge.';
+        errBox.style.display = 'block';
+      }
+    }
+
+    function showDashboard() {
+      document.getElementById('adminGateScreen').style.display = 'none';
+      document.getElementById('adminDashboard').style.display = 'block';
+      document.getElementById('authHeaderAction').style.display = 'block';
+      loadInquiries();
+      loadUsers();
+    }
+
+    function adminLogout() {
+      sessionStorage.removeItem('flk_admin_secret');
+      location.reload();
+    }
+
+    function switchTab(tab) {
+      const inqView = document.getElementById('tabInquiriesView');
+      const usersView = document.getElementById('tabUsersView');
+      const inqBtn = document.getElementById('tabInqBtn');
+      const usersBtn = document.getElementById('tabUsersBtn');
+
+      if (tab === 'users') {
+        inqView.style.display = 'none';
+        usersView.style.display = 'flex';
+        inqBtn.classList.remove('active');
+        usersBtn.classList.add('active');
+        loadUsers();
+      } else {
+        usersView.style.display = 'none';
+        inqView.style.display = 'flex';
+        usersBtn.classList.remove('active');
+        inqBtn.classList.add('active');
+        loadInquiries();
+      }
+    }
+
+    async function loadInquiries() {
+      const container = document.getElementById('tabInquiriesView');
+      const secret = getAdminSecret();
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/admin/inquiries`, {
+          headers: { 'Authorization': `Bearer ${secret}` }
+        });
+        const data = await res.json();
+        const inquiries = data.inquiries || [];
+        document.getElementById('badgeInquiries').textContent = inquiries.length;
+
+        if (inquiries.length === 0) {
+          container.innerHTML = '<div class="card" style="text-align: center; color: var(--c-text-muted); padding: 3rem;">No pending inquiries in queue. Quiescent.</div>';
+          return;
+        }
+
+        container.innerHTML = inquiries.map(inq => `
+          <div id="card_${esc(inq.id)}" class="card" style="padding: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; flex-wrap: wrap; gap: 0.5rem;">
+              <strong style="color: #38bdf8; font-size: 1.15rem;">${esc(inq.email)}</strong>
+              <div style="display: flex; gap: 0.4rem;">
+                <span style="background: rgba(245, 158, 11, 0.2); color: #f59e0b; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">${esc((inq.plan || 'PRO').toUpperCase())}</span>
+                <span style="background: rgba(6, 182, 212, 0.2); color: #06b6d4; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">${esc(inq.type || 'INQUIRY')}</span>
+              </div>
+            </div>
+            <div style="font-size: 0.85rem; color: #cbd5e1; margin-bottom: 0.4rem;">
+              📞 Phone: <strong>${esc(inq.phone || 'None provided')}</strong> &bull; Received: ${esc(new Date(inq.received_at || Date.now()).toLocaleString())}
+            </div>
+            <div style="font-size: 0.88rem; color: var(--c-text-muted); margin-bottom: 1.25rem; line-height: 1.5; background: rgba(0,0,0,0.3); padding: 0.75rem 1rem; border-radius: 8px;">
+              Notes: ${esc(inq.message || inq.notes || 'No extra notes provided.')}
+            </div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <button onclick="approveInquiry('${esc(inq.id)}', '${esc(inq.email)}', 'pro')" class="btn btn-primary" style="padding: 0.45rem 0.9rem; font-size: 0.8rem;">✓ Approve Pro (250/d)</button>
+              <button onclick="approveInquiry('${esc(inq.id)}', '${esc(inq.email)}', 'ultra')" class="btn btn-primary" style="padding: 0.45rem 0.9rem; font-size: 0.8rem; background: linear-gradient(135deg, #a855f7, #6366f1);">✓ Approve Ultra (500/d)</button>
+              <button onclick="approveInquiry('${esc(inq.id)}', '${esc(inq.email)}', 'custom')" class="btn btn-primary" style="padding: 0.45rem 0.9rem; font-size: 0.8rem; background: linear-gradient(135deg, #10b981, #06b6d4);">✓ Approve Custom</button>
+              <button onclick="openEmailModal('${esc(inq.email)}')" class="btn btn-secondary" style="padding: 0.45rem 0.9rem; font-size: 0.8rem;">✉️ Send Email</button>
+              <button onclick="dismissInquiry('${esc(inq.id)}', '${esc(inq.email)}')" class="btn btn-danger" style="padding: 0.45rem 0.9rem; font-size: 0.8rem;">Dismiss</button>
+            </div>
+          </div>
+        `).join('');
+      } catch (e) {
+        container.innerHTML = '<div class="card" style="text-align:center; color:#ef4444; padding:2rem;">Failed to load inquiries.</div>';
+      }
+    }
+
+    async function loadUsers() {
+      const container = document.getElementById('tabUsersView');
+      const secret = getAdminSecret();
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/admin/users`, {
+          headers: { 'Authorization': `Bearer ${secret}` }
+        });
+        const data = await res.json();
+        const users = data.users || [];
+        document.getElementById('badgeUsers').textContent = users.length;
+
+        if (users.length === 0) {
+          container.innerHTML = '<div class="card" style="text-align: center; color: var(--c-text-muted); padding: 3rem;">No active provisioned users. Approved applicants will appear here.</div>';
+          return;
+        }
+
+        container.innerHTML = users.map(u => `
+          <div id="user_${esc(u.email)}" class="card" style="padding: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; flex-wrap: wrap; gap: 0.5rem;">
+              <strong style="color: #4ade80; font-size: 1.15rem;">${esc(u.email)}</strong>
+              <span style="background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">${esc((u.plan || 'PRO').toUpperCase())} (${esc(u.daily_quota || 250)}/day)</span>
+            </div>
+            <div style="font-size: 0.82rem; color: var(--c-text-muted); margin-bottom: 1rem;">
+              UID: <code>${esc(u.user_id || 'N/A')}</code> &bull; Approved: ${esc(new Date(u.approved_at || Date.now()).toLocaleDateString())}
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+              <button onclick="revokeUser('${esc(u.email)}')" class="btn btn-danger" style="padding: 0.45rem 0.9rem; font-size: 0.8rem;">🔻 Revoke Tier (Revert to Free)</button>
+              <button onclick="openEmailModal('${esc(u.email)}')" class="btn btn-secondary" style="padding: 0.45rem 0.9rem; font-size: 0.8rem;">✉️ Send Email</button>
+            </div>
+          </div>
+        `).join('');
+      } catch (e) {
+        container.innerHTML = '<div class="card" style="text-align:center; color:#ef4444; padding:2rem;">Failed to load active users.</div>';
+      }
+    }
+
+    async function approveInquiry(id, email, plan) {
+      const secret = getAdminSecret();
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/admin/approve-inquiry`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${secret}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ inquiry_id: id, email, plan })
+        });
+        if (res.ok) {
+          const card = document.getElementById('card_' + id);
+          if (card) {
+            card.innerHTML = `<div style="color: #10b981; font-weight: 700; text-align: center; padding: 1rem;">✓ Approved ${esc(email)} & shifted to ${esc(plan.toUpperCase())}! Moved to Active Users.</div>`;
+            setTimeout(() => { card.remove(); loadInquiries(); loadUsers(); }, 1200);
+          }
+        }
+      } catch (e) {
+        alert('Approval operation error.');
+      }
+    }
+
+    async function dismissInquiry(id, email) {
+      const secret = getAdminSecret();
+      try {
+        await fetch(`${BACKEND_URL}/api/admin/dismiss-inquiry`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${secret}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ inquiry_id: id, email })
+        });
+        document.getElementById('card_' + id)?.remove();
+        loadInquiries();
+      } catch {}
+    }
+
+    async function revokeUser(email) {
+      if (!confirm(`Revoke commercial tier for ${email} and revert to Free tier?`)) return;
+      const secret = getAdminSecret();
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/admin/revoke-user`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${secret}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        });
+        if (res.ok) {
+          alert(`✓ User ${email} revoked to Free tier.`);
+          loadUsers();
+        }
+      } catch {}
+    }
+
+    function openEmailModal(recipient) {
+      document.getElementById('modalRecipient').value = recipient || '';
+      document.getElementById('emailModal').classList.add('open');
+    }
+    function closeEmailModal() {
+      document.getElementById('emailModal').classList.remove('open');
+    }
+
+    async function sendAdminEmail() {
+      const to = document.getElementById('modalRecipient').value.trim();
+      const subject = document.getElementById('modalSubject').value.trim();
+      const message = document.getElementById('modalMessage').value.trim();
+      const secret = getAdminSecret();
+
+      if (!to || !message) {
+        alert('Recipient and message body are required.');
+        return;
+      }
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/admin/send-email`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${secret}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ to, subject, message })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          alert(`✓ Official email dispatched to ${to} via Resend.`);
+          closeEmailModal();
+        } else {
+          alert(`Failed to send email: ${data.message || 'Check mailer config.'}`);
+        }
+      } catch (e) {
+        alert('Network error dispatching email.');
+      }
+    }
+
+    // Auto-login on load if secret stored in session
+    window.addEventListener('DOMContentLoaded', () => {
+      const stored = getAdminSecret();
+      if (stored) {
+        document.getElementById('adminSecretInput').value = stored;
+        authenticateAdmin();
       }
     });
   </script>

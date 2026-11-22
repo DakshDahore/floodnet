@@ -1,13 +1,5 @@
-# Netlify Serverless API Functions
+# API Proxy for legacy environments
 /api/*         /.netlify/functions/api/:splat  200
 
-# Specific static routes for FloodLock pages
-/citizen.html  /citizen.html                   200
-/citizen       /citizen.html                   200
-/admin.html    /admin.html                     200
-/admin         /admin.html                     200
-/monitor.html  /monitor.html                   200
-/monitor       /monitor.html                   200
-
-# SPA fallback for Cloudflare Pages and Netlify
+# SPA fallback for Cloudflare Pages (only catches routes that don't match a real file)
 /*             /index.html                     200
