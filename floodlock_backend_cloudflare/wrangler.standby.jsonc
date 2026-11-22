@@ -37,13 +37,13 @@
   "vars": {
     "GROQ_MODEL": "llama-3.1-8b-instant",
     "GEMINI_MODEL": "gemini-2.5-flash",
-    "ALLOWED_ORIGINS": "https://floodnet.netlify.app,https://dakshdahore1995-design.github.io,http://localhost:3000,http://127.0.0.1:3000,http://localhost:8000,http://127.0.0.1:8000",
+    "ALLOWED_ORIGINS": "https://floodlock.pages.dev,https://floodnet.netlify.app,https://dakshdahore1995-design.github.io,http://localhost:3000,http://127.0.0.1:3000,http://localhost:8000,http://127.0.0.1:8000",
     "FOUNDER_ALERT_EMAIL": "dakshdahore.d@gmail.com,lantern.mech@gmail.com",
     "EMAILJS_SERVICE_ID": "service_8yw2mtw",
     "EMAILJS_TEMPLATE_ID": "template_default",
     "EMAILJS_PUBLIC_KEY": "user_8yw2mtw",
     "OTP_DELIVERY_URL": "https://api.resend.com/emails",
-    "OTP_FROM_ADDRESS": "auth@floodlock.org",
+    "OTP_FROM_ADDRESS": "FloodLock <onboarding@resend.dev>",
     "WORKER_SLOT": "HOT_STANDBY"
   }
 }

@@ -336,14 +336,29 @@ async function dispatchUserOtp(env, recipient, otpCode) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        to: recipient,
-        from: env.OTP_FROM_ADDRESS || "auth@floodlock.org",
-        subject: "Your FloodLock Verification Code",
+        to: [recipient],
+        from: env.OTP_FROM_ADDRESS || "FloodLock <onboarding@resend.dev>",
+        subject: `Your FloodLock Verification Code: ${otpCode}`,
         text: `Your FloodLock one-time verification code is ${otpCode}. It expires in 5 minutes.`,
+        html: `<div style="font-family:system-ui,-apple-system,sans-serif;padding:32px 24px;background:#050811;color:#f1f5f9;border-radius:12px;max-width:480px;border:1px solid #1e293b;margin:0 auto">
+  <div style="font-size:20px;font-weight:700;color:#38bdf8;margin-bottom:8px;letter-spacing:-0.5px">🌊 FloodLock</div>
+  <div style="font-size:14px;color:#94a3b8;margin-bottom:24px">Planetary Defense &amp; Flood Intelligence Gateway</div>
+  <div style="font-size:14px;color:#cbd5e1;line-height:1.5;margin-bottom:20px">Your 6-digit one-time verification code for passwordless authentication is below. It expires in <strong>5 minutes</strong>:</div>
+  <div style="background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.3);border-radius:8px;padding:16px 20px;text-align:center;font-size:32px;font-weight:800;letter-spacing:10px;color:#38bdf8;margin-bottom:24px;font-family:monospace">
+    ${otpCode}
+  </div>
+  <div style="font-size:12px;color:#64748b;line-height:1.4">If you did not initiate this request, you can safely ignore this email. No password was compromised.</div>
+</div>`,
       }),
     });
-    return { delivered: res.ok, status: res.status };
-  } catch {
+    if (!res.ok) {
+      const errTxt = await res.text().catch(() => "");
+      console.error(JSON.stringify({ event: "otp_delivery_failed", status: res.status, err: errTxt }));
+      return { delivered: false, status: res.status, reason: errTxt };
+    }
+    return { delivered: true, status: res.status };
+  } catch (err) {
+    console.error(JSON.stringify({ event: "otp_delivery_network_error", err: err?.message || String(err) }));
     return { delivered: false, reason: "OTP_PROVIDER_NETWORK_ERROR" };
   } finally {
     clearTimeout(timer);
