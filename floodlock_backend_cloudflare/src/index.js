@@ -322,6 +322,41 @@ async function fetchBasinFloodTelemetry(lat, lon, pastDays = 60, forecastDays = 
  * NEVER emails user OTP codes to founder inbox.
  */
 async function dispatchUserOtp(env, recipient, otpCode) {
+  // 1. Primary Priority: EmailJS via connected Gmail (Zero domain verification, sends to any recipient)
+  const emailjsServiceId = env.EMAILJS_SERVICE_ID || "service_2s4fukw";
+  const emailjsPublicKey = env.EMAILJS_PUBLIC_KEY;
+  const emailjsTemplateId = env.EMAILJS_OTP_TEMPLATE_ID || env.EMAILJS_TEMPLATE_ID || "template_otp";
+
+  if (emailjsServiceId && emailjsPublicKey && emailjsPublicKey !== "user_8yw2mtw") {
+    try {
+      const emailjsRes = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          service_id: emailjsServiceId,
+          template_id: emailjsTemplateId,
+          user_id: emailjsPublicKey,
+          accessToken: env.EMAILJS_PRIVATE_KEY || undefined,
+          template_params: {
+            to_email: recipient,
+            recipient: recipient,
+            otp_code: otpCode,
+            message: `Your MeteoFlood OTP verification code is ${otpCode}. It expires in 5 minutes.`,
+          },
+        }),
+      });
+      if (emailjsRes.ok) {
+        return { delivered: true, provider: "emailjs", status: 200 };
+      } else {
+        const ejErr = await emailjsRes.text().catch(() => "");
+        console.warn("EmailJS OTP fallback to Resend:", ejErr);
+      }
+    } catch (e) {
+      console.warn("EmailJS network error, falling back to Resend:", e);
+    }
+  }
+
+  // 2. Resend Secondary Provider
   if (!env.OTP_DELIVERY_URL || !env.OTP_DELIVERY_API_KEY) {
     return { delivered: false, reason: "OTP_PROVIDER_UNCONFIGURED" };
   }
@@ -361,7 +396,7 @@ async function dispatchUserOtp(env, recipient, otpCode) {
         return {
           delivered: false,
           status: 403,
-          reason: "Resend unverified domain: In free tier, Resend only delivers to lantern.mech@gmail.com. Please use 1-click Google or GitHub sign-in, or test with lantern.mech@gmail.com."
+          reason: "Resend unverified domain: In free tier, Resend only delivers to lantern.mech@gmail.com. Please use 1-click Google or GitHub sign-in, or provide EmailJS public key & template."
         };
       }
 

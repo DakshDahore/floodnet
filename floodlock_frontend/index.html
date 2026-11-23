@@ -21,6 +21,9 @@
   <!-- Chart.js for High-Precision 90-Day Hydrological Hydrographs -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
+  <!-- Official Cloudflare Turnstile Bot Protection (Explicit Auto-Reset Rendering) -->
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onloadTurnstileCallback&render=explicit" async defer></script>
+
   <style>
     :root {
       /* Savile Row Coat & Fluid Leather Palette */
@@ -743,6 +746,14 @@ print("════════════════════════�
             <div style="flex: 1; height: 1px; background: rgba(255, 255, 255, 0.1);"></div>
             <span style="font-size: 0.72rem; color: var(--c-text-muted); font-family: var(--font-mono); letter-spacing: 0.05em;">OR PASSWORDLESS EMAIL OTP</span>
             <div style="flex: 1; height: 1px; background: rgba(255, 255, 255, 0.1);"></div>
+          </div>
+
+          <!-- Official Cloudflare Turnstile Bot Protection (Auto-Resetting) -->
+          <div style="background: rgba(10, 15, 24, 0.8); border: 1px solid rgba(6, 182, 212, 0.35); border-radius: 16px; padding: 1.25rem; margin-bottom: 1.5rem; text-align: center;">
+            <div id="turnstileStatus" style="font-size: 0.85rem; font-weight: 600; color: #a5f3fc; margin-bottom: 0.75rem;">
+              🛡️ Cloudflare Bot Protection
+            </div>
+            <div id="turnstileContainer" style="display: inline-block;"></div>
           </div>
 
           <!-- Email OTP Form -->
@@ -1714,35 +1725,58 @@ print(response.json())</code></pre>
     }
 
     /* ══════════════════════════════════════════════════════════════════
-       6. CLOUDFLARE TURNSTILE BOT PROTECTION
+       6. CLOUDFLARE TURNSTILE BOT PROTECTION (AUTO-RESETTING)
        ══════════════════════════════════════════════════════════════════ */
     window.turnstileToken = null;
-    window.onTurnstileSuccess = function(token) {
-      window.turnstileToken = token;
-      const status = document.getElementById('turnstileStatus');
-      if (status) {
-        status.style.color = '#10b981';
-        status.textContent = '✓ Cloudflare Verification Passed';
+    let turnstileWidgetId = null;
+
+    window.onloadTurnstileCallback = function() {
+      const container = document.getElementById('turnstileContainer');
+      if (container && typeof turnstile !== 'undefined' && turnstileWidgetId === null) {
+        turnstileWidgetId = turnstile.render('#turnstileContainer', {
+          sitekey: '0x4AAAAAAGNWAxD-pTWgKP_j',
+          theme: 'dark',
+          callback: function(token) {
+            window.turnstileToken = token;
+            const status = document.getElementById('turnstileStatus');
+            if (status) {
+              status.style.color = '#10b981';
+              status.textContent = '✓ Cloudflare Verification Passed';
+            }
+            if (typeof audioEngine !== 'undefined') audioEngine.playDrop();
+          },
+          'expired-callback': function() {
+            window.turnstileToken = null;
+            resetTurnstile();
+          },
+          'error-callback': function(code) {
+            console.warn('Turnstile notification:', code);
+            const status = document.getElementById('turnstileStatus');
+            if (status) {
+              status.style.color = '#38bdf8';
+              status.textContent = '🛡️ Refreshing Bot Challenge...';
+            }
+            setTimeout(resetTurnstile, 1500);
+          }
+        });
       }
-      if (typeof audioEngine !== 'undefined') audioEngine.playDrop();
     };
-    window.onTurnstileExpired = function() {
+
+    function resetTurnstile() {
       window.turnstileToken = null;
-      const status = document.getElementById('turnstileStatus');
-      if (status) {
-        status.style.color = '#f59e0b';
-        status.textContent = 'Verification expired. Please re-verify.';
+      if (typeof turnstile !== 'undefined' && turnstileWidgetId !== null) {
+        try {
+          turnstile.reset(turnstileWidgetId);
+          const status = document.getElementById('turnstileStatus');
+          if (status) {
+            status.style.color = '#a5f3fc';
+            status.textContent = '🛡️ Cloudflare Bot Protection';
+          }
+        } catch (e) {
+          console.warn('Turnstile reset:', e);
+        }
       }
-    };
-    window.onTurnstileError = function(code) {
-      console.warn('Turnstile notification:', code);
-      const status = document.getElementById('turnstileStatus');
-      if (status) {
-        status.style.color = '#38bdf8';
-        status.textContent = '✓ Edge Security Active (Direct Mode)';
-      }
-      window.turnstileToken = 'BYPASS_NETWORK_FALLBACK';
-    };
+    }
 
     /* ══════════════════════════════════════════════════════════════════
        7. VIEW SWITCHING & WATERY SIDEBAR DOCK
@@ -1863,11 +1897,13 @@ print(response.json())</code></pre>
       }
       const status = document.getElementById('authStatusMsg');
       if (status) status.innerHTML = '';
+      resetTurnstile();
     }
 
     async function resendEmailOtp() {
       const resendBtn = document.getElementById('btnResendOtp');
       if (resendBtn && resendBtn.disabled) return;
+      resetTurnstile();
       await requestEmailOtp(true);
     }
 
@@ -1876,6 +1912,10 @@ print(response.json())</code></pre>
       const status = document.getElementById('authStatusMsg');
 
       if (!isResend) {
+        if (!window.turnstileToken) {
+          alert('Please complete the Cloudflare Bot Protection verification above.');
+          return;
+        }
         if (!document.getElementById('consentAge')?.checked) {
           alert('Please confirm you are 13 years of age or older.');
           return;
@@ -1896,7 +1936,8 @@ print(response.json())</code></pre>
         const res = await window.FloodConfig.fetchApi('AUTH_SEND_OTP', {
           method: 'POST',
           body: {
-            identity: email
+            identity: email,
+            turnstile_token: window.turnstileToken || ''
           }
         });
         if (res.ok) {
@@ -1912,9 +1953,11 @@ print(response.json())</code></pre>
         } else {
           const errMsg = res.data?.reason || res.data?.message || 'Failed to dispatch OTP';
           status.innerHTML = `<span style="color:#ef4444;">${errMsg}</span>`;
+          resetTurnstile();
         }
       } catch (err) {
         status.innerHTML = `<span style="color:#ef4444;">Network error while contacting authentication server: ${err.message}</span>`;
+        resetTurnstile();
       }
     }
 
