@@ -1163,6 +1163,29 @@ export default {
         });
       }
 
+      // ── DELETE /api/user/account (GDPR Article 17 Right to Erasure / Account Purge) ──
+      if ((path === "/api/user/account" || path === "/api/user/delete-account") && (method === "DELETE" || method === "POST")) {
+        try { requireSecrets(env, ["MASTER_SECRET"]); } catch {
+          return jsonResponse(request, env, { error: "SERVER_MISCONFIGURED" }, 500);
+        }
+
+        const session = await verifySessionToken(env.MASTER_SECRET, request.headers.get("Authorization"));
+        if (!session) {
+          return jsonResponse(request, env, { error: "UNAUTHORIZED", message: "Valid Bearer session token required." }, 401);
+        }
+
+        if (env.FLOODLOCK_KV) {
+          // Permanently erase personal identity encryption blob & uid mapping
+          if (session.idh) await env.FLOODLOCK_KV.delete(`user_enc:${session.idh}`);
+          if (session.sub) await env.FLOODLOCK_KV.delete(`uid_map:${session.sub}`);
+        }
+
+        return jsonResponse(request, env, {
+          success: true,
+          message: "Account and personal data permanently erased in compliance with GDPR Right to Erasure.",
+        });
+      }
+
       // ── GET /api/state-cache (Antecedent Basin Hydrology Cache) ──
       if (path === "/api/state-cache" && method === "GET") {
         const basin = url.searchParams.get("basin") || "planetary_composite_basin";
@@ -1406,17 +1429,19 @@ export default {
                   }
                   quotaStatus = { tier: uProf.plan, daily_remaining: qRes.daily_remaining };
                 } else if (env.SECURITY_STATE_DO) {
-                  const freeStub = env.SECURITY_STATE_DO.get(env.SECURITY_STATE_DO.idFromName(`daily:${session.sub}`));
-                  const freeRl = await freeStub.checkRateLimit(`daily:${session.sub}`, uProf.daily_quota || 10, 86400000);
+                  const rateLimitKey = `daily:${session.idh || session.sub}`;
+                  const freeStub = env.SECURITY_STATE_DO.get(env.SECURITY_STATE_DO.idFromName(rateLimitKey));
+                  const freeRl = await freeStub.checkRateLimit(rateLimitKey, uProf.daily_quota || 10, 86400000);
                   if (!freeRl.allowed) {
                     return jsonResponse(request, env, { error: "DAILY_QUOTA_EXCEEDED", message: "Free daily quota reached." }, 429);
                   }
                   quotaStatus = { tier: "free", daily_remaining: freeRl.remaining };
                 }
               } else if (env.SECURITY_STATE_DO) {
-                // Fallback if profile blob is missing/delayed in KV: enforce free 10/day quota on session.sub
-                const freeStub = env.SECURITY_STATE_DO.get(env.SECURITY_STATE_DO.idFromName(`daily:${session.sub}`));
-                const freeRl = await freeStub.checkRateLimit(`daily:${session.sub}`, 10, 86400000);
+                // Fallback if profile blob is missing/delayed in KV: enforce free 10/day quota on session.idh
+                const rateLimitKey = `daily:${session.idh || session.sub}`;
+                const freeStub = env.SECURITY_STATE_DO.get(env.SECURITY_STATE_DO.idFromName(rateLimitKey));
+                const freeRl = await freeStub.checkRateLimit(rateLimitKey, 10, 86400000);
                 if (!freeRl.allowed) {
                   return jsonResponse(request, env, { error: "DAILY_QUOTA_EXCEEDED", message: "Free daily quota reached." }, 429);
                 }

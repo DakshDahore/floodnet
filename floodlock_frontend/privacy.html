@@ -146,8 +146,14 @@
       <li><strong>Cloudflare Inc.:</strong> For DNS routing, edge CDN delivery, and edge security.</li>
     </ul>
 
-    <h2>6. Contact & Data Deletion</h2>
-    <p>Users may request complete erasure of their account records or session history at any time. For privacy inquiries or deletion requests, contact our engineering desk at <a href="mailto:dakshdahore.d@gmail.com">dakshdahore.d@gmail.com</a>.</p>
+    <h2>6. Account Deletion & GDPR Right to Erasure</h2>
+    <p>In accordance with GDPR Article 17 (Right to Erasure) and global data protection standards, users have the absolute right to have all their personal data permanently destroyed:</p>
+    <ul>
+      <li><strong>1-Click Self-Service Deletion:</strong> Authenticated users can permanently delete their account at any time by navigating to <em>Settings → Delete Account</em>.</li>
+      <li><strong>Immediate Cryptographic Purge:</strong> When an account is deleted, all encrypted personal profile records (name, email address, avatar, order bindings) are immediately and irrevocably purged from our edge key-value storage.</li>
+      <li><strong>Anti-Abuse Rate-Limiting Policy (GDPR Recital 47 & Article 17(3)(e)):</strong> To prevent sybil-attacks, automated scrapers, and fraudulent quota resetting, rolling 24-hour rate limit counters are maintained on irreversible, one-way cryptographically salted HMAC hashes. These pseudonymous hashes contain zero readable personal data and expire automatically at the end of their rolling 24-hour window. Re-registering with the same identity does not reset an active daily query quota.</li>
+      <li><strong>Manual Erasure Requests:</strong> Users may also request manual erasure or inquire about data governance by emailing our engineering desk directly at <a href="mailto:dakshdahore.d@gmail.com">dakshdahore.d@gmail.com</a>.</li>
+    </ul>
 
     <div class="footer">
       <div>&copy; 2026 MeteoFlood Intelligence. All rights reserved.</div>

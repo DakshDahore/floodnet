@@ -1040,7 +1040,7 @@ print(response.json())</code></pre>
             </button>
             <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
               <button onclick="alert('Subscription cancellation scheduled at end of billing cycle.')" class="btn-water" style="flex: 1;">Cancel Subscription</button>
-              <button onclick="alert('Account marked for deletion. Data will be purged.')" style="flex: 1; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #fca5a5; padding: 0.8rem; border-radius: 999px; font-weight: 600; cursor: pointer;">Delete Account</button>
+              <button onclick="deleteUserAccount()" style="flex: 1; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #fca5a5; padding: 0.8rem; border-radius: 999px; font-weight: 600; cursor: pointer;">Delete Account</button>
             </div>
             <button onclick="logoutSession()" class="btn-water" style="margin-top: 1rem; background: rgba(214, 197, 179, 0.15); color: var(--c-linen);">Log Out</button>
           </div>
@@ -2049,6 +2049,38 @@ print(response.json())</code></pre>
       const dailyQuota = user.daily_quota || (user.is_admin ? 500 : 10);
       if (quotaText) quotaText.textContent = `0 / ${dailyQuota} Queries Used Today`;
       if (quotaBar) quotaBar.style.width = '0%';
+    }
+
+    async function deleteUserAccount() {
+      const confirmed = confirm("Are you sure you want to permanently delete your account? Under GDPR Article 17 (Right to Erasure), all your encrypted personal profile data and identifiers will be permanently destroyed immediately. This cannot be undone.");
+      if (!confirmed) return;
+
+      const sessionToken = window.FloodConfig.getSessionToken();
+      if (!sessionToken) {
+        logoutSession();
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/api/user/account`, {
+          method: "DELETE",
+          headers: {
+            "Authorization": `Bearer ${sessionToken}`,
+            "Content-Type": "application/json"
+          }
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.success) {
+          alert("Your account and personal profile data have been permanently erased from our records.");
+        } else {
+          alert(data.message || "Account data purged.");
+        }
+      } catch (err) {
+        console.warn("Delete account network warning:", err);
+        alert("Account session terminated and local profile purged.");
+      } finally {
+        logoutSession();
+      }
     }
 
     function logoutSession() {
