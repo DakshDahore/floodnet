@@ -1,0 +1,65 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "floodlock-backend",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-23",
+  "triggers": {
+    "crons": [
+      "0 * * * *"
+    ]
+  },
+  "observability": {
+    "enabled": true
+  },
+  "ai": {
+    "binding": "AI"
+  },
+  "kv_namespaces": [
+    {
+      "binding": "FLOODLOCK_KV",
+      "id": "14d0a3d3d4174a49a2440e855bffdde0"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "SECURITY_STATE_DO",
+        "class_name": "SecurityStateDO"
+      },
+      {
+        "name": "BILLING_STATE_DO",
+        "class_name": "BillingStateDO"
+      },
+      {
+        "name": "CIRCUIT_BREAKER_DO",
+        "class_name": "CircuitBreakerDO"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1-durable-state",
+      "new_sqlite_classes": [
+        "SecurityStateDO",
+        "BillingStateDO",
+        "CircuitBreakerDO"
+      ]
+    }
+  ],
+  "vars": {
+    "GROQ_MODEL": "openai/gpt-oss-120b",
+    "GEMINI_MODEL": "gemini-2.5-flash",
+    "ALLOWED_ORIGINS": "https://metoflood.netlify.app,https://floodlock.pages.dev,https://floodnet.netlify.app,https://dakshdahore1995-design.github.io,http://localhost:3000,http://127.0.0.1:3000,http://localhost:8000,http://127.0.0.1:8000",
+    "FOUNDER_ALERT_EMAIL": "dakshdahore.d@gmail.com,lantern.mech@gmail.com",
+    "EMAILJS_SERVICE_ID": "service_2s4fukw",
+    "EMAILJS_TEMPLATE_ID": "template_spefc1e",
+    "EMAILJS_PUBLIC_KEY": "JyA8ccT87iU8JnkPi",
+    "OTP_DELIVERY_URL": "https://api.resend.com/emails",
+    "OTP_FROM_ADDRESS": "MeteoFlood <onboarding@resend.dev>",
+    "GOOGLE_CLIENT_ID": "665808449308-0m3lp5romjn2o4cq0510tm3os8r5nc7e.apps.googleusercontent.com",
+    "GITHUB_CLIENT_ID": "Ov23liHMgDQduw9y5SOT",
+    "FRONTEND_URL": "https://metoflood.netlify.app"
+  },
+  "services": [],
+  "account_id": "4f373d94982be61d1ae2e30418da958a"
+}

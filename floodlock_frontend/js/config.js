@@ -9,11 +9,20 @@
  */
 
 const DEFAULT_CONFIG = {
-  // Primary 24/7 Cloudflare Edge Backend (Worker Slot A / Active)
+  // Primary 24/7 Cloudflare Edge Backend (Account 1 / Active)
   CLOUDFLARE_EDGE_URL: "https://floodlock-backend.dakshdahore1995.workers.dev",
 
-  // Hot Standby Cloudflare Edge Backend (Worker Slot B / Redundant Pair for Zero Downtime)
+  // Hot Standby Cloudflare Edge Backend (Account 1 / Redundant Pair for Zero Downtime)
   CLOUDFLARE_STANDBY_URL: "https://floodlock-backend-standby.dakshdahore1995.workers.dev",
+
+  // Mirror Alpha Edge Backend (Account 2: dahoremugdha@gmail.com)
+  CLOUDFLARE_MIRROR_ALPHA_URL: "https://floodlock-backend.dahoremugdha.workers.dev",
+
+  // Mirror Beta Edge Backend (Account 3: dakshdadafit@gmail.com)
+  CLOUDFLARE_MIRROR_BETA_URL: "https://floodlock-backend.dakshdadafit.workers.dev",
+
+  // Mirror Gamma Edge Backend (Account 4: lantern.mech@gmail.com)
+  CLOUDFLARE_MIRROR_GAMMA_URL: "https://floodlock-backend.lanternmech.workers.dev",
 
   // Public HTTPS Cloudflare Tunnel directly to Windows Laptop (YuvaMPS1 @ 192.168.1.106)
   PUBLIC_TUNNEL_URL: "https://subscribers-sustained-cannon-moderator.trycloudflare.com",
@@ -145,16 +154,22 @@ class ConfigManager {
    * Universal fetch helper with automatic Bearer token injection and timeout
    */
   /**
-   * Universal fetch helper with automatic 2-Worker Active/Standby failover, Bearer token injection, and timeout
+   * Universal fetch helper with automatic 4-Account Quad-Cluster failover, Bearer token injection, and timeout
    */
   async fetchApi(endpointKey, options = {}) {
     const primaryBase = this.getBaseUrl().replace(/\/+$/, "");
     const standbyBase = (this.get("CLOUDFLARE_STANDBY_URL") || DEFAULT_CONFIG.CLOUDFLARE_STANDBY_URL).replace(/\/+$/, "");
+    const mirrorAlpha = (this.get("CLOUDFLARE_MIRROR_ALPHA_URL") || DEFAULT_CONFIG.CLOUDFLARE_MIRROR_ALPHA_URL).replace(/\/+$/, "");
+    const mirrorBeta = (this.get("CLOUDFLARE_MIRROR_BETA_URL") || DEFAULT_CONFIG.CLOUDFLARE_MIRROR_BETA_URL).replace(/\/+$/, "");
+    const mirrorGamma = (this.get("CLOUDFLARE_MIRROR_GAMMA_URL") || DEFAULT_CONFIG.CLOUDFLARE_MIRROR_GAMMA_URL).replace(/\/+$/, "");
 
-    const candidates = [primaryBase];
-    if (standbyBase && standbyBase !== primaryBase) {
-      candidates.push(standbyBase);
-    }
+    const candidates = [
+      primaryBase,
+      standbyBase,
+      mirrorAlpha,
+      mirrorBeta,
+      mirrorGamma,
+    ].filter((v, i, a) => Boolean(v) && a.indexOf(v) === i);
 
     const headers = {
       "Content-Type": "application/json",

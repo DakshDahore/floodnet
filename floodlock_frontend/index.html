@@ -2306,15 +2306,38 @@ print(response.json())</code></pre>
       }
     }
 
+    const GATEWAY_CLUSTER = [
+      window.FloodConfig ? window.FloodConfig.getBaseUrl().replace(/\/+$/, '') : 'https://floodlock-backend.dakshdahore1995.workers.dev',
+      'https://floodlock-backend-standby.dakshdahore1995.workers.dev',
+      'https://floodlock-backend.dahoremugdha.workers.dev',
+      'https://floodlock-backend.dakshdadafit.workers.dev',
+      'https://floodlock-backend.lanternmech.workers.dev'
+    ].filter((v, i, a) => Boolean(v) && a.indexOf(v) === i);
+
     async function loadPlanetaryAMRHeatGrid(forceRefresh = false) {
       const statusEl = document.getElementById('planetaryMeshStatus');
       if (statusEl) statusEl.textContent = 'Syncing Earth Mesh...';
       try {
         const refreshParam = forceRefresh ? '?refresh=true' : '';
-        const url = `${window.FloodConfig.getBaseUrl()}/api/flood/planetary-heatgrid${refreshParam}`;
-        const res = await fetch(url);
-        const data = await res.json();
-        if (!res.ok || !data.features) {
+        let data = null;
+
+        for (const base of GATEWAY_CLUSTER) {
+          try {
+            const url = `${base}/api/flood/planetary-heatgrid${refreshParam}`;
+            const res = await fetch(url, { signal: AbortSignal.timeout(9000) });
+            if (res.ok) {
+              const parsed = await res.json();
+              if (parsed && parsed.features) {
+                data = parsed;
+                break;
+              }
+            }
+          } catch (e) {
+            console.warn(`Gateway ${base} unreachable, attempting next cluster mirror...`);
+          }
+        }
+
+        if (!data || !data.features) {
           if (statusEl) statusEl.textContent = 'Earth Grid: Edge Offline';
           return;
         }
@@ -2685,12 +2708,23 @@ print(response.json())</code></pre>
       }
 
       const scenarioParam = basinId && basinId !== 'global' ? `&scenario=${basinId}` : '';
-      const url = `${window.FloodConfig.getBaseUrl()}/api/forecast?lat=${lat}&lon=${lon}${scenarioParam}&reasoning=true`;
+      let data = null;
+
+      for (const base of GATEWAY_CLUSTER) {
+        try {
+          const url = `${base}/api/forecast?lat=${lat}&lon=${lon}${scenarioParam}&reasoning=true`;
+          const res = await fetch(url, { signal: AbortSignal.timeout(12000) });
+          if (res.ok) {
+            data = await res.json();
+            break;
+          }
+        } catch (e) {
+          console.warn(`Forecast query failed on ${base}, attempting next mirror...`);
+        }
+      }
 
       try {
-        const res = await fetch(url);
-        const data = await res.json();
-        if (!res.ok) return;
+        if (!data) return;
 
         const np = data.neural_predictions || {};
         const tr = data.tactical_reasoning || {};
