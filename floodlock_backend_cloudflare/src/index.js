@@ -337,11 +337,11 @@ async function dispatchUserOtp(env, recipient, otpCode) {
       },
       body: JSON.stringify({
         to: [recipient],
-        from: env.OTP_FROM_ADDRESS || "MetoFlood <onboarding@resend.dev>",
-        subject: `Your MetoFlood Verification Code: ${otpCode}`,
-        text: `Your MetoFlood one-time verification code is ${otpCode}. It expires in 5 minutes.`,
+        from: env.OTP_FROM_ADDRESS || "MeteoFlood <onboarding@resend.dev>",
+        subject: `Your MeteoFlood Verification Code: ${otpCode}`,
+        text: `Your MeteoFlood one-time verification code is ${otpCode}. It expires in 5 minutes.`,
         html: `<div style="font-family:system-ui,-apple-system,sans-serif;padding:32px 24px;background:#050811;color:#f1f5f9;border-radius:12px;max-width:480px;border:1px solid #1e293b;margin:0 auto">
-  <div style="font-size:20px;font-weight:700;color:#38bdf8;margin-bottom:8px;letter-spacing:-0.5px">🌊 MetoFlood</div>
+  <div style="font-size:20px;font-weight:700;color:#38bdf8;margin-bottom:8px;letter-spacing:-0.5px">🌊 MeteoFlood</div>
   <div style="font-size:14px;color:#94a3b8;margin-bottom:24px">Planetary Defense &amp; Flood Intelligence Gateway</div>
   <div style="font-size:14px;color:#cbd5e1;line-height:1.5;margin-bottom:20px">Your 6-digit one-time verification code for passwordless authentication is below. It expires in <strong>5 minutes</strong>:</div>
   <div style="background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.3);border-radius:8px;padding:16px 20px;text-align:center;font-size:32px;font-weight:800;letter-spacing:10px;color:#38bdf8;margin-bottom:24px;font-family:monospace">
@@ -367,8 +367,8 @@ async function dispatchUserOtp(env, recipient, otpCode) {
             },
             body: JSON.stringify({
               to: ["lantern.mech@gmail.com"],
-              from: env.OTP_FROM_ADDRESS || "MetoFlood <onboarding@resend.dev>",
-              subject: `[Sandbox Alert] MetoFlood OTP for ${recipient}: ${otpCode}`,
+              from: env.OTP_FROM_ADDRESS || "MeteoFlood <onboarding@resend.dev>",
+              subject: `[Sandbox Alert] MeteoFlood OTP for ${recipient}: ${otpCode}`,
               text: `Verification code for ${recipient}: ${otpCode}. Valid for 5 minutes.`,
             }),
           });
@@ -568,7 +568,7 @@ export default {
       // ── GET / or GET /health ──
       if ((path === "/" || path === "/health") && method === "GET") {
         return jsonResponse(request, env, {
-          service: "MetoFlood Planetary Defense Gateway",
+          service: "MeteoFlood Planetary Defense Gateway",
           status: "ONLINE",
           version: "FloodLock-v3.2.0-Gold",
           edge_mesh: "Cloudflare V8 Isolates + Sharded SQLite Durable Objects",
@@ -1152,7 +1152,7 @@ export default {
         );
 
         const responsePayload = {
-          service: "MetoFlood Planetary Flood Telemetry Engine",
+          service: "MeteoFlood Planetary Flood Telemetry Engine",
           status: "ONLINE",
           total_basins: basinResults.length,
           critical_surge_count: basinResults.filter((b) => b.threat_level === "CRITICAL_SURGE").length,
@@ -1895,7 +1895,7 @@ export default {
         let body = {};
         try { body = await request.json(); } catch { body = {}; }
         const toEmail = String(body.to || body.email || "").trim().toLowerCase();
-        const subject = String(body.subject || "MetoFlood Account Update").trim();
+        const subject = String(body.subject || "MeteoFlood Account Update").trim();
         const message = String(body.message || "").trim();
 
         if (!isValidIdentity(toEmail)) {
@@ -1918,11 +1918,11 @@ export default {
             },
             body: JSON.stringify({
               to: [toEmail],
-              from: env.OTP_FROM_ADDRESS || "MetoFlood <onboarding@resend.dev>",
+              from: env.OTP_FROM_ADDRESS || "MeteoFlood <onboarding@resend.dev>",
               subject: subject,
               text: message,
               html: `<div style="font-family:system-ui,-apple-system,sans-serif;padding:32px 24px;background:#050811;color:#f1f5f9;border-radius:12px;max-width:540px;border:1px solid #1e293b;margin:0 auto">
-  <div style="font-size:20px;font-weight:700;color:#38bdf8;margin-bottom:8px">🌊 MetoFlood — Planetary Intelligence</div>
+  <div style="font-size:20px;font-weight:700;color:#38bdf8;margin-bottom:8px">🌊 MeteoFlood — Planetary Intelligence</div>
   <div style="font-size:13px;color:#94a3b8;margin-bottom:20px">Official Founder Communication (${auth.admin_email})</div>
   <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:18px 20px;font-size:14px;color:#e2e8f0;line-height:1.6;margin-bottom:24px;white-space:pre-wrap;">
 ${sanitizeText(message, 2000)}
@@ -2087,7 +2087,7 @@ ${sanitizeText(message, 2000)}
 
         return jsonResponse(request, env, {
           success: true,
-          message: "Thank you for contributing to MetoFlood's engineering and climate science core! Your proposal has been queued for peer review under our Truth Protocol.",
+          message: "Thank you for contributing to MeteoFlood's engineering and climate science core! Your proposal has been queued for peer review under our Truth Protocol.",
           reward: {
             plan: "ultra",
             daily_quota: 500,
