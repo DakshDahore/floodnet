@@ -35,13 +35,36 @@ function utcDayKey(nowMs = Date.now()) {
 
 export function normalizeClientIp(ip) {
   if (!ip || typeof ip !== "string") return "global";
-  const clean = ip.trim();
-  if (clean.includes(":")) {
-    // IPv6: Key on the /64 routing prefix (first 4 segments) to block subnet rotation
-    const segments = clean.split(":");
-    return segments.slice(0, 4).join(":") + "::/64";
+  let clean = ip.trim().toLowerCase();
+  if (!clean) return "global";
+  clean = clean.split("%")[0];
+  if (clean.includes(".")) {
+    const lastColon = clean.lastIndexOf(":");
+    if (lastColon !== -1) {
+      const possibleIpv4 = clean.slice(lastColon + 1);
+      if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(possibleIpv4)) {
+        return possibleIpv4;
+      }
+    } else {
+      return clean;
+    }
   }
-  return clean;
+  if (!clean.includes(":")) return clean;
+  let groups = [];
+  if (clean.includes("::")) {
+    const parts = clean.split("::");
+    const left = parts[0] ? parts[0].split(":").filter(Boolean) : [];
+    const right = parts[1] ? parts[1].split(":").filter(Boolean) : [];
+    const missing = 8 - (left.length + right.length);
+    const middle = Array(Math.max(0, missing)).fill("0");
+    groups = [...left, ...middle, ...right];
+  } else {
+    groups = clean.split(":").filter(Boolean);
+  }
+  groups = groups.map(g => (g.replace(/^0+/, "") || "0"));
+  while (groups.length < 8) groups.push("0");
+  const prefix = groups.slice(0, 4).join(":");
+  return `${prefix}::/64`;
 }
 
 export class SecurityStateDO extends BaseDO {

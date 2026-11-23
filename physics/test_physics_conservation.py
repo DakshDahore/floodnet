@@ -4,6 +4,10 @@ Automated Physical Conservation & Edge-Case Verification Suite for Engine 1.
 """
 
 import unittest
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from floodlock_physics_simulator import LANDMARK_BENCHMARKS, NumericalHydrologySimulator
 
 

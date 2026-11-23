@@ -1015,6 +1015,10 @@ print("════════════════════════�
           <div id="aiAdvisoryBox" style="margin-top: 1rem; padding: 0.75rem 1rem; border-radius: 8px; background: rgba(6, 182, 212, 0.08); border-left: 3px solid #06b6d4; font-size: 0.85rem; color: var(--c-linen);">
             <strong>Tactical Advisory:</strong> <span id="aiAdvisoryText">Perimeter secure. Continue passive telemetry monitoring.</span>
           </div>
+
+          <div style="margin-top: 0.75rem; padding: 0.6rem 0.9rem; border-radius: 6px; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); font-size: 0.75rem; color: #fca5a5; line-height: 1.4;">
+            ⚠️ <strong>Public Safety Notice:</strong> FloodLock is an experimental information tool, not an official warning system. In an emergency follow instructions from your local authorities and call your local emergency number.
+          </div>
         </div>
       </div>
 
@@ -3192,23 +3196,29 @@ print(response.json())</code></pre>
 
     // ── 1-Click OAuth Handlers ──
     function loginWithGoogle() {
-      const base = window.FloodConfig.getBaseUrl().replace(/\/+$/, '');
+      const clientId = "665808449308-0m3lp5romjn2o4cq0510tm3os8r5nc7e.apps.googleusercontent.com";
+      const redirectUri = `${window.location.origin}/auth/callback`;
       const stateObj = {
         origin: window.location.origin,
         provider: "google",
         ts: Date.now()
       };
-      window.location.href = `${base}/api/auth/oauth/google?state=${encodeURIComponent(JSON.stringify(stateObj))}`;
+      const stateStr = encodeURIComponent(JSON.stringify(stateObj));
+      const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=openid%20email%20profile&prompt=select_account&state=${stateStr}`;
+      window.location.href = googleAuthUrl;
     }
 
     function loginWithGitHub() {
-      const base = window.FloodConfig.getBaseUrl().replace(/\/+$/, '');
+      const clientId = "Ov23liHMgDQduw9y5SOT";
+      const redirectUri = `${window.location.origin}/auth/callback`;
       const stateObj = {
         origin: window.location.origin,
         provider: "github",
         ts: Date.now()
       };
-      window.location.href = `${base}/api/auth/oauth/github?state=${encodeURIComponent(JSON.stringify(stateObj))}`;
+      const stateStr = encodeURIComponent(JSON.stringify(stateObj));
+      const ghAuthUrl = `https://github.com/login/oauth/authorize?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=read:user%20user:email&state=${stateStr}`;
+      window.location.href = ghAuthUrl;
     }
 
     // ── XSS-safe HTML escaper (RED-1 fix) ──
@@ -3291,15 +3301,23 @@ print(response.json())</code></pre>
       const urlParams = new URLSearchParams(window.location.search);
       const oauthCode = urlParams.get('code');
       if (oauthCode) {
+        let oauthProvider = 'google';
+        try {
+          const stateRaw = urlParams.get('state');
+          if (stateRaw) {
+            const parsed = JSON.parse(decodeURIComponent(stateRaw));
+            if (parsed.provider) oauthProvider = parsed.provider;
+          }
+        } catch {}
         switchView('auth');
         const status = document.getElementById('authStatusMsg');
-        if (status) status.innerHTML = '<span style="color:#38bdf8;">Authenticating Google credentials with Cloudflare Edge...</span>';
+        if (status) status.innerHTML = `<span style="color:#38bdf8;">Authenticating ${oauthProvider === 'github' ? 'GitHub' : 'Google'} credentials with Cloudflare Edge...</span>`;
 
         window.FloodConfig.fetchApi('AUTH_OAUTH_EXCHANGE', {
           method: 'POST',
           body: {
             code: oauthCode,
-            provider: 'google',
+            provider: oauthProvider,
             redirect_uri: `${window.location.origin}/auth/callback`
           }
         }).then(res => {

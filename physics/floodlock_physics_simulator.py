@@ -318,6 +318,41 @@ LANDMARK_BENCHMARKS: Dict[str, Dict[str, float]] = {
         "flow_length_m": 600.0, "channel_width_m": 30.0, "drain_capacity_mm_hr": 35.0,
         "lateral_inflow_coeff": 0.25,
     },
+    "hurricane_ida_nyc_2021": {
+        "peak_rain_mm_hr": 80.0, "initial_soil_sat": 0.85, "ks_mm_hr": 0.5,
+        "psi_mm": 120.0, "impervious": 0.92, "slope": 0.005, "manning_n": 0.015,
+        "tide_surge_m": 0.3, "outfall_invert_m": 1.8,
+        "flow_length_m": 450.0, "channel_width_m": 25.0, "drain_capacity_mm_hr": 20.0,
+        "lateral_inflow_coeff": 0.30,
+    },
+    "ahr_valley_2021_fluvial": {
+        "peak_rain_mm_hr": 145.0, "initial_soil_sat": 0.92, "ks_mm_hr": 2.5,
+        "psi_mm": 180.0, "impervious": 0.45, "slope": 0.06, "manning_n": 0.038,
+        "tide_surge_m": 0.0, "outfall_invert_m": 3.0,
+        "flow_length_m": 1500.0, "channel_width_m": 20.0, "drain_capacity_mm_hr": None,
+        "lateral_inflow_coeff": 12.0,
+    },
+    "pakistan_2022_monsoon": {
+        "peak_rain_mm_hr": 95.0, "initial_soil_sat": 0.98, "ks_mm_hr": 0.8,
+        "psi_mm": 220.0, "impervious": 0.60, "slope": 0.001, "manning_n": 0.025,
+        "tide_surge_m": 0.2, "outfall_invert_m": 1.0,
+        "flow_length_m": 2000.0, "channel_width_m": 80.0, "drain_capacity_mm_hr": None,
+        "lateral_inflow_coeff": 5.0,
+    },
+    "jeddah_2022_flash": {
+        "peak_rain_mm_hr": 182.0, "initial_soil_sat": 0.15, "ks_mm_hr": 1.5,
+        "psi_mm": 320.0, "impervious": 0.85, "slope": 0.025, "manning_n": 0.022,
+        "tide_surge_m": 0.2, "outfall_invert_m": 1.5,
+        "flow_length_m": 700.0, "channel_width_m": 35.0, "drain_capacity_mm_hr": 10.0,
+        "lateral_inflow_coeff": 0.40,
+    },
+    "brisbane_2022_tidal": {
+        "peak_rain_mm_hr": 120.0, "initial_soil_sat": 0.95, "ks_mm_hr": 3.0,
+        "psi_mm": 160.0, "impervious": 0.70, "slope": 0.008, "manning_n": 0.028,
+        "tide_surge_m": 2.8, "outfall_invert_m": 1.8,
+        "flow_length_m": 900.0, "channel_width_m": 50.0, "drain_capacity_mm_hr": 15.0,
+        "lateral_inflow_coeff": 1.2,
+    },
 }
 
 FEATURE_NAMES: List[str] = [

@@ -11,7 +11,11 @@
 ## ⚡ Live Deployments
 
 - **Web Dashboard:** [https://floodnet.netlify.app](https://floodnet.netlify.app)
-- **Cloudflare 24/7 Edge Backend:** [https://floodlock-backend.dakshdahore1995.workers.dev](https://floodlock-backend.dakshdahore1995.workers.dev)
+- **Primary Edge (Core 1):** [https://floodlock-backend.dakshdahore1995.workers.dev](https://floodlock-backend.dakshdahore1995.workers.dev)
+- **Standby Edge (Core 2):** [https://floodlock-backend-standby.dakshdahore1995.workers.dev](https://floodlock-backend-standby.dakshdahore1995.workers.dev)
+- **Mirror Alpha:** [https://floodlock-backend.dahoremugdha.workers.dev](https://floodlock-backend.dahoremugdha.workers.dev)
+- **Mirror Beta:** [https://floodlock-backend.dakshdadafit.workers.dev](https://floodlock-backend.dakshdadafit.workers.dev)
+- **Mirror Gamma:** [https://floodlock-backend.lanternmech.workers.dev](https://floodlock-backend.lanternmech.workers.dev)
 
 ---
 
@@ -82,6 +86,9 @@ python3 -m http.server 3000
 Open `http://localhost:3000` in your web browser.
 
 ---
+
+## 📦 Package Contents
+Pure human-readable source code; no executables or model binaries.
 
 ## 👥 Authors
 - **Daksh Dahore** ([@DakshDahore](https://github.com/DakshDahore))

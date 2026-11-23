@@ -8,27 +8,34 @@
  * backend server (.env) and NEVER exposed in frontend code.
  */
 
-const DEFAULT_CONFIG = {
-  // Primary 24/7 Cloudflare Edge Backend (Account 1 / Active)
-  CLOUDFLARE_EDGE_URL: "https://floodlock-backend.dakshdahore1995.workers.dev",
+const WORKER_ENDPOINTS = [
+  "https://floodlock-backend.dakshdahore1995.workers.dev",
+  "https://floodlock-backend-standby.dakshdahore1995.workers.dev",
+  "https://floodlock-backend.dahoremugdha.workers.dev",
+  "https://floodlock-backend.dakshdadafit.workers.dev",
+  "https://floodlock-backend.lanternmech.workers.dev",
+];
 
-  // Hot Standby Cloudflare Edge Backend (Standby Pair for Zero Downtime)
-  CLOUDFLARE_STANDBY_URL: "https://floodlock-backend-standby.dakshdahore1995.workers.dev",
+const DEFAULT_CONFIG = {
+  // Primary 24/7 Cloudflare Edge Backend (Core 1 / Active)
+  CLOUDFLARE_EDGE_URL: WORKER_ENDPOINTS[0],
+
+  // Hot Standby Cloudflare Edge Backend (Core 2)
+  CLOUDFLARE_STANDBY_URL: WORKER_ENDPOINTS[1],
 
   // Mirror Alpha Edge Backend (Pool Alpha)
-  CLOUDFLARE_MIRROR_ALPHA_URL: "https://floodlock-backend.dahoremugdha.workers.dev",
+  CLOUDFLARE_MIRROR_ALPHA_URL: WORKER_ENDPOINTS[2],
 
   // Mirror Beta Edge Backend (Pool Beta)
-  CLOUDFLARE_MIRROR_BETA_URL: "https://floodlock-backend.dakshdadafit.workers.dev",
+  CLOUDFLARE_MIRROR_BETA_URL: WORKER_ENDPOINTS[3],
 
   // Mirror Gamma Edge Backend (Pool Gamma)
-  CLOUDFLARE_MIRROR_GAMMA_URL: "https://floodlock-backend.lanternmech.workers.dev",
-
-  // Direct Edge Tunnel Gateway
-  PUBLIC_TUNNEL_URL: "https://subscribers-sustained-cannon-moderator.trycloudflare.com",
+  CLOUDFLARE_MIRROR_GAMMA_URL: WORKER_ENDPOINTS[4],
   
-  // Local development fallback
-  LOCAL_BACKEND_URL: "http://localhost:8000",
+  // Local development fallback (strictly active on localhost)
+  LOCAL_BACKEND_URL: (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"))
+    ? "http://localhost:8000"
+    : null,
 
   // Cloud secondary fallback (Render / Fly.io)
   CLOUD_BACKEND_URL: "https://floodlock-backend-cloud.onrender.com",
@@ -73,6 +80,7 @@ class ConfigManager {
     this.config = { ...DEFAULT_CONFIG };
     this.loadFromStorage();
     this.activeBackend = "CLOUDFLARE"; // Default to 24/7 Edge
+    this.activeEdgeUrl = null;
     this.isOnline = true;
     this.telemetryCache = null;
     this.endpoints = FLOODLOCK_ENDPOINTS;
@@ -126,10 +134,7 @@ class ConfigManager {
 
   getBaseUrl() {
     if (this.activeBackend === "CLOUDFLARE" || !this.activeBackend || this.activeBackend === "EDGE") {
-      return this.get("CLOUDFLARE_EDGE_URL") || DEFAULT_CONFIG.CLOUDFLARE_EDGE_URL;
-    }
-    if (this.activeBackend === "TUNNEL") {
-      return this.get("PUBLIC_TUNNEL_URL") || DEFAULT_CONFIG.CLOUDFLARE_EDGE_URL;
+      return this.activeEdgeUrl || this.get("CLOUDFLARE_EDGE_URL") || DEFAULT_CONFIG.CLOUDFLARE_EDGE_URL;
     }
     if (this.activeBackend === "LOCAL") {
       return this.get("LOCAL_BACKEND_URL") || DEFAULT_CONFIG.CLOUDFLARE_EDGE_URL;
@@ -151,13 +156,10 @@ class ConfigManager {
   }
 
   /**
-   * Universal fetch helper with automatic Bearer token injection and timeout
-   */
-  /**
    * Universal fetch helper with automatic 4-Account Quad-Cluster failover, Bearer token injection, and timeout
    */
   async fetchApi(endpointKey, options = {}) {
-    const primaryBase = this.getBaseUrl().replace(/\/+$/, "");
+    const primaryBase = (this.activeEdgeUrl || this.getBaseUrl()).replace(/\/+$/, "");
     const standbyBase = (this.get("CLOUDFLARE_STANDBY_URL") || DEFAULT_CONFIG.CLOUDFLARE_STANDBY_URL).replace(/\/+$/, "");
     const mirrorAlpha = (this.get("CLOUDFLARE_MIRROR_ALPHA_URL") || DEFAULT_CONFIG.CLOUDFLARE_MIRROR_ALPHA_URL).replace(/\/+$/, "");
     const mirrorBeta = (this.get("CLOUDFLARE_MIRROR_BETA_URL") || DEFAULT_CONFIG.CLOUDFLARE_MIRROR_BETA_URL).replace(/\/+$/, "");
@@ -203,13 +205,16 @@ class ConfigManager {
         });
         clearTimeout(timeoutId);
 
-        // If primary returns a 5xx error, automatically failover to standby worker
-        if (res.status >= 500 && candidates.indexOf(base) === 0 && candidates.length > 1) {
-          console.warn(`[FloodLock Failover] Primary worker (${base}) returned HTTP ${res.status}. Seamlessly failing over to hot standby: ${standbyBase}`);
+        // If candidate returns 429 (rate-limited) or 5xx, failover to next candidate worker
+        if ((res.status === 429 || res.status >= 500) && candidates.length > 1) {
+          console.warn(`[FloodLock Failover] Worker (${base}) returned HTTP ${res.status}. Seamlessly shifting traffic to next available cluster...`);
           continue;
         }
 
         const data = await res.json().catch(() => ({}));
+        if (res.ok) {
+          this.activeEdgeUrl = base;
+        }
         return {
           ok: res.ok,
           status: res.status,
@@ -246,97 +251,56 @@ class ConfigManager {
       }
     };
 
-    // 1. Try Primary 24/7 Cloudflare Edge Backend (Worker Slot A)
-    const cfUrl = this.get("CLOUDFLARE_EDGE_URL") || DEFAULT_CONFIG.CLOUDFLARE_EDGE_URL;
-    if (cfUrl) {
-      const res = await timedFetch(`${cfUrl}/health`, 4000);
-      if (res && res.ok) {
-        try {
-          const data = await res.json();
-          this.activeBackend = "CLOUDFLARE";
-          this.telemetryCache = data;
-          return {
-            tier: "CLOUDFLARE",
-            url: cfUrl,
-            name: "CLOUDFLARE PRIMARY EDGE [V8 ACTIVE]",
-            data: data
-          };
-        } catch (e) {
-          // JSON parse issue, fall through
-        }
-      }
-    }
-
-    // 2. Try Hot-Standby Cloudflare Edge Backend (Worker Slot B / Redundant Pair)
-    const standbyUrl = this.get("CLOUDFLARE_STANDBY_URL") || DEFAULT_CONFIG.CLOUDFLARE_STANDBY_URL;
-    if (standbyUrl) {
-      const resStandby = await timedFetch(`${standbyUrl}/health`, 3000);
-      if (resStandby && resStandby.ok) {
-        try {
-          const data = await resStandby.json();
-          this.activeBackend = "CLOUDFLARE_STANDBY";
-          this.telemetryCache = data;
-          return {
-            tier: "CLOUDFLARE",
-            url: standbyUrl,
-            name: "CLOUDFLARE HOT-STANDBY EDGE [V8 FAILOVER ACTIVE]",
-            data: data
-          };
-        } catch (e) {
-          // Fall through
-        }
-      }
-    }
-
-    // 2. Try Public HTTPS Tunnel (1500ms timeout)
-    const tunnelUrl = this.get("PUBLIC_TUNNEL_URL");
-    if (tunnelUrl) {
-      const res = await timedFetch(`${tunnelUrl}/health`, 1500);
-      if (res && res.ok) {
-        try {
-          const data = await res.json();
-          this.activeBackend = "TUNNEL";
-          this.telemetryCache = data;
-          return {
-            tier: "TUNNEL",
-            url: tunnelUrl,
-            name: "MSI LAPTOP SENTINEL [TUNNEL LIVE]",
-            data: data
-          };
-        } catch (e) {
-          // JSON parse issue, fall through
-        }
-      }
-    }
-
-    // 3. Try Direct Local Backend (only if HTTP to avoid mixed content block, 800ms timeout)
-    const localCandidates = [
-      "http://127.0.0.1:8000",
-      "http://localhost:8000",
-      this.get("LOCAL_BACKEND_URL")
+    // 1. Probe All Cloudflare Edge Backend Clusters (Primary -> Standby -> Mirror Alpha -> Beta -> Gamma)
+    const edgeEndpoints = [
+      { key: "CLOUDFLARE_EDGE_URL", name: "CLOUDFLARE PRIMARY EDGE [V8 ACTIVE]" },
+      { key: "CLOUDFLARE_STANDBY_URL", name: "CLOUDFLARE HOT-STANDBY EDGE [FAILOVER]" },
+      { key: "CLOUDFLARE_MIRROR_ALPHA_URL", name: "CLOUDFLARE MIRROR ALPHA [MUGDHA CLUSTER]" },
+      { key: "CLOUDFLARE_MIRROR_BETA_URL", name: "CLOUDFLARE MIRROR BETA [DADAFIT CLUSTER]" },
+      { key: "CLOUDFLARE_MIRROR_GAMMA_URL", name: "CLOUDFLARE MIRROR GAMMA [LANTERN CLUSTER]" },
     ];
-    for (const localUrl of localCandidates) {
-      if (localUrl && window.location.protocol === "http:") {
-        const res = await timedFetch(`${localUrl}/health`, 800);
+
+    for (const ep of edgeEndpoints) {
+      const url = this.get(ep.key) || DEFAULT_CONFIG[ep.key];
+      if (url) {
+        const res = await timedFetch(`${url}/health`, 3000);
         if (res && res.ok) {
           try {
             const data = await res.json();
-            this.activeBackend = "LOCAL";
+            this.activeBackend = "CLOUDFLARE";
+            this.activeEdgeUrl = url;
             this.telemetryCache = data;
             return {
-              tier: "LOCAL",
-              url: localUrl,
-              name: "LOCAL BACKEND [LIVE :8000]",
+              tier: "CLOUDFLARE",
+              url: url,
+              name: ep.name,
               data: data
             };
-          } catch (e) {
-            // Next candidate
-          }
+          } catch (e) {}
         }
       }
     }
 
-    // 4. Try Cloud Serverless API (Hosted directly on Netlify / same origin, 1500ms timeout)
+    // 2. Try Direct Local Backend (only if HTTP and running on localhost, 800ms timeout)
+    const localUrl = this.get("LOCAL_BACKEND_URL");
+    if (localUrl && typeof window !== "undefined" && window.location && window.location.protocol === "http:") {
+      const res = await timedFetch(`${localUrl}/health`, 800);
+      if (res && res.ok) {
+        try {
+          const data = await res.json();
+          this.activeBackend = "LOCAL";
+          this.telemetryCache = data;
+          return {
+            tier: "LOCAL",
+            url: localUrl,
+            name: "LOCAL BACKEND [LIVE :8000]",
+            data: data
+          };
+        } catch (e) {}
+      }
+    }
+
+    // 3. Try Cloud Serverless API (Hosted directly on Netlify / same origin, 1500ms timeout)
     const currentOrigin = (typeof window !== "undefined" && window.location && window.location.origin) ? window.location.origin : "";
     if (currentOrigin && !currentOrigin.includes("127.0.0.1") && !currentOrigin.includes("localhost")) {
       const res = await timedFetch(`${currentOrigin}/api/health`, 1500);
@@ -351,13 +315,11 @@ class ConfigManager {
             name: "CLOUD NETLIFY [SERVERLESS]",
             data: data
           };
-        } catch (e) {
-          // Next candidate
-        }
+        } catch (e) {}
       }
     }
 
-    // 5. Try External Cloud Fallback URL (1500ms timeout)
+    // 4. Try External Cloud Fallback URL (1500ms timeout)
     const cloudUrl = this.get("CLOUD_BACKEND_URL");
     if (cloudUrl) {
       const res = await timedFetch(`${cloudUrl}/health`, 1500);
@@ -372,13 +334,11 @@ class ConfigManager {
             name: "CLOUD BACKEND [ONLINE]",
             data: data
           };
-        } catch (e) {
-          // Next candidate
-        }
+        } catch (e) {}
       }
     }
 
-    // 6. Pure In-Browser Edge MLP (Zero-Latency Local Physics & Neural Net)
+    // 5. Pure In-Browser Edge MLP (Zero-Latency Local Physics & Neural Net)
     this.activeBackend = "EDGE";
     return {
       tier: "EDGE",

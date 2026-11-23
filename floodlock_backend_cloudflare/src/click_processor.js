@@ -15,7 +15,14 @@
  */
 
 import { WEIGHTS_14F } from "./weights_14f.js";
-import { runTacticalReasoning, isDeterministicPhysicalHazard, buildDeterministicEdgeSop } from "./ai_resilience.js";
+import {
+  runTacticalReasoning,
+  isDeterministicPhysicalHazard,
+  buildDeterministicEdgeSop,
+  decideThreatLevel,
+  decideThreatState,
+  PUBLIC_SAFETY_DISCLAIMER,
+} from "./ai_resilience.js";
 
 const DEFAULT_ORIGINS = [
   "https://metoflood.netlify.app",
@@ -106,7 +113,7 @@ function predict14F(features) {
 
 const TELEMETRY_CACHE = new Map();
 
-async function fetchLiveTelemetryWithCache(lat, lon) {
+export async function fetchLiveTelemetryWithCache(lat, lon) {
   const cacheKey = `${lat.toFixed(2)}_${lon.toFixed(2)}`;
   const now = Date.now();
   if (TELEMETRY_CACHE.has(cacheKey)) {
@@ -175,7 +182,9 @@ async function fetchLiveTelemetryWithCache(lat, lon) {
     ? past120Slice.reduce((a, b) => a + Math.max(0, Number(b || 0)), 0)
     : (telemetryDegraded ? 0.0 : r0 * 12.0);
 
-  const soilArr = Array.isArray(hourly.soil_moisture_0_to_100cm) ? hourly.soil_moisture_0_to_100cm : [];
+  const soilArr = Array.isArray(hourly.soil_moisture_0_to_100cm)
+    ? hourly.soil_moisture_0_to_100cm
+    : (Array.isArray(hourly.soil_moisture_0_to_1cm) ? hourly.soil_moisture_0_to_1cm : []);
   const rawMoisture = soilArr.length > currentIdx
     ? Number(soilArr[currentIdx] ?? 0.35)
     : (soilArr.length ? Number(soilArr[soilArr.length - 1] ?? 0.35) : 0.35);
@@ -207,6 +216,8 @@ async function fetchLiveTelemetryWithCache(lat, lon) {
 
   return result;
 }
+
+export { fetchLiveTelemetryWithCache as fetchLiveTelemetry };
 
 function getCorsHeaders(request, env) {
   const origin = request.headers.get("Origin") || "";
@@ -366,31 +377,16 @@ export default {
       const groqVerified = tacticalReasoning && (tacticalReasoning.threat_verified === true || tacticalReasoning.verification_status === "VERIFIED_FLOOD_HAZARD");
       const groqDismissed = tacticalReasoning && (tacticalReasoning.threat_verified === false || tacticalReasoning.verification_status === "FALSE_ALARM_DOWNGRADED");
 
-      let finalThreatLevel = "MONITORED_NOMINAL";
-      let auditVerdict = "NOMINAL_MONITORED";
-      let auditAction = "ROUTINE_MONITORING";
+      const { threatLevel: finalThreatLevel, verdict: auditVerdict, action: auditAction } = decideThreatState({
+        isPhysicalHazard,
+        telemetryDegraded: telem.telemetryDegraded,
+        isThreat,
+        groqDismissed,
+        groqVerified,
+      });
 
-      if (telem.telemetryDegraded && !isPhysicalHazard && !isThreat) {
-        finalThreatLevel = "ELEVATED_WATCH";
-        auditVerdict = "TELEMETRY_UNAVAILABLE_FAILSAFE_WATCH";
-        auditAction = "FAILSAFE_WATCH_ENGAGED";
+      if (telem.telemetryDegraded && !isPhysicalHazard) {
         tacticalReasoning = tacticalReasoning || buildDeterministicEdgeSop(telem, neuralPred, lat, lon);
-      } else if (isPhysicalHazard) {
-        // SAFETY FLOOR INVARIANT: Hard physical disaster telemetry CANNOT be dismissed by AI.
-        finalThreatLevel = "CRITICAL_INUNDATION";
-        auditVerdict = "CONFIRMED_FLOOD_HAZARD";
-        auditAction = groqDismissed ? "OVERRIDDEN_BY_PHYSICAL_SAFETY_FLOOR" : "CRITICAL_ALARM_DISPATCHED";
-      } else if (isThreat) {
-        if (groqDismissed) {
-          // Finding 2 Fix: In sub-floor band, AI refutation downgrades to ELEVATED_WATCH (not NOMINAL)
-          finalThreatLevel = "ELEVATED_WATCH";
-          auditVerdict = "SUB_HAZARD_WATCH_ADVISORY";
-          auditAction = "ALARM_DOWNGRADED_TO_WATCH";
-        } else if (groqVerified || !tacticalReasoning) {
-          finalThreatLevel = "CRITICAL_INUNDATION";
-          auditVerdict = "CONFIRMED_FLOOD_HAZARD";
-          auditAction = "CRITICAL_ALARM_DISPATCHED";
-        }
       }
 
       // Structured Flood Audit Telemetry
@@ -423,7 +419,7 @@ export default {
           engine: tacticalReasoning ? tacticalReasoning.engine : "None (Sub-threshold)",
           groq_verdict: auditVerdict,
           threat_verified: (finalThreatLevel === "CRITICAL_INUNDATION"),
-          confidence_score: tacticalReasoning ? tacticalReasoning.confidence_score : 99,
+          confidence_score: tacticalReasoning ? tacticalReasoning.confidence_score : Math.round(neuralPred.flash_flood_probability * 100),
           physical_audit_summary: tacticalReasoning ? (tacticalReasoning.physical_consistency_audit || tacticalReasoning.causal_attribution) : "Nominal hydrological equilibrium.",
           action_taken: auditAction,
           physical_safety_floor_active: isPhysicalHazard,
@@ -434,6 +430,7 @@ export default {
 
       return jsonResponse(request, env, {
         timestamp: new Date().toISOString(),
+        latency_ms: Math.round((performance.now() - t0) * 100) / 100,
         processor_core: "floodlock-click-processor",
         coordinates: { lat, lon },
         telemetry: telem,
@@ -443,6 +440,7 @@ export default {
         groq_audit_verdict: floodAuditLog.adversarial_groq_audit.groq_verdict,
         flood_audit_log: floodAuditLog,
         dual_trigger_black_swan: isBlackSwan,
+        disclaimer: PUBLIC_SAFETY_DISCLAIMER,
         tactical_reasoning: isPhysicalHazard
           ? (tacticalReasoning || buildDeterministicEdgeSop(telem, neuralPred, lat, lon))
           : (finalThreatLevel === "NOMINAL" || finalThreatLevel === "MONITORED_NOMINAL" ? null : tacticalReasoning),

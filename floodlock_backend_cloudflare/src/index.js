@@ -36,7 +36,14 @@ import {
   createSignedOAuthState,
   verifySignedOAuthState,
 } from "./crypto_utils.js";
-import { runTacticalReasoning, isDeterministicPhysicalHazard, buildDeterministicEdgeSop } from "./ai_resilience.js";
+import {
+  runTacticalReasoning,
+  isDeterministicPhysicalHazard,
+  buildDeterministicEdgeSop,
+  decideThreatLevel,
+  decideThreatState,
+  PUBLIC_SAFETY_DISCLAIMER,
+} from "./ai_resilience.js";
 
 export { SecurityStateDO, BillingStateDO, CircuitBreakerDO } from "./durable_objects.js";
 
@@ -191,7 +198,7 @@ function predict14F(features) {
   };
 }
 
-async function fetchLiveTelemetry(lat, lon) {
+export async function fetchLiveTelemetry(lat, lon) {
   const weatherUrl =
     `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
     `&current=precipitation,rain,surface_pressure,wind_speed_10m,wind_direction_10m,cape` +
@@ -255,7 +262,9 @@ async function fetchLiveTelemetry(lat, lon) {
     : (telemetryDegraded ? 0.0 : r0 * 12.0);
 
   // Open-Meteo volumetric water content theta (m3/m3) to degree of soil saturation (porosity approx 0.45 m3/m3)
-  const soilArr = Array.isArray(hourly.soil_moisture_0_to_100cm) ? hourly.soil_moisture_0_to_100cm : [];
+  const soilArr = Array.isArray(hourly.soil_moisture_0_to_100cm)
+    ? hourly.soil_moisture_0_to_100cm
+    : (Array.isArray(hourly.soil_moisture_0_to_1cm) ? hourly.soil_moisture_0_to_1cm : []);
   const rawMoisture = soilArr.length > currentIdx
     ? Number(soilArr[currentIdx] ?? 0.35)
     : (soilArr.length ? Number(soilArr[soilArr.length - 1] ?? 0.35) : 0.35);
@@ -424,6 +433,7 @@ async function dispatchUserOtp(env, recipient, otpCode) {
         headers: {
           "Content-Type": "application/json",
           "Origin": "https://metoflood.netlify.app",
+          "Referer": "https://metoflood.netlify.app/",
           "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
         },
         body: JSON.stringify({
@@ -495,7 +505,7 @@ async function dispatchUserOtp(env, recipient, otpCode) {
         return {
           delivered: false,
           status: 403,
-          reason: "Resend unverified domain: In free tier, Resend only delivers to lantern.mech@gmail.com. Please use 1-click Google or GitHub sign-in, or provide EmailJS public key & template."
+          reason: "Resend unverified domain: In free sandbox tier, Resend only delivers to the account owner. Please use 1-click Google or GitHub sign-in, or provide EmailJS public key & template."
         };
       }
 
@@ -555,10 +565,14 @@ async function dispatchGatewayRefund(env, refundRecord) {
   }
 }
 
-async function dispatchFounderAlert(env, subject, details) {
-  const serviceId = env.EMAILJS_SERVICE_ID || "service_8yw2mtw";
-  const templateId = env.EMAILJS_TEMPLATE_ID || "template_default";
-  const userId = env.EMAILJS_PUBLIC_KEY || "user_8yw2mtw";
+export async function dispatchFounderAlert(env, subject, details) {
+  if (!env || !env.FOUNDER_ALERT_EMAIL) {
+    console.warn("[ALERT] FOUNDER_ALERT_EMAIL missing, skipping founder alert dispatch.");
+    return;
+  }
+  const serviceId = env.EMAILJS_SERVICE_ID || "service_2s4fukw";
+  const templateId = env.EMAILJS_TEMPLATE_ID || "template_spefc1e";
+  const userId = env.EMAILJS_PUBLIC_KEY || "JyA8ccT87iU8JnkPi";
   const accessToken = env.EMAILJS_PRIVATE_KEY || "";
   try {
     const payload = {
@@ -566,7 +580,7 @@ async function dispatchFounderAlert(env, subject, details) {
       template_id: templateId,
       user_id: userId,
       template_params: {
-        to_email: env.FOUNDER_ALERT_EMAIL || "dakshdahore.d@gmail.com,lantern.mech@gmail.com",
+        to_email: env.FOUNDER_ALERT_EMAIL,
         subject,
         message: typeof details === "string" ? details : JSON.stringify(details, null, 2),
         timestamp: new Date().toISOString(),
@@ -575,7 +589,11 @@ async function dispatchFounderAlert(env, subject, details) {
     if (accessToken) payload.accessToken = accessToken;
     await fetch("https://api.emailjs.com/api/v1.0/email/send", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Origin": "https://metoflood.netlify.app",
+        "Referer": "https://metoflood.netlify.app/",
+      },
       body: JSON.stringify(payload),
     });
   } catch {}
@@ -624,7 +642,10 @@ function findClosestBasin(lat, lon) {
   return { basin: closest, distance_km: minDistance };
 }
 
-const ADMIN_EMAILS = new Set(["dakshdahore.d@gmail.com", "lantern.mech@gmail.com", "lanternmech.official@gmail.com"]);
+function getAdminEmailsSet(env) {
+  if (!env || !env.ADMIN_EMAILS || typeof env.ADMIN_EMAILS !== "string") return new Set();
+  return new Set(env.ADMIN_EMAILS.split(",").map(s => s.trim().toLowerCase()).filter(Boolean));
+}
 
 export async function verifyAdminAccess(env, request) {
   const authHeader = request.headers.get("Authorization") || "";
@@ -638,10 +659,48 @@ export async function verifyAdminAccess(env, request) {
   }
 
   if (constantTimeEqual(token, env.ADMIN_SECRET)) {
-    return { ok: true, admin_email: "dakshdahore.d@gmail.com", method: "ADMIN_SECRET" };
+    const adminEmail = (env.ADMIN_EMAILS && typeof env.ADMIN_EMAILS === "string")
+      ? env.ADMIN_EMAILS.split(",")[0].trim()
+      : "admin@floodlock.local";
+    return { ok: true, admin_email: adminEmail, method: "ADMIN_SECRET" };
   }
 
   return { ok: false, reason: "INVALID_ADMIN_CREDENTIALS" };
+}
+
+export async function verifyTurnstileToken(turnstileToken, secretKey, clientIp, environment) {
+  if (!secretKey) {
+    if (environment === "production") {
+      return { ok: false, status: 500, error: "SERVER_MISCONFIGURED", message: "Turnstile secret key missing in production." };
+    }
+    return { ok: true };
+  }
+
+  if (!turnstileToken || typeof turnstileToken !== "string" || !turnstileToken.trim()) {
+    return { ok: false, status: 403, error: "BOT_CHALLENGE_REQUIRED", message: "Cloudflare Turnstile token required." };
+  }
+
+  try {
+    const tsRes = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        secret: secretKey,
+        response: turnstileToken,
+        remoteip: clientIp || "",
+      }),
+    });
+    const tsData = await tsRes.json();
+    if (!tsData || !tsData.success) {
+      return { ok: false, status: 403, error: "BOT_CHALLENGE_FAILED", message: "Cloudflare Turnstile bot challenge rejected." };
+    }
+    return { ok: true };
+  } catch {
+    if (environment === "production") {
+      return { ok: false, status: 503, error: "BOT_CHALLENGE_ERROR", message: "Bot verification service temporarily unreachable." };
+    }
+    return { ok: true };
+  }
 }
 
 export default {
@@ -743,29 +802,12 @@ export default {
           return jsonResponse(request, env, { error: "INVALID_IDENTITY", message: "Valid email or E.164 phone required." }, 400);
         }
 
-        // Cloudflare Turnstile verification: hard fail on rejection
+        // Cloudflare Turnstile verification: mandatory bot challenge
         const turnstileToken = body["cf-turnstile-response"] || body.turnstile_token;
-        if (turnstileToken && env.TURNSTILE_SECRET_KEY && turnstileToken !== "BYPASS_NETWORK_FALLBACK") {
-          try {
-            const clientIp = request.headers.get("CF-Connecting-IP") || "";
-            const tsRes = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
-              method: "POST",
-              headers: { "Content-Type": "application/x-www-form-urlencoded" },
-              body: new URLSearchParams({
-                secret: env.TURNSTILE_SECRET_KEY,
-                response: turnstileToken,
-                remoteip: clientIp,
-              }),
-            });
-            const tsData = await tsRes.json();
-            if (!tsData.success) {
-              return jsonResponse(request, env, { error: "BOT_CHALLENGE_FAILED", message: "Cloudflare Turnstile bot challenge rejected." }, 403);
-            }
-          } catch {
-            if (env.ENVIRONMENT === "production") {
-              return jsonResponse(request, env, { error: "BOT_CHALLENGE_ERROR", message: "Bot verification service temporarily unreachable." }, 503);
-            }
-          }
+        const clientIp = request.headers.get("cf-connecting-ip") || request.headers.get("x-forwarded-for") || "127.0.0.1";
+        const tsCheck = await verifyTurnstileToken(turnstileToken, env.TURNSTILE_SECRET_KEY, clientIp, env.ENVIRONMENT);
+        if (!tsCheck.ok) {
+          return jsonResponse(request, env, { error: tsCheck.error, message: tsCheck.message }, tsCheck.status);
         }
 
         const idKey = await deriveDomainSecret(env.MASTER_SECRET, "identity-hash");
@@ -781,7 +823,6 @@ export default {
         const otpCode = String(100000 + (codeNum % 900000));
         const otpHash = await hmacSha256Hex(otpKey, `otp:${identityHash}:${otpCode}`);
 
-        const clientIp = request.headers.get("cf-connecting-ip") || request.headers.get("x-forwarded-for") || "127.0.0.1";
         const secStub = env.SECURITY_STATE_DO.get(env.SECURITY_STATE_DO.idFromName(`sec:${identityHash}`));
         const issued = await secStub.issueOtp(identityHash, otpHash, 300000, 30000, clientIp);
 
@@ -867,7 +908,7 @@ export default {
           }
         }
 
-        const isAdmin = ADMIN_EMAILS.has(rawIdentity);
+        const isAdmin = getAdminEmailsSet(env).has(rawIdentity);
         const sessionToken = await issueSessionToken(env.MASTER_SECRET, {
           userId: profile.user_id,
           identityHash,
@@ -1035,7 +1076,7 @@ export default {
             if (encryptedBlob) profile = await decryptPiiAtRest(env.PII_ENCRYPTION_KEY, encryptedBlob, identityHash);
           }
 
-          const isAdmin = ADMIN_EMAILS.has(userEmail);
+          const isAdmin = getAdminEmailsSet(env).has(userEmail);
           const assignedPlan = isAdmin ? "ultra" : (profile?.plan || "free");
           const dailyQuota = isAdmin ? 500 : (profile?.daily_quota || 10);
 
@@ -1250,7 +1291,7 @@ export default {
             if (encryptedBlob) profile = await decryptPiiAtRest(env.PII_ENCRYPTION_KEY, encryptedBlob, identityHash);
           }
 
-          const isAdmin = ADMIN_EMAILS.has(userEmail);
+          const isAdmin = getAdminEmailsSet(env).has(userEmail);
 
           if (!profile) {
             const randId = crypto.getRandomValues(new Uint8Array(6));
@@ -1318,7 +1359,7 @@ export default {
         }
         if (!profile) return jsonResponse(request, env, { error: "PROFILE_NOT_FOUND" }, 404);
 
-        const isAdmin = ADMIN_EMAILS.has(profile.identity_raw);
+        const isAdmin = getAdminEmailsSet(env).has(profile.identity_raw);
         return jsonResponse(request, env, {
           authenticated: true,
           profile: {
@@ -1625,6 +1666,7 @@ export default {
 
       // ── GET /api/forecast?lat=X&lon=Y (with /api/live-mumbai backward-compatible alias) ──
       if ((path === "/api/forecast" || path === "/api/live-mumbai") && method === "GET") {
+        const t0 = performance.now();
         const lat = parseFloat(url.searchParams.get("lat") ?? "18.998");
         const lon = parseFloat(url.searchParams.get("lon") ?? "72.842");
         if (!Number.isFinite(lat) || !Number.isFinite(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
@@ -1779,30 +1821,13 @@ export default {
         const groqVerified = tacticalReasoning && (tacticalReasoning.threat_verified === true || tacticalReasoning.verification_status === "VERIFIED_FLOOD_HAZARD");
         const groqDismissed = tacticalReasoning && (tacticalReasoning.threat_verified === false || tacticalReasoning.verification_status === "FALSE_ALARM_DOWNGRADED");
 
-        let finalThreatLevel = "MONITORED_NOMINAL";
-        let auditAction = "ROUTINE_MONITORING";
-        let auditVerdict = "NOMINAL_MONITORED";
-
-        if (isPhysicalHazard) {
-          // SAFETY FLOOR INVARIANT: Physical disaster telemetry overrides any AI refutation or failure
-          finalThreatLevel = "CRITICAL_INUNDATION";
-          auditVerdict = "CONFIRMED_FLOOD_HAZARD";
-          auditAction = groqDismissed
-            ? "OVERRIDDEN_BY_PHYSICAL_SAFETY_FLOOR"
-            : "CRITICAL_ALARM_DISPATCHED";
-        } else if (isThreat) {
-          if (groqDismissed) {
-            // Finding 2 Fix: In sub-floor neural alert band, if AI refutes,
-            // downgrade to ELEVATED_WATCH (NOT NOMINAL) and preserve tactical advisory
-            finalThreatLevel = "ELEVATED_WATCH";
-            auditVerdict = "SUB_HAZARD_WATCH_ADVISORY";
-            auditAction = "ALARM_DOWNGRADED_TO_WATCH";
-          } else if (groqVerified || !tacticalReasoning) {
-            finalThreatLevel = "CRITICAL_INUNDATION";
-            auditVerdict = "CONFIRMED_FLOOD_HAZARD";
-            auditAction = "CRITICAL_ALARM_DISPATCHED";
-          }
-        }
+        const { threatLevel: finalThreatLevel, verdict: auditVerdict, action: auditAction } = decideThreatState({
+          isPhysicalHazard,
+          telemetryDegraded: telem.telemetryDegraded,
+          isThreat,
+          groqDismissed,
+          groqVerified,
+        });
 
         const floodAuditLog = {
           timestamp: new Date().toISOString(),
@@ -1833,7 +1858,7 @@ export default {
             engine: tacticalReasoning ? tacticalReasoning.engine : "None (Sub-threshold)",
             groq_verdict: auditVerdict,
             threat_verified: (finalThreatLevel === "CRITICAL_INUNDATION"),
-            confidence_score: tacticalReasoning ? tacticalReasoning.confidence_score : 99,
+            confidence_score: tacticalReasoning ? tacticalReasoning.confidence_score : Math.round(neuralPred.flash_flood_probability * 100),
             physical_audit_summary: tacticalReasoning ? (tacticalReasoning.physical_consistency_audit || tacticalReasoning.causal_attribution) : "Nominal hydrological equilibrium.",
             action_taken: auditAction,
             physical_safety_floor_active: isPhysicalHazard,
@@ -1842,7 +1867,7 @@ export default {
 
         console.log(`[FLOOD_AUDIT_LOG] Lat:${lat.toFixed(3)}, Lon:${lon.toFixed(3)} | NeuralDepth:+1h=${neuralPred.depth_trajectory_cm?.h1}cm | GroqVerdict:${floodAuditLog.adversarial_groq_audit.groq_verdict} | Action:${floodAuditLog.adversarial_groq_audit.action_taken}`);
 
-        if (telem.telemetryDegraded) {
+        if (!isPhysicalHazard && telem.telemetryDegraded) {
           return jsonResponse(request, env, {
             status: "DEGRADED_TELEMETRY",
             forecast_mode: forecastMode,
@@ -1850,12 +1875,12 @@ export default {
             groq_audit_verdict: "TELEMETRY_UNAVAILABLE_FAILSAFE_WATCH",
             flood_audit_log: floodAuditLog,
             depth_cm: neuralPred?.depth_trajectory_cm?.h1 || 0.0,
-            confidence_score: 50,
-            latency_ms: 0.15,
+            latency_ms: Math.round((performance.now() - t0) * 100) / 100,
             quota: quotaStatus,
             neural_predictions: neuralPred,
             tactical_reasoning: tacticalReasoning || buildDeterministicEdgeSop(telem, neuralPred, lat, lon),
             message: "Live hydrometeorological telemetry unavailable from meteorological provider. Fail-safe elevated watch engaged.",
+            disclaimer: PUBLIC_SAFETY_DISCLAIMER,
             timestamp: new Date().toISOString(),
           }, 200, qosHeaders);
         }
@@ -1868,18 +1893,19 @@ export default {
             groq_audit_verdict: "ALL_CLEAR_ZERO_METEOROLOGY",
             flood_audit_log: floodAuditLog,
             depth_cm: 0.0,
-            confidence_score: 99,
-            latency_ms: 0.15,
+            latency_ms: Math.round((performance.now() - t0) * 100) / 100,
             quota: quotaStatus,
             neural_predictions: neuralPred,
             tactical_reasoning: null,
             message: "Zero precipitation and nominal sea level detected. Basin dry.",
+            disclaimer: PUBLIC_SAFETY_DISCLAIMER,
             timestamp: new Date().toISOString(),
           }, 200, qosHeaders);
         }
 
         return jsonResponse(request, env, {
           timestamp: new Date().toISOString(),
+          latency_ms: Math.round((performance.now() - t0) * 100) / 100,
           forecast_mode: forecastMode,
           coordinates: { lat, lon },
           telemetry: telem,
@@ -1890,6 +1916,7 @@ export default {
           flood_audit_log: floodAuditLog,
           dual_trigger_black_swan: isBlackSwan,
           quota: quotaStatus,
+          disclaimer: PUBLIC_SAFETY_DISCLAIMER,
           tactical_reasoning: isPhysicalHazard
             ? (tacticalReasoning || buildDeterministicEdgeSop(telem, neuralPred, lat, lon))
             : (finalThreatLevel === "NOMINAL" || finalThreatLevel === "MONITORED_NOMINAL" ? null : tacticalReasoning),
@@ -2102,8 +2129,8 @@ export default {
           success: true,
           inquiry_id: inqId,
           message: inqType === "REFUND"
-            ? "Refund request received! Founder Daksh Dahore will review your case within 3–4 working days strictly via lanternmech.official@gmail.com."
-            : "Commercial inquiry received! Founder Daksh Dahore will review your application within 3–4 working days. Official confirmation is dispatched strictly from lanternmech.official@gmail.com. We never ask for payments or credentials via phone or SMS.",
+            ? `Refund request received! Founder Daksh Dahore will review your case within 3–4 working days strictly via ${env.FOUNDER_ALERT_EMAIL || "support@floodlock.org"}.`
+            : `Commercial inquiry received! Founder Daksh Dahore will review your application within 3–4 working days. Official confirmation is dispatched strictly from ${env.FOUNDER_ALERT_EMAIL || "support@floodlock.org"}. We never ask for payments or credentials via phone or SMS.`,
         }, 201);
       }
 
@@ -2364,8 +2391,49 @@ export default {
           return jsonResponse(request, env, { error: "EMPTY_MESSAGE", message: "Message content required." }, 400);
         }
 
+        // Primary: EmailJS dispatch
+        const emailjsServiceId = env.EMAILJS_SERVICE_ID || "service_2s4fukw";
+        const emailjsPublicKey = env.EMAILJS_PUBLIC_KEY || "JyA8ccT87iU8JnkPi";
+        const emailjsTemplateId = env.EMAILJS_TEMPLATE_ID || "template_spefc1e";
+
+        if (emailjsServiceId && emailjsPublicKey) {
+          try {
+            const ejRes = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Origin": "https://metoflood.netlify.app",
+                "Referer": "https://metoflood.netlify.app/",
+              },
+              body: JSON.stringify({
+                service_id: emailjsServiceId,
+                template_id: emailjsTemplateId,
+                user_id: emailjsPublicKey,
+                accessToken: env.EMAILJS_PRIVATE_KEY || undefined,
+                template_params: {
+                  to_email: toEmail,
+                  subject: subject,
+                  message: message,
+                  sender: auth.admin_email,
+                  timestamp: new Date().toISOString(),
+                },
+              }),
+            });
+            if (ejRes.ok) {
+              return jsonResponse(request, env, {
+                success: true,
+                provider: "emailjs",
+                message: `Email dispatched to ${toEmail} via EmailJS.`,
+              }, 200);
+            }
+          } catch (e) {
+            console.warn("EmailJS admin dispatch error, checking fallback:", e);
+          }
+        }
+
+        // Secondary Fallback: Resend HTTP API
         if (!env.OTP_DELIVERY_URL || !env.OTP_DELIVERY_API_KEY) {
-          return jsonResponse(request, env, { error: "MAILER_UNCONFIGURED", message: "Resend email delivery unconfigured." }, 500);
+          return jsonResponse(request, env, { error: "MAILER_UNCONFIGURED", message: "Email delivery unconfigured." }, 500);
         }
 
         try {
@@ -2387,7 +2455,7 @@ export default {
 ${sanitizeText(message, 2000)}
   </div>
   <div style="font-size:12px;color:#64748b;line-height:1.4">
-    Notice: Official responses and invoices are dispatched exclusively from lanternmech.official@gmail.com. We never ask for payments or credentials via phone, WhatsApp, or SMS.
+    Notice: Official responses and invoices are dispatched exclusively from ${auth.admin_email || env.FOUNDER_ALERT_EMAIL || "support@floodlock.org"}. We never ask for payments or credentials via phone, WhatsApp, or SMS.
   </div>
 </div>`,
             }),
@@ -2400,6 +2468,7 @@ ${sanitizeText(message, 2000)}
 
           return jsonResponse(request, env, {
             success: true,
+            provider: "resend",
             message: `Email dispatched to ${toEmail} via Resend.`,
           }, 200);
         } catch (err) {

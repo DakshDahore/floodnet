@@ -20,13 +20,13 @@ This directory contains the training and calibration pipeline for the 14-feature
 
 | Evaluation Regime | Metric | Value | Description |
 | :--- | :--- | :--- | :--- |
-| **Synthetic Simulator Holdout (`X_val`)** | Depth MAE | **3.96 cm** | Surrogate emulation error against the 0D lumped physics simulator across 15,000 synthetic holdout sequences. |
+| **Synthetic Simulator Holdout (`X_val`)** | Depth MAE | **3.96 cm** | Surrogate emulation error against the 0D lumped physics simulator across 15,000 synthetic holdout sequences. 3.96 cm is the error against the simulator's own output, not against real floods. |
 | **Synthetic Simulator Holdout (`X_val`)** | Runoff MAE | **9.50 m³/s** | Peak volumetric discharge emulation accuracy against lumped simulator. |
 | **Synthetic Simulator Holdout (`X_val`)** | Flood Probability MAE | **0.0102** | Binary classification calibration on inundation boundaries. |
-| **Real Historical Gauge Observations** | Mean Absolute Error | **~75 cm** | Evaluated against 6 real-world historical gauge records (Mumbai 2005/2021, Valencia 2024, Zhengzhou 2021, Houston USGS, Sahara). |
+| **Real Historical Gauge Observations** | Mean Absolute Error | **75.34 cm** | Evaluated offline by scripts/eval_real_gauges.py across 6 verified historical gauge records in data/gauge_cases.csv. |
 
 ### Why Real Gauge Observations Diverge from 0D Lumped Models
-A zero-dimensional lumped kinematic storage model computes mass conservation over an idealized catchment box coupling Green-Ampt infiltration with Manning discharge. In complex real-world terrain (such as the Valencia Paiporta canyon torrent or Zhengzhou subway breach), 2D momentum funneling, channel geomorphology, and urban infrastructure bottlenecks concentrate runoff into extreme local flood crests (e.g. 225 cm observed vs 22 cm lumped).
+A zero-dimensional lumped kinematic storage model computes mass conservation over an idealized catchment box coupling Green-Ampt infiltration with Manning discharge. In complex real-world terrain (such as the Valencia Paiporta canyon torrent or Zhengzhou subway breach), 2D momentum funneling, channel geomorphology, and urban infrastructure bottlenecks concentrate runoff into extreme local flood crests. On real events the model can under-predict by a large factor (for example Valencia: 225 cm observed vs about 22 cm), so safety decisions are driven by the rainfall and surge floor.
 
 **This physical divergence is the exact raison d’être of FloodLock's multi-layered defense:**
 1. The **Deterministic Physical Hazard Floor** does NOT rely on the surrogate's depth prediction alone. It triggers on raw rainfall rate ($R_0 \ge 15\text{ mm/hr}$), antecedent rain ($R_{48} \ge 50\text{ mm}$), or coastal surge ($\ge 1.5\text{m}$), forcing emergency alerts regardless of neural depth under-prediction.

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { DatabaseSync } from "node:sqlite";
 import {
   deriveDomainSecret,
   encryptPiiAtRest,
@@ -9,18 +10,29 @@ import {
   constantTimeEqual,
   createSignedOAuthState,
   verifySignedOAuthState,
+  hmacSha256Hex,
 } from "../src/crypto_utils.js";
 import {
   isDeterministicPhysicalHazard,
   normalizeTacticalPayload,
   buildDeterministicEdgeSop,
+  decideThreatLevel,
+  decideThreatState,
+  PUBLIC_SAFETY_DISCLAIMER,
 } from "../src/ai_resilience.js";
-import {
+import worker, {
   getSafeFrontendRedirect,
   verifyAdminAccess,
+  verifyTurnstileToken,
+  fetchLiveTelemetry as fetchLiveTelemetryGateway,
+  dispatchFounderAlert,
 } from "../src/index.js";
 import {
+  fetchLiveTelemetry as fetchLiveTelemetryClick,
+} from "../src/click_processor.js";
+import {
   normalizeClientIp,
+  SecurityStateDO,
 } from "../src/durable_objects.js";
 
 const MASTER = "0123456789abcdef0123456789abcdef0123456789abcdef";
@@ -140,6 +152,66 @@ test("5. Finding 1 & 2 Fix: Deterministic physical hazard floor vetoes AI dismis
   assert.notEqual(normalizedBenign.safe_evacuation_corridors[0], "No evacuation required", "Benign corridor text must be replaced with emergency corridors");
   assert.match(normalizedBenign.safe_evacuation_corridors[0], /elevated|arterial|ridge/i);
   assert.doesNotMatch(normalizedBenign.danger_zone_perimeter, /nominal terrain/i, "Benign perimeter must be replaced");
+});
+
+test("5b. Task 1: Life-safety floor strictly overrides all evasive/benign AI phrases when isPhysicalHazard is true, and preserves advisory when false", () => {
+  const telemetry = { r0: 20.0, r48: 65.0, soilSat: 0.92, tideSurge: 1.9 };
+  const predictions = { depth_trajectory_cm: { h1: 25.0, h3: 40.0 }, flash_flood_probability: 0.90, runoff_q_m3s: 200.0 };
+  const fallbackFloor = buildDeterministicEdgeSop(telemetry, predictions, 18.92, 72.83);
+
+  const evasivePhrases = [
+    "Flooding is unlikely; continue normal activities.",
+    "Conditions are safe. Stay at home if you prefer.",
+    "Minimal risk, routine commuting is fine.",
+    "Not expected to flood. Carry on with your day.",
+    "Low risk of inundation, no need to relocate.",
+    "No action needed.",
+  ];
+
+  for (const phrase of evasivePhrases) {
+    const fakeAiAnswer = {
+      threat_verified: false,
+      verification_status: "FALSE_ALARM_DOWNGRADED",
+      confidence_score: 95,
+      tactical_civic_advisory: phrase,
+      safe_evacuation_corridors: ["Carry on normally", "No evacuation needed"],
+      danger_zone_perimeter: "Safe ground everywhere",
+      impassable_infrastructure: ["None"],
+      nearest_open_hospital: { name: "Local Clinic", status: "NORMAL", distance_km: 1.0 },
+    };
+
+    const out = normalizeTacticalPayload(fakeAiAnswer, "EvasiveEngine", fallbackFloor, true);
+    assert.equal(out.threat_verified, true, `Floor must enforce threat_verified=true for phrase: "${phrase}"`);
+    assert.equal(out.verification_status, "VERIFIED_FLOOD_HAZARD", `Floor must enforce VERIFIED_FLOOD_HAZARD for phrase: "${phrase}"`);
+    assert.equal(out.tactical_civic_advisory, fallbackFloor.tactical_civic_advisory, `Advisory must equal fallback SOP for phrase: "${phrase}"`);
+    assert.deepEqual(out.safe_evacuation_corridors, fallbackFloor.safe_evacuation_corridors, `Corridors must equal fallback SOP for phrase: "${phrase}"`);
+    assert.equal(out.danger_zone_perimeter, fallbackFloor.danger_zone_perimeter, `Perimeter must equal fallback SOP for phrase: "${phrase}"`);
+    assert.deepEqual(out.impassable_infrastructure, fallbackFloor.impassable_infrastructure, `Impassable infra must equal fallback SOP for phrase: "${phrase}"`);
+    assert.deepEqual(out.nearest_open_hospital, fallbackFloor.nearest_open_hospital, `Hospital must equal fallback SOP for phrase: "${phrase}"`);
+  }
+
+  // Safe path: When isPhysicalHazard is false, normal AI advisory must be kept
+  const safeAiAnswer = {
+    threat_verified: true,
+    verification_status: "VERIFIED_FLOOD_HAZARD",
+    confidence_score: 85,
+    tactical_civic_advisory: "Localized street flooding reported in sector 4. Exercise caution near drains.",
+    safe_evacuation_corridors: ["Take north bypass avenue"],
+    danger_zone_perimeter: "Sector 4 low dip",
+    impassable_infrastructure: ["Main St underpass"],
+    nearest_open_hospital: { name: "City General", status: "OPEN", distance_km: 2.5 },
+  };
+
+  const safeTelemetry = { r0: 2.0, r48: 10.0, soilSat: 0.35, tideSurge: 0.1 };
+  const safePredictions = { depth_trajectory_cm: { h1: 3.0, h3: 4.0 }, flash_flood_probability: 0.2, runoff_q_m3s: 10.0 };
+  const safeFallback = buildDeterministicEdgeSop(safeTelemetry, safePredictions, 18.92, 72.83);
+
+  const safeOut = normalizeTacticalPayload(safeAiAnswer, "NormalEngine", safeFallback, false);
+  assert.equal(safeOut.tactical_civic_advisory, "Localized street flooding reported in sector 4. Exercise caution near drains.");
+  assert.deepEqual(safeOut.safe_evacuation_corridors, ["Take north bypass avenue"]);
+  assert.equal(safeOut.danger_zone_perimeter, "Sector 4 low dip");
+  assert.deepEqual(safeOut.impassable_infrastructure, ["Main St underpass"]);
+  assert.equal(safeOut.nearest_open_hospital.name, "City General");
 });
 
 test("6. Finding 1 Fix: AI cache key partitions floor states and re-normalizes cached dismissal with live physical floor", () => {
@@ -304,143 +376,326 @@ test("10. Finding 4 Fix: Admin authentication strictly requires length >= 32 ADM
   assert.equal(resSession.reason, "INVALID_ADMIN_CREDENTIALS");
 });
 
-test("11. Finding 5 Fix: 3-strike lockout is scoped per identity + IP to prevent cross-network DoS", () => {
-  // Simulate the SecurityStateDO strike & lockout mechanics with per-IP isolation
-  class MockSecurityState {
-    constructor() {
-      this.strikes = new Map();
-      this.lockouts = new Map();
-    }
+test("10b. Task 2: IPv6 /64 prefix expansion and address normalization table", () => {
+  const table = [
+    ["2001:db8:abcd:12:1:2:3:4", "2001:db8:abcd:12::/64"],
+    ["2001:db8:abcd:12::9", "2001:db8:abcd:12::/64"],
+    ["2001:db8::1", "2001:db8:0:0::/64"],
+    ["2001:db8::2", "2001:db8:0:0::/64"],
+    ["::ffff:1.2.3.4", "1.2.3.4"],
+    ["203.0.113.5", "203.0.113.5"],
+    ["", "global"],
+  ];
 
-    recordFailureAndCheckLockout(identityHash, clientIp, nowMs = Date.now()) {
-      const lockoutKey = `${identityHash}:${clientIp}`;
-      const lockedUntil = this.lockouts.get(lockoutKey) || 0;
-      if (lockedUntil > nowMs) {
-        return { locked: true, reason: "ACCOUNT_LOCKED" };
-      }
-
-      const currentStrikes = (this.strikes.get(lockoutKey) || 0) + 1;
-      this.strikes.set(lockoutKey, currentStrikes);
-
-      if (currentStrikes >= 3) {
-        this.lockouts.set(lockoutKey, nowMs + 15 * 60 * 1000);
-        return { locked: true, reason: "ACCOUNT_LOCKED", strikes: currentStrikes };
-      }
-      return { locked: false, strikes: currentStrikes };
-    }
-
-    isLocked(identityHash, clientIp, nowMs = Date.now()) {
-      const lockoutKey = `${identityHash}:${clientIp}`;
-      return (this.lockouts.get(lockoutKey) || 0) > nowMs;
-    }
+  for (const [input, expected] of table) {
+    const actual = normalizeClientIp(input);
+    assert.equal(actual, expected, `normalizeClientIp("${input}") should return "${expected}" but got "${actual}"`);
   }
+});
 
-  const sec = new MockSecurityState();
-  const targetIdentity = "alice_identity_hash_999";
+test("10c. Task 3: Turnstile verification is mandatory (no token -> 403, bypass string -> 403, valid token -> ok)", async () => {
+  const secretKey = "0x4AAAAAAtestsecret";
+  const origFetch = globalThis.fetch;
+
+  try {
+    // Case A: Missing or empty token returns 403 BOT_CHALLENGE_REQUIRED
+    const resNoToken = await verifyTurnstileToken("", secretKey, "203.0.113.1", "production");
+    assert.equal(resNoToken.ok, false);
+    assert.equal(resNoToken.status, 403);
+    assert.equal(resNoToken.error, "BOT_CHALLENGE_REQUIRED");
+
+    // Case B: Bypass string returns 403 BOT_CHALLENGE_FAILED (stub fetch returning failure)
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({ success: false, "error-codes": ["invalid-input-response"] }),
+    });
+    const resBypass = await verifyTurnstileToken("FAKE_DISCARDED_TOKEN", secretKey, "203.0.113.1", "production");
+    assert.equal(resBypass.ok, false);
+    assert.equal(resBypass.status, 403);
+    assert.equal(resBypass.error, "BOT_CHALLENGE_FAILED");
+
+    // Case C: Valid token (stub fetch returning success) continues cleanly
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({ success: true }),
+    });
+    const resValid = await verifyTurnstileToken("valid_cf_token_xyz", secretKey, "203.0.113.1", "production");
+    assert.equal(resValid.ok, true);
+
+    // Case D: Missing TURNSTILE_SECRET_KEY in production returns 500 SERVER_MISCONFIGURED
+    const resMissingSecretProd = await verifyTurnstileToken("some_token", "", "203.0.113.1", "production");
+    assert.equal(resMissingSecretProd.ok, false);
+    assert.equal(resMissingSecretProd.status, 500);
+    assert.equal(resMissingSecretProd.error, "SERVER_MISCONFIGURED");
+
+    // Case E: Missing TURNSTILE_SECRET_KEY in non-production environment allowed
+    const resMissingSecretDev = await verifyTurnstileToken("some_token", "", "203.0.113.1", "development");
+    assert.equal(resMissingSecretDev.ok, true);
+  } finally {
+    globalThis.fetch = origFetch;
+  }
+});
+
+test("10d. Task 4: decideThreatLevel shared threat resolution table", () => {
+  const table = [
+    // hazard | degraded | isThreat | groqDismissed | groqVerified | expectedLevel
+    { hazard: true, degraded: true, isThreat: true, groqDismissed: false, groqVerified: true, expected: "CRITICAL_INUNDATION" },
+    { hazard: true, degraded: true, isThreat: false, groqDismissed: true, groqVerified: false, expected: "CRITICAL_INUNDATION" },
+    { hazard: true, degraded: false, isThreat: false, groqDismissed: true, groqVerified: false, expected: "CRITICAL_INUNDATION" },
+    { hazard: false, degraded: true, isThreat: true, groqDismissed: false, groqVerified: true, expected: "ELEVATED_WATCH" },
+    { hazard: false, degraded: true, isThreat: false, groqDismissed: false, groqVerified: false, expected: "ELEVATED_WATCH" },
+    { hazard: false, degraded: false, isThreat: true, groqDismissed: true, groqVerified: false, expected: "ELEVATED_WATCH" },
+    { hazard: false, degraded: false, isThreat: true, groqDismissed: false, groqVerified: true, expected: "CRITICAL_INUNDATION" },
+    { hazard: false, degraded: false, isThreat: false, groqDismissed: false, groqVerified: false, expected: "MONITORED_NOMINAL" },
+  ];
+
+  for (const row of table) {
+    const level = decideThreatLevel({
+      isPhysicalHazard: row.hazard,
+      telemetryDegraded: row.degraded,
+      isThreat: row.isThreat,
+      groqDismissed: row.groqDismissed,
+      groqVerified: row.groqVerified,
+    });
+    assert.equal(level, row.expected, `Mismatch for row ${JSON.stringify(row)}: expected ${row.expected} but got ${level}`);
+
+    const state = decideThreatState({
+      isPhysicalHazard: row.hazard,
+      telemetryDegraded: row.degraded,
+      isThreat: row.isThreat,
+      groqDismissed: row.groqDismissed,
+      groqVerified: row.groqVerified,
+    });
+    assert.equal(state.threatLevel, row.expected);
+  }
+});
+
+test("10e. Task 7: dispatchFounderAlert gracefully handles missing FOUNDER_ALERT_EMAIL and dispatches when present", async () => {
+  const origFetch = globalThis.fetch;
+  let fetched = false;
+  try {
+    globalThis.fetch = async (url, opts) => {
+      fetched = true;
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    };
+
+    // 1. Missing FOUNDER_ALERT_EMAIL -> skips alert, does not crash, fetch not called
+    fetched = false;
+    await dispatchFounderAlert({}, "Test Alert", { foo: "bar" });
+    assert.equal(fetched, false);
+
+    await dispatchFounderAlert({ FOUNDER_ALERT_EMAIL: "" }, "Test Alert", { foo: "bar" });
+    assert.equal(fetched, false);
+
+    // 2. Present FOUNDER_ALERT_EMAIL -> calls alert dispatch
+    await dispatchFounderAlert({ FOUNDER_ALERT_EMAIL: "admin@floodlock.local" }, "Test Alert", { foo: "bar" });
+    assert.equal(fetched, true);
+  } finally {
+    globalThis.fetch = origFetch;
+  }
+});
+
+test("10f. Task 12: Public safety disclaimer is present in API forecast responses and matches life-safety guidance", async () => {
+  const req = new Request("http://localhost/api/forecast?lat=19.07&lon=72.87");
+  const res = await worker.fetch(req, { ENVIRONMENT: "development" });
+  assert.equal(res.status, 200);
+
+  const data = await res.json();
+  const expectedNotice = "FloodLock is an experimental information tool, not an official warning system. In an emergency follow instructions from your local authorities and call your local emergency number.";
+  
+  assert.equal(data.disclaimer, expectedNotice);
+  assert.equal(PUBLIC_SAFETY_DISCLAIMER, expectedNotice);
+});
+
+function createTestSecurityDO() {
+  const db = new DatabaseSync(":memory:");
+  const ctx = {
+    storage: {
+      sql: {
+        exec(sql, ...params) {
+          const trimmed = sql.trim();
+          if (params.length > 0) {
+            const stmt = db.prepare(trimmed);
+            if (/^SELECT\b/i.test(trimmed)) {
+              return { toArray: () => stmt.all(...params) };
+            } else {
+              stmt.run(...params);
+              return { toArray: () => [] };
+            }
+          } else {
+            if (/^SELECT\b/i.test(trimmed)) {
+              const stmt = db.prepare(trimmed);
+              return { toArray: () => stmt.all() };
+            } else {
+              db.exec(trimmed);
+              return { toArray: () => [] };
+            }
+          }
+        }
+      },
+      getAlarm: async () => null,
+      setAlarm: async () => {},
+    }
+  };
+  return new SecurityStateDO(ctx, {});
+}
+
+test("11. Finding 5 Fix: 3-strike lockout is scoped per identity + IP to prevent cross-network DoS (Real SecurityStateDO)", async () => {
+  const sec = createTestSecurityDO();
+  const masterKey = "mastersecret12345678901234567890123456789012";
+  const idKey = await deriveDomainSecret(masterKey, "identity-hash");
+  const otpKey = await deriveDomainSecret(masterKey, "otp-hash");
+  const identityHash = await hmacSha256Hex(idKey, "id:alice_lockout_test@example.com");
+
+  const correctCode = "654321";
+  const correctHash = await hmacSha256Hex(otpKey, `otp:${identityHash}:${correctCode}`);
+  await sec.issueOtp(identityHash, correctHash, 300000, 0, "192.168.1.1");
+
   const attackerIp = "198.51.100.44";
   const legitimateUserIp = "203.0.113.88";
 
-  // Attacker fails 3 times from their IP
-  sec.recordFailureAndCheckLockout(targetIdentity, attackerIp);
-  sec.recordFailureAndCheckLockout(targetIdentity, attackerIp);
-  const strike3 = sec.recordFailureAndCheckLockout(targetIdentity, attackerIp);
-  assert.equal(strike3.locked, true, "Attacker IP must be locked after 3 strikes");
-  assert.equal(sec.isLocked(targetIdentity, attackerIp), true, "Attacker IP is locked out");
+  // Attacker fails 3 times from attackerIp
+  const w1 = await hmacSha256Hex(otpKey, `otp:${identityHash}:000001`);
+  const r1 = await sec.verifyOtp(identityHash, w1, attackerIp);
+  assert.equal(r1.ok, false);
+  assert.equal(r1.code, "INVALID_CODE");
 
-  // Legitimate user on their own IP is completely unaffected and NOT locked out
-  assert.equal(
-    sec.isLocked(targetIdentity, legitimateUserIp),
-    false,
-    "Legitimate user IP must NOT be locked out by attacker failures"
-  );
-  const userAttempt = sec.recordFailureAndCheckLockout(targetIdentity, legitimateUserIp);
-  assert.equal(userAttempt.locked, false, "Legitimate user can attempt verification");
+  const w2 = await hmacSha256Hex(otpKey, `otp:${identityHash}:000002`);
+  const r2 = await sec.verifyOtp(identityHash, w2, attackerIp);
+  assert.equal(r2.ok, false);
+  assert.equal(r2.code, "INVALID_CODE");
+
+  const w3 = await hmacSha256Hex(otpKey, `otp:${identityHash}:000003`);
+  const r3 = await sec.verifyOtp(identityHash, w3, attackerIp);
+  assert.equal(r3.ok, false);
+  assert.equal(r3.code, "ACCOUNT_LOCKED", "Attacker IP must be locked on 3rd failed strike");
+  assert.equal(r3.status, 403);
+
+  // Subsequent attempts from attackerIp are locked
+  const r4 = await sec.verifyOtp(identityHash, w3, attackerIp);
+  assert.equal(r4.code, "ACCOUNT_LOCKED");
+  assert.equal(r4.status, 403);
+
+  // Legitimate user on another IP is NOT locked out and succeeds
+  const rUser = await sec.verifyOtp(identityHash, correctHash, legitimateUserIp);
+  assert.equal(rUser.ok, true, "Legitimate user IP must NOT be locked out by attacker failures");
 
   // IPv6 /64 prefix normalization test
   const ipv6A = "2001:0db8:85a3:0000:0000:8a2e:0370:7334";
   const ipv6B = "2001:0db8:85a3:0000:ffff:ffff:ffff:ffff";
-  assert.equal(normalizeClientIp(ipv6A), "2001:0db8:85a3:0000::/64");
+  assert.equal(normalizeClientIp(ipv6A), "2001:db8:85a3:0::/64");
   assert.equal(normalizeClientIp(ipv6A), normalizeClientIp(ipv6B), "IPv6 /64 subnet rotation must map to same bucket");
 });
 
-test("12. Critical Security Fix: Global OTP failure cap (5 attempts) revokes challenge and locks identity against IP rotation attacks", () => {
-  // Model the global 5-failure revocation invariant in SecurityStateDO
-  class MockSecurityDOWithGlobalCap {
-    constructor() {
-      this.challenge = { otpHash: "hash_of_123456", attempts: 0, expiresAt: Date.now() + 300000 };
-      this.globalLockouts = new Map();
-      this.ipLockouts = new Map();
-    }
+test("12. Critical Security Fix: Global OTP failure cap (5 attempts) revokes challenge and locks identity against IP rotation attacks (Real SecurityStateDO)", async () => {
+  const masterKey = "mastersecret12345678901234567890123456789012";
+  const idKey = await deriveDomainSecret(masterKey, "identity-hash");
+  const otpKey = await deriveDomainSecret(masterKey, "otp-hash");
 
-    verify(identityHash, submittedHash, clientIp) {
-      const now = Date.now();
-      const normalizedIp = normalizeClientIp(clientIp);
-      const ipKey = `${identityHash}:${normalizedIp}`;
+  // Scenario A: 4 wrong codes from 4 IPs, 5th wrong code gives CHALLENGE_REVOKED, correct code afterwards fails
+  const secA = createTestSecurityDO();
+  const idA = await hmacSha256Hex(idKey, "id:victim_user_a@example.com");
+  const correctCodeA = "777888";
+  const correctHashA = await hmacSha256Hex(otpKey, `otp:${idA}:${correctCodeA}`);
+  await secA.issueOtp(idA, correctHashA, 300000, 0, "192.168.1.1");
 
-      if ((this.globalLockouts.get(identityHash) || 0) > now) {
-        return { ok: false, status: 403, code: "ACCOUNT_LOCKED" };
-      }
-      if ((this.ipLockouts.get(ipKey) || 0) > now) {
-        return { ok: false, status: 403, code: "IP_LOCKED" };
-      }
-      if (!this.challenge) {
-        return { ok: false, status: 400, code: "NO_ACTIVE_OTP" };
-      }
-
-      if (submittedHash === this.challenge.otpHash) {
-        this.challenge = null;
-        return { ok: true };
-      }
-
-      this.challenge.attempts += 1;
-      if (this.challenge.attempts >= 5) {
-        // Burn challenge and lock globally!
-        this.challenge = null;
-        this.globalLockouts.set(identityHash, now + 15 * 60 * 1000);
-        return { ok: false, status: 403, code: "CHALLENGE_REVOKED" };
-      }
-
-      return { ok: false, status: 401, code: "INVALID_CODE", remaining: 5 - this.challenge.attempts };
-    }
+  for (let i = 1; i <= 4; i++) {
+    const wrongHash = await hmacSha256Hex(otpKey, `otp:${idA}:00000${i}`);
+    const res = await secA.verifyOtp(idA, wrongHash, `198.51.100.${i}`);
+    assert.equal(res.ok, false);
+    assert.equal(res.code, "INVALID_CODE", `Attempt ${i} must return INVALID_CODE`);
   }
 
-  const sdo = new MockSecurityDOWithGlobalCap();
-  const identity = "user_victim_hash";
+  // 5th wrong code from a 5th IP gives CHALLENGE_REVOKED
+  const wrongHash5 = await hmacSha256Hex(otpKey, `otp:${idA}:000005`);
+  const res5 = await secA.verifyOtp(idA, wrongHash5, "198.51.100.5");
+  assert.equal(res5.ok, false);
+  assert.equal(res5.code, "CHALLENGE_REVOKED", "5th failed attempt globally must revoke challenge");
+  assert.equal(res5.status, 403);
 
-  // Attacker rotates IPs: 1 guess per IP
-  const r1 = sdo.verify(identity, "wrong_1", "198.51.100.1");
-  assert.equal(r1.status, 401);
-  const r2 = sdo.verify(identity, "wrong_2", "198.51.100.2");
-  assert.equal(r2.status, 401);
-  const r3 = sdo.verify(identity, "wrong_3", "198.51.100.3");
-  assert.equal(r3.status, 401);
-  const r4 = sdo.verify(identity, "wrong_4", "198.51.100.4");
-  assert.equal(r4.status, 401);
+  // Afterwards even the correct code on another IP fails
+  const resAfterRevoke = await secA.verifyOtp(idA, correctHashA, "198.51.100.6");
+  assert.equal(resAfterRevoke.ok, false);
+  assert.equal(resAfterRevoke.code, "ACCOUNT_LOCKED", "After challenge revocation, account must be locked globally");
+  assert.equal(resAfterRevoke.status, 403);
 
-  // 5th failed attempt from yet another IP (IP #5)
-  const r5 = sdo.verify(identity, "wrong_5", "198.51.100.5");
-  assert.equal(r5.status, 403, "5th failed attempt must revoke challenge and return 403");
-  assert.equal(r5.code, "CHALLENGE_REVOKED");
+  // Scenario B: 4 wrong codes from 4 IPs, then the correct code on 5th attempt succeeds
+  const secB = createTestSecurityDO();
+  const idB = await hmacSha256Hex(idKey, "id:user_success_5th@example.com");
+  const correctCodeB = "555666";
+  const correctHashB = await hmacSha256Hex(otpKey, `otp:${idB}:${correctCodeB}`);
+  await secB.issueOtp(idB, correctHashB, 300000, 0, "192.168.1.1");
 
-  // On IP #37, even with the correct code, the challenge has been destroyed and account locked!
-  const r37 = sdo.verify(identity, "hash_of_123456", "2001:db8:85a3::37");
-  assert.equal(r37.status, 403, "Challenge must be burned; correct code on rotated IP is rejected");
-  assert.equal(r37.code, "ACCOUNT_LOCKED");
+  for (let i = 1; i <= 4; i++) {
+    const wrongHash = await hmacSha256Hex(otpKey, `otp:${idB}:00000${i}`);
+    const res = await secB.verifyOtp(idB, wrongHash, `203.0.113.${i}`);
+    assert.equal(res.code, "INVALID_CODE");
+  }
+
+  const res5Success = await secB.verifyOtp(idB, correctHashB, "203.0.113.5");
+  assert.equal(res5Success.ok, true, "Correct code on 5th attempt must succeed");
+
+  // Scenario C: Issuing a 4th OTP within 10 minutes returns RATE_LIMITED
+  const secC = createTestSecurityDO();
+  const idC = await hmacSha256Hex(idKey, "id:ratelimit_user@example.com");
+  const r1 = await secC.issueOtp(idC, "hash1", 300000, 0, "1.1.1.1");
+  const r2 = await secC.issueOtp(idC, "hash2", 300000, 0, "1.1.1.1");
+  const r3 = await secC.issueOtp(idC, "hash3", 300000, 0, "1.1.1.1");
+  const r4 = await secC.issueOtp(idC, "hash4", 300000, 0, "1.1.1.1");
+
+  assert.equal(r1.ok, true);
+  assert.equal(r2.ok, true);
+  assert.equal(r3.ok, true);
+  assert.equal(r4.ok, false);
+  assert.equal(r4.code, "RATE_LIMITED", "4th OTP issuance within 10m must return RATE_LIMITED");
 });
 
-test("13. Critical Telemetry Fix: Volumetric moisture converted to saturation & degraded telemetry fail-safe", () => {
-  // Open-Meteo volumetric water content θ = 0.38 m³/m³ with porosity 0.45 m³/m³
-  const rawMoisture = 0.38;
-  const soilSat = Math.min(1.0, Math.max(0.0, rawMoisture / 0.45));
-  assert.ok(soilSat >= 0.80, "0.38 m³/m³ volumetric moisture must map to >= 80% saturation");
-  assert.equal(Math.round(soilSat * 100), 84, "0.38 / 0.45 must evaluate to 84% saturation");
+test("13. Critical Telemetry Fix: Real fetchLiveTelemetry antecedent slicing & soil moisture conversion", async () => {
+  const origFetch = globalThis.fetch;
+  try {
+    const times = [];
+    const rain = [];
+    const soil = [];
+    for (let i = 0; i < 24; i++) {
+      const hh = String(i).padStart(2, "0");
+      times.push(`2026-11-23T${hh}:00`);
+      if (i <= 12) {
+        rain.push(2.0); // 13 hours * 2 = 26.0 mm past rain
+      } else {
+        rain.push(500.0); // future hours: MUST NOT be counted!
+      }
+      soil.push(i === 12 ? 0.38 : 0.20);
+    }
 
-  // Telemetry degradation flag check
-  const degradedTelemetry = { r0: 0.0, r48: 0.0, soilSat: 0.45, tideSurge: 0.0, telemetryDegraded: true };
-  const predictions = { depth_trajectory_cm: { h1: 0.0 } };
-  const isFloor = isDeterministicPhysicalHazard(degradedTelemetry, predictions);
+    globalThis.fetch = async (url) => ({
+      ok: true,
+      json: async () => ({
+        current: { time: "2026-11-23T12:00", precipitation: 2.0 },
+        hourly: {
+          time: times,
+          precipitation: rain,
+          soil_moisture_0_to_1cm: soil,
+        },
+      }),
+    });
 
-  // When telemetry is degraded, ALL_CLEAR condition (!isPhysicalHazard && !telemetryDegraded) must evaluate to FALSE
-  const allowedAllClear = !isFloor && !degradedTelemetry.telemetryDegraded;
-  assert.equal(allowedAllClear, false, "Degraded telemetry must NEVER be permitted to emit ALL_CLEAR");
+    const telemGateway = await fetchLiveTelemetryGateway(18.92, 72.83);
+    assert.equal(telemGateway.r48, 26.0, "r48 must only sum past hours, excluding future 500mm hours");
+    assert.equal(telemGateway.soilSat, 0.84, "0.38 m³/m³ moisture must convert to 0.38 / 0.45 = 0.84 saturation");
+    assert.equal(telemGateway.telemetryDegraded, false);
+
+    const telemClick = await fetchLiveTelemetryClick(18.92, 72.83);
+    assert.equal(telemClick.r48, 26.0);
+    assert.equal(telemClick.soilSat, 0.84);
+
+    // Stub that throws must yield telemetryDegraded === true
+    globalThis.fetch = async () => { throw new Error("Connection timeout"); };
+    const telemFail = await fetchLiveTelemetryGateway(18.92, 72.83);
+    assert.equal(telemFail.telemetryDegraded, true, "Network error or timeout must yield telemetryDegraded === true");
+
+    const telemFailClick = await fetchLiveTelemetryClick(19.92, 73.83);
+    assert.equal(telemFailClick.telemetryDegraded, true);
+  } finally {
+    globalThis.fetch = origFetch;
+  }
 });

@@ -1,0 +1,8 @@
+event,lat,lon,rain_r0,rain_r48,soil_sat,tide,observed_peak_depth_cm,source_url_or_citation
+mumbai_2005_deluge,19.0600,72.8656,185.0,450.0,0.96,4.48,210.0,"Central Water Commission & MCGM Fact-Finding Committee (2005)"
+valencia_2024_barranco,39.4230,-0.4180,165.0,220.0,0.85,0.40,225.0,"Confederacion Hidrografica del Jucar (CHJ) & AEMET (2024)"
+zhengzhou_2021_megacity,34.7800,113.6500,201.9,380.0,0.90,0.00,195.0,"China Ministry of Water Resources Hydrological Bureau (2021)"
+dubai_2024_cloudburst,25.2048,55.2708,110.0,254.0,0.25,0.60,65.0,"UAE National Center of Meteorology (NCM) & Dubai Municipality (2024)"
+jeddah_2022_flash,21.5433,39.1728,182.0,182.0,0.15,0.20,180.0,"Saudi National Center for Meteorology (NCM) Jeddah Station (2022)"
+sahara_control,22.7850,5.5228,0.0,0.0,0.10,0.00,0.0,"WMO Surface Climate Baseline Control Station 60680 (2021)"
+

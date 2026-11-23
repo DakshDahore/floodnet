@@ -1,7 +1,0 @@
-{
-  "name": "floodlock-backend-fixed",
-  "version": "2.0.0",
-  "private": true,
-  "type": "module",
-  "scripts": { "test": "node --test test/backend.test.mjs", "dev": "wrangler dev", "deploy": "wrangler deploy" }
-}
