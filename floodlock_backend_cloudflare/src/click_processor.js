@@ -15,7 +15,7 @@
  */
 
 import { WEIGHTS_14F } from "./weights_14f.js";
-import { runTacticalReasoning } from "./ai_resilience.js";
+import { runTacticalReasoning, isDeterministicPhysicalHazard } from "./ai_resilience.js";
 
 const DEFAULT_ORIGINS = [
   "https://metoflood.netlify.app",
@@ -312,23 +312,37 @@ export default {
         neuralPred.flash_flood_probability > 0.40 ||
         (telem.r0 > 15.0 && telem.soilSat > 0.75);
 
+      const isPhysicalHazard = isDeterministicPhysicalHazard(telem, neuralPred);
+
       let tacticalReasoning = null;
-      if (isThreat) {
+      if (isThreat || isPhysicalHazard) {
         tacticalReasoning = await runTacticalReasoning(env, telem, neuralPred, lat, lon, {
           skipCache: false,
         });
       }
 
-      // Adversarial Groq Verification Gate
+      // Adversarial Groq Verification Gate with Deterministic Safety Floor
       const groqVerified = tacticalReasoning && (tacticalReasoning.threat_verified === true || tacticalReasoning.verification_status === "VERIFIED_FLOOD_HAZARD");
       const groqDismissed = tacticalReasoning && (tacticalReasoning.threat_verified === false || tacticalReasoning.verification_status === "FALSE_ALARM_DOWNGRADED");
 
       let finalThreatLevel = "MONITORED_NOMINAL";
-      if (isThreat) {
+      let auditVerdict = "NOMINAL_MONITORED";
+      let auditAction = "ROUTINE_MONITORING";
+
+      if (isPhysicalHazard) {
+        // SAFETY FLOOR INVARIANT: Hard physical disaster telemetry CANNOT be dismissed by AI.
+        finalThreatLevel = "CRITICAL_INUNDATION";
+        auditVerdict = "CONFIRMED_FLOOD_HAZARD";
+        auditAction = groqDismissed ? "OVERRIDDEN_BY_PHYSICAL_SAFETY_FLOOR" : "CRITICAL_ALARM_DISPATCHED";
+      } else if (isThreat) {
         if (groqDismissed) {
           finalThreatLevel = "NOMINAL";
+          auditVerdict = "FALSE_ALARM_DOWNGRADED";
+          auditAction = "ALARM_SUPPRESSED_FALSE_ALARM";
         } else if (groqVerified || !tacticalReasoning) {
           finalThreatLevel = "CRITICAL_INUNDATION";
+          auditVerdict = "CONFIRMED_FLOOD_HAZARD";
+          auditAction = "CRITICAL_ALARM_DISPATCHED";
         }
       }
 
@@ -358,13 +372,14 @@ export default {
           raw_neural_threat_flag: isThreat,
         },
         adversarial_groq_audit: {
-          groq_called: Boolean(isThreat),
+          groq_called: Boolean(isThreat || isPhysicalHazard),
           engine: tacticalReasoning ? tacticalReasoning.engine : "None (Sub-threshold)",
-          groq_verdict: groqDismissed ? "FALSE_ALARM_DOWNGRADED" : (groqVerified ? "CONFIRMED_FLOOD_HAZARD" : "NOMINAL_MONITORED"),
-          threat_verified: groqVerified,
+          groq_verdict: auditVerdict,
+          threat_verified: (finalThreatLevel === "CRITICAL_INUNDATION"),
           confidence_score: tacticalReasoning ? tacticalReasoning.confidence_score : 99,
           physical_audit_summary: tacticalReasoning ? (tacticalReasoning.physical_consistency_audit || tacticalReasoning.causal_attribution) : "Nominal hydrological equilibrium.",
-          action_taken: groqDismissed ? "ALARM_SUPPRESSED_FALSE_ALARM" : (groqVerified ? "CRITICAL_ALARM_DISPATCHED" : "ROUTINE_MONITORING"),
+          action_taken: auditAction,
+          physical_safety_floor_active: isPhysicalHazard,
         }
       };
 

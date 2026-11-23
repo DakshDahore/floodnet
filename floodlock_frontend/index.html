@@ -2333,12 +2333,14 @@ print(response.json())</code></pre>
     ].filter((v, i, a) => Boolean(v) && a.indexOf(v) === i);
 
     const CLICK_CLUSTER = [
+      'https://floodlock-click-processor.lanternmech.workers.dev',
       'https://floodlock-click-processor.dakshdahore1995.workers.dev',
-      window.FloodConfig ? window.FloodConfig.getBaseUrl().replace(/\/+$/, '') : 'https://floodlock-backend.dakshdahore1995.workers.dev',
+      window.FloodConfig ? window.FloodConfig.getBaseUrl().replace(/\/+$/, '') : 'https://floodlock-backend.lanternmech.workers.dev',
+      'https://floodlock-backend.lanternmech.workers.dev',
+      'https://floodlock-backend.dakshdahore1995.workers.dev',
       'https://floodlock-backend-standby.dakshdahore1995.workers.dev',
       'https://floodlock-backend.dahoremugdha.workers.dev',
-      'https://floodlock-backend.dakshdadafit.workers.dev',
-      'https://floodlock-backend.lanternmech.workers.dev'
+      'https://floodlock-backend.dakshdadafit.workers.dev'
     ].filter((v, i, a) => Boolean(v) && a.indexOf(v) === i);
 
     async function loadPlanetaryAMRHeatGrid(forceRefresh = false) {

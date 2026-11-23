@@ -34,7 +34,7 @@ import {
   sanitizeText,
   containsMaliciousPayload,
 } from "./crypto_utils.js";
-import { runTacticalReasoning } from "./ai_resilience.js";
+import { runTacticalReasoning, isDeterministicPhysicalHazard } from "./ai_resilience.js";
 
 export { SecurityStateDO, BillingStateDO, CircuitBreakerDO } from "./durable_objects.js";
 
@@ -93,6 +93,36 @@ function buildCorsHeaders(request, env) {
     "Referrer-Policy": "strict-origin-when-cross-origin",
     "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
   };
+}
+
+function getSafeFrontendRedirect(rawOrigin, env) {
+  const fallback = (env.FRONTEND_URL || "https://floodlock.pages.dev").replace(/\/+$/, "");
+  if (!rawOrigin || typeof rawOrigin !== "string") return fallback;
+  try {
+    const parsed = new URL(rawOrigin);
+    const host = parsed.hostname.toLowerCase();
+    const proto = parsed.protocol;
+
+    if (
+      proto === "https:" &&
+      (host === "floodlock.pages.dev" ||
+       host.endsWith(".floodlock.pages.dev") ||
+       host === "metoflood.netlify.app" ||
+       host === "floodnet.netlify.app" ||
+       host === "dakshdahore1995-design.github.io" ||
+       (env.FRONTEND_URL && parsed.origin === new URL(env.FRONTEND_URL).origin))
+    ) {
+      return parsed.origin;
+    }
+
+    if (
+      (proto === "http:" || proto === "https:") &&
+      (host === "localhost" || host === "127.0.0.1")
+    ) {
+      return parsed.origin;
+    }
+  } catch {}
+  return fallback;
 }
 
 function jsonResponse(request, env, data, status = 200, extraHeaders = {}) {
@@ -558,11 +588,19 @@ async function verifyAdminAccess(env, request) {
   const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : authHeader.trim();
   if (!token) return { ok: false, reason: "MISSING_AUTH" };
 
-  if (env.MASTER_SECRET && constantTimeEqual(token, env.MASTER_SECRET)) {
-    return { ok: true, admin_email: "dakshdahore.d@gmail.com", method: "MASTER_SECRET" };
+  // Finding 4 Fix: Dedicated Admin API Secret explicitly decoupled from root MASTER_SECRET
+  if (env.ADMIN_SECRET && constantTimeEqual(token, env.ADMIN_SECRET)) {
+    return { ok: true, admin_email: "dakshdahore.d@gmail.com", method: "ADMIN_SECRET" };
   }
 
+  // Domain-separated HKDF fallback ensuring raw MASTER_SECRET is never accepted as bearer token
   if (env.MASTER_SECRET) {
+    const adminDomainKey = await deriveDomainSecret(env.MASTER_SECRET, "floodlock-admin-bearer-token");
+    const adminKeyHex = await hmacSha256Hex(adminDomainKey, "admin-authorization-v3");
+    if (constantTimeEqual(token, adminKeyHex)) {
+      return { ok: true, admin_email: "dakshdahore.d@gmail.com", method: "DERIVED_ADMIN_KEY" };
+    }
+
     const session = await verifySessionToken(env.MASTER_SECRET, `Bearer ${token}`);
     if (session) {
       if (session.isAdmin) {
@@ -830,7 +868,7 @@ export default {
       // ── GET /api/auth/oauth/google (1-Click Google OAuth Entrypoint) ──
       if (path === "/api/auth/oauth/google" && method === "GET") {
         const clientId = (env.GOOGLE_CLIENT_ID || "").trim();
-        const frontendUrl = env.FRONTEND_URL || "https://metoflood.netlify.app";
+        const frontendUrl = getSafeFrontendRedirect(env.FRONTEND_URL, env);
         if (!clientId) {
           return Response.redirect(`${frontendUrl}/#oauth_error=google_unconfigured`, 302);
         }
@@ -854,9 +892,10 @@ export default {
         try {
           let userEmail = "";
           let userName = "";
+          let userPicture = null;
 
           if (provider === "google") {
-            const redirectUri = body.redirect_uri || `${env.FRONTEND_URL || "https://metoflood.netlify.app"}/auth/callback`;
+            const redirectUri = body.redirect_uri || `${getSafeFrontendRedirect(env.FRONTEND_URL, env)}/auth/callback`;
             const clientId = String(env.GOOGLE_CLIENT_ID || "").trim();
             const clientSecret = String(env.GOOGLE_CLIENT_SECRET || "").trim();
             const cleanRedirectUri = String(redirectUri || "").trim();
@@ -886,8 +925,64 @@ export default {
               return jsonResponse(request, env, { error: "USERINFO_FAILED", message: "Failed to fetch Google user profile." }, 400);
             }
             const userData = await userRes.json();
+            // Finding 2 Fix: Verify email was verified by Google
+            if (userData.verified_email !== true && userData.email_verified !== true) {
+              return jsonResponse(request, env, { error: "UNVERIFIED_EMAIL", message: "Google account email is not verified." }, 403);
+            }
             userEmail = String(userData.email || "").toLowerCase().trim();
             userName = String(userData.name || "").trim();
+            userPicture = userData.picture || null;
+          } else if (provider === "github") {
+            const redirectUri = body.redirect_uri || `${getSafeFrontendRedirect(env.FRONTEND_URL, env)}/auth/callback`;
+            const clientId = String(env.GITHUB_CLIENT_ID || "").trim();
+            const clientSecret = String(env.GITHUB_CLIENT_SECRET || "").trim();
+            const cleanRedirectUri = String(redirectUri || "").trim();
+            const cleanCode = String(code || "").trim();
+
+            const tokenRes = await fetch("https://github.com/login/oauth/access_token", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Accept: "application/json" },
+              body: JSON.stringify({
+                client_id: clientId,
+                client_secret: clientSecret,
+                code: cleanCode,
+                redirect_uri: cleanRedirectUri,
+              }),
+            });
+            if (!tokenRes.ok) {
+              return jsonResponse(request, env, { error: "TOKEN_EXCHANGE_FAILED", message: "GitHub token exchange failed." }, 400);
+            }
+            const tokenData = await tokenRes.json();
+            if (!tokenData.access_token) {
+              return jsonResponse(request, env, { error: "TOKEN_EXCHANGE_FAILED", message: "No access token from GitHub." }, 400);
+            }
+
+            try {
+              const ghUserRes = await fetch("https://api.github.com/user", {
+                headers: { Authorization: `Bearer ${tokenData.access_token}`, "User-Agent": "FloodLock-Worker/3.2" },
+              });
+              if (ghUserRes.ok) {
+                const ghUser = await ghUserRes.json();
+                userName = ghUser.name || ghUser.login || "GitHub User";
+                userPicture = ghUser.avatar_url || null;
+              }
+            } catch {}
+
+            // Finding 2 Fix: Strictly fetch verified emails only from GitHub - never trust unverified profile email
+            const emailsRes = await fetch("https://api.github.com/user/emails", {
+              headers: { Authorization: `Bearer ${tokenData.access_token}`, "User-Agent": "FloodLock-Worker/3.2" },
+            });
+            if (!emailsRes.ok) {
+              return jsonResponse(request, env, { error: "GITHUB_EMAILS_FAILED", message: "Failed to fetch GitHub emails." }, 400);
+            }
+            const emails = await emailsRes.json();
+            const verifiedObj = Array.isArray(emails)
+              ? (emails.find((e) => e.primary && e.verified) || emails.find((e) => e.verified))
+              : null;
+            if (!verifiedObj || !verifiedObj.email) {
+              return jsonResponse(request, env, { error: "UNVERIFIED_EMAIL", message: "GitHub account has no verified email." }, 403);
+            }
+            userEmail = String(verifiedObj.email).toLowerCase().trim();
           }
 
           if (!userEmail || !isValidIdentity(userEmail)) {
@@ -960,7 +1055,7 @@ export default {
       // ── GET /api/auth/oauth/github (1-Click GitHub OAuth Entrypoint) ──
       if (path === "/api/auth/oauth/github" && method === "GET") {
         const clientId = env.GITHUB_CLIENT_ID;
-        const frontendUrl = env.FRONTEND_URL || "https://metoflood.netlify.app";
+        const frontendUrl = getSafeFrontendRedirect(env.FRONTEND_URL, env);
         if (!clientId) {
           return Response.redirect(`${frontendUrl}/#oauth_error=github_unconfigured`, 302);
         }
@@ -975,12 +1070,13 @@ export default {
       if ((path === "/api/auth/oauth/callback" || path === "/api/auth/oauth/github/callback") && method === "GET") {
         const code = url.searchParams.get("code");
         let provider = url.searchParams.get("provider");
-        let frontendUrl = env.FRONTEND_URL || "https://metoflood.netlify.app";
+        let frontendUrl = getSafeFrontendRedirect(env.FRONTEND_URL, env);
         const stateParam = url.searchParams.get("state");
         if (stateParam) {
           try {
             const parsed = JSON.parse(stateParam);
-            if (parsed.origin) frontendUrl = parsed.origin;
+            // Finding 1 Fix: Strict origin validation - prevent open redirect / session hijacking
+            if (parsed.origin) frontendUrl = getSafeFrontendRedirect(parsed.origin, env);
             if (parsed.provider) provider = parsed.provider;
           } catch {}
         }
@@ -1027,6 +1123,11 @@ export default {
               return Response.redirect(`${frontendUrl}/#oauth_error=userinfo_failed`, 302);
             }
             const userData = await userRes.json();
+            // Finding 2 Fix: Verify email was verified by Google
+            if (userData.verified_email !== true && userData.email_verified !== true) {
+              console.error("Google OAuth callback: Email not verified by Google");
+              return Response.redirect(`${frontendUrl}/#oauth_error=unverified_email`, 302);
+            }
             userEmail = String(userData.email || "").toLowerCase().trim();
             userName = String(userData.name || "").trim();
             userPicture = userData.picture || null;
@@ -1035,7 +1136,7 @@ export default {
             const redirectUri = `${workerOrigin}/api/auth/oauth/callback`;
             const tokenRes = await fetch("https://github.com/login/oauth/access_token", {
               method: "POST",
-              headers: { "Content-Type": "application/json", "Accept": "application/json" },
+              headers: { "Content-Type": "application/json", Accept: "application/json" },
               body: JSON.stringify({
                 client_id: env.GITHUB_CLIENT_ID || "",
                 client_secret: env.GITHUB_CLIENT_SECRET || "",
@@ -1048,37 +1149,40 @@ export default {
               return Response.redirect(`${frontendUrl}/#oauth_error=github_token_failed`, 302);
             }
 
-            // Fetch GitHub user profile (name, avatar, public email)
             try {
               const ghUserRes = await fetch("https://api.github.com/user", {
                 headers: {
                   Authorization: `Bearer ${tokenData.access_token}`,
-                  "User-Agent": "MeteoFlood-Worker",
+                  "User-Agent": "FloodLock-Worker/3.2",
                 },
               });
               if (ghUserRes.ok) {
                 const ghUser = await ghUserRes.json();
                 userName = ghUser.name || ghUser.login || "GitHub User";
                 userPicture = ghUser.avatar_url || null;
-                if (ghUser.email) userEmail = String(ghUser.email).toLowerCase().trim();
               }
             } catch (e) {
               console.warn("GitHub user fetch error:", e);
             }
 
-            // Fallback to /user/emails if primary email is private
-            if (!userEmail) {
-              const emailsRes = await fetch("https://api.github.com/user/emails", {
-                headers: {
-                  Authorization: `Bearer ${tokenData.access_token}`,
-                  "User-Agent": "MeteoFlood-Worker",
-                },
-              });
-              if (emailsRes.ok) {
-                const emails = await emailsRes.json();
-                const primary = Array.isArray(emails) ? emails.find((e) => e.primary && e.verified) || emails.find((e) => e.verified) || emails[0] : null;
-                userEmail = primary?.email ? String(primary.email).toLowerCase().trim() : "";
+            // Finding 2 Fix: Strictly fetch verified emails only from GitHub - never trust unverified profile email
+            const emailsRes = await fetch("https://api.github.com/user/emails", {
+              headers: {
+                Authorization: `Bearer ${tokenData.access_token}`,
+                "User-Agent": "FloodLock-Worker/3.2",
+              },
+            });
+            if (emailsRes.ok) {
+              const emails = await emailsRes.json();
+              const verifiedObj = Array.isArray(emails) ? (emails.find((e) => e.primary && e.verified) || emails.find((e) => e.verified)) : null;
+              if (verifiedObj && verifiedObj.email) {
+                userEmail = String(verifiedObj.email).toLowerCase().trim();
               }
+            }
+
+            if (!userEmail) {
+              console.error("GitHub OAuth callback: No verified email found for user");
+              return Response.redirect(`${frontendUrl}/#oauth_error=unverified_github_email`, 302);
             }
             if (!userName) userName = "GitHub User";
           }
@@ -1610,28 +1714,43 @@ export default {
           "X-Shed-Protection": isPaidVip ? "ACTIVE" : "NONE",
         };
 
+        const isPhysicalHazard = isDeterministicPhysicalHazard(telem, neuralPred);
+
         // Prevent custom what-if overrides from poisoning shared KV AI cache
-        const tacticalReasoning = isThreat
+        const tacticalReasoning = (isThreat || isPhysicalHazard)
           ? await runTacticalReasoning(env, telem, neuralPred, lat, lon, {
               skipCache: forecastMode === "CUSTOM_WHAT_IF_SIMULATION",
               scenarioName: scenario || null,
             })
           : null;
 
-        // ADVERSARIAL GROQ VERIFICATION GATE (Daksh's directive):
-        // When neural net strikes flood:
-        // - If Groq verifies it (threat_verified: true) -> SHOW IT (CRITICAL_INUNDATION + sirens + corridors)
-        // - If Groq flags false (threat_verified: false) -> "dont do anythign" -> SUPPRESS (NOMINAL, alert suppressed)
+        // ADVERSARIAL GROQ VERIFICATION GATE WITH DETERMINISTIC SAFETY FLOOR:
+        // Finding 3 Fix: If hard physical telemetry indicates a severe flood disaster,
+        // AI model CANNOT downgrade the threat.
         const groqVerified = tacticalReasoning && (tacticalReasoning.threat_verified === true || tacticalReasoning.verification_status === "VERIFIED_FLOOD_HAZARD");
         const groqDismissed = tacticalReasoning && (tacticalReasoning.threat_verified === false || tacticalReasoning.verification_status === "FALSE_ALARM_DOWNGRADED");
 
         let finalThreatLevel = "MONITORED_NOMINAL";
-        if (isThreat) {
+        let auditAction = "ROUTINE_MONITORING";
+        let auditVerdict = "NOMINAL_MONITORED";
+
+        if (isPhysicalHazard) {
+          // SAFETY FLOOR INVARIANT: Physical disaster telemetry overrides any AI refutation or failure
+          finalThreatLevel = "CRITICAL_INUNDATION";
+          auditVerdict = "CONFIRMED_FLOOD_HAZARD";
+          auditAction = groqDismissed
+            ? "OVERRIDDEN_BY_PHYSICAL_SAFETY_FLOOR"
+            : "CRITICAL_ALARM_DISPATCHED";
+        } else if (isThreat) {
           if (groqDismissed) {
-            // Adversarial Groq audit refuted flood risk; suppress civic alarm
+            // Adversarial Groq audit refuted sub-hazard false alarm; suppress civic alarm
             finalThreatLevel = "NOMINAL";
+            auditVerdict = "FALSE_ALARM_DOWNGRADED";
+            auditAction = "ALARM_SUPPRESSED_FALSE_ALARM";
           } else if (groqVerified || !tacticalReasoning) {
             finalThreatLevel = "CRITICAL_INUNDATION";
+            auditVerdict = "CONFIRMED_FLOOD_HAZARD";
+            auditAction = "CRITICAL_ALARM_DISPATCHED";
           }
         }
 
@@ -1660,13 +1779,14 @@ export default {
             raw_neural_threat_flag: isThreat,
           },
           adversarial_groq_audit: {
-            groq_called: Boolean(isThreat),
+            groq_called: Boolean(isThreat || isPhysicalHazard),
             engine: tacticalReasoning ? tacticalReasoning.engine : "None (Sub-threshold)",
-            groq_verdict: groqDismissed ? "FALSE_ALARM_DOWNGRADED" : (groqVerified ? "CONFIRMED_FLOOD_HAZARD" : "NOMINAL_MONITORED"),
-            threat_verified: groqVerified,
+            groq_verdict: auditVerdict,
+            threat_verified: (finalThreatLevel === "CRITICAL_INUNDATION"),
             confidence_score: tacticalReasoning ? tacticalReasoning.confidence_score : 99,
             physical_audit_summary: tacticalReasoning ? (tacticalReasoning.physical_consistency_audit || tacticalReasoning.causal_attribution) : "Nominal hydrological equilibrium.",
-            action_taken: groqDismissed ? "ALARM_SUPPRESSED_FALSE_ALARM" : (groqVerified ? "CRITICAL_ALARM_DISPATCHED" : "ROUTINE_MONITORING"),
+            action_taken: auditAction,
+            physical_safety_floor_active: isPhysicalHazard,
           }
         };
 

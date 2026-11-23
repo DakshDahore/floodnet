@@ -21,22 +21,22 @@ SECRETS_PATH = Path.home() / ".shared-ai-memory" / "floodlock_secrets.json"
 PRIMARY_WORKER = "https://floodlock-backend.dakshdahore1995.workers.dev"
 STANDBY_WORKER = "https://floodlock-backend-standby.dakshdahore1995.workers.dev"
 
-def load_master_secret():
+def load_admin_secret():
     if not SECRETS_PATH.exists():
         print(f"[!] Error: Secrets file not found at {SECRETS_PATH}")
         sys.exit(1)
     try:
         with open(SECRETS_PATH, "r", encoding="utf-8") as f:
             data = json.load(f)
-            return data.get("MASTER_SECRET")
+            return data.get("ADMIN_SECRET") or data.get("MASTER_SECRET")
     except Exception as e:
         print(f"[!] Error reading secrets: {e}")
         sys.exit(1)
 
 def provision_user(email: str, plan: str = "pro"):
-    master_secret = load_master_secret()
-    if not master_secret:
-        print("[!] Master secret missing from secrets vault.")
+    admin_secret = load_admin_secret()
+    if not admin_secret:
+        print("[!] Admin secret missing from secrets vault.")
         sys.exit(1)
 
     payload = json.dumps({"email": email.strip().lower(), "plan": plan.strip().lower()}).encode("utf-8")
@@ -49,7 +49,7 @@ def provision_user(email: str, plan: str = "pro"):
         data=payload,
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {master_secret}",
+            "Authorization": f"Bearer {admin_secret}",
             "User-Agent": "FloodLock-Admin-Engine/3.2"
         },
         method="POST"

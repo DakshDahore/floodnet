@@ -27,8 +27,26 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-DEFAULT_BASE_URL = "http://127.0.0.1:8787"
+DEFAULT_BASE_URL = "https://floodlock-backend.lanternmech.workers.dev"
 REPO_ROOT = Path(__file__).resolve().parent.parent
+
+def resolve_target(arg_url: str | None = None) -> str:
+    if arg_url:
+        return arg_url
+    candidates = [
+        "https://floodlock-backend.dakshdahore1995.workers.dev",
+        "https://floodlock-backend.lanternmech.workers.dev",
+        "http://127.0.0.1:8787"
+    ]
+    for c in candidates:
+        try:
+            req = urllib.request.Request(f"{c}/health", headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=4) as resp:
+                if resp.status == 200:
+                    return c
+        except Exception:
+            continue
+    return candidates[1]
 
 
 class HonestSecurityAudit:
@@ -192,4 +210,5 @@ class HonestSecurityAudit:
 
 
 if __name__ == "__main__":
-    HonestSecurityAudit(sys.argv[1] if len(sys.argv) > 1 else DEFAULT_BASE_URL).run()
+    target = resolve_target(sys.argv[1] if len(sys.argv) > 1 else None)
+    HonestSecurityAudit(target).run()
