@@ -1618,11 +1618,67 @@ export default {
             })
           : null;
 
+        // ADVERSARIAL GROQ VERIFICATION GATE (Daksh's directive):
+        // When neural net strikes flood:
+        // - If Groq verifies it (threat_verified: true) -> SHOW IT (CRITICAL_INUNDATION + sirens + corridors)
+        // - If Groq flags false (threat_verified: false) -> "dont do anythign" -> SUPPRESS (NOMINAL, alert suppressed)
+        const groqVerified = tacticalReasoning && (tacticalReasoning.threat_verified === true || tacticalReasoning.verification_status === "VERIFIED_FLOOD_HAZARD");
+        const groqDismissed = tacticalReasoning && (tacticalReasoning.threat_verified === false || tacticalReasoning.verification_status === "FALSE_ALARM_DOWNGRADED");
+
+        let finalThreatLevel = "MONITORED_NOMINAL";
+        if (isThreat) {
+          if (groqDismissed) {
+            // Adversarial Groq audit refuted flood risk; suppress civic alarm
+            finalThreatLevel = "NOMINAL";
+          } else if (groqVerified || !tacticalReasoning) {
+            finalThreatLevel = "CRITICAL_INUNDATION";
+          }
+        }
+
+        const floodAuditLog = {
+          timestamp: new Date().toISOString(),
+          target_coordinates: { lat, lon },
+          hydrology: {
+            nearest_basin: basin.name || basin.basin_id || "Regional Catchment",
+            water_proximity_m: basin.water_prox !== undefined ? basin.water_prox : 450,
+            soil_ks_mm_hr: basin.ks_mm_hr || 25,
+            topographic_wetness_index: basin.twi || 10.5,
+            impervious_surface_fraction: basin.impervious || 0.45,
+          },
+          live_meteorology: {
+            rain_rate_r0_mm_hr: telem.r0,
+            accum_48h_mm: telem.r48,
+            accum_120h_mm: telem.r120,
+            soil_saturation_pct: Math.round(telem.soilSat * 100),
+            coastal_tide_surge_m: telem.tideSurge,
+            convective_cape_j_kg: telem.cape,
+          },
+          neural_forward_pass: {
+            depth_trajectory_cm: neuralPred.depth_trajectory_cm,
+            runoff_q_m3s: neuralPred.runoff_q_m3s,
+            flash_flood_probability: neuralPred.flash_flood_probability,
+            raw_neural_threat_flag: isThreat,
+          },
+          adversarial_groq_audit: {
+            groq_called: Boolean(isThreat),
+            engine: tacticalReasoning ? tacticalReasoning.engine : "None (Sub-threshold)",
+            groq_verdict: groqDismissed ? "FALSE_ALARM_DOWNGRADED" : (groqVerified ? "CONFIRMED_FLOOD_HAZARD" : "NOMINAL_MONITORED"),
+            threat_verified: groqVerified,
+            confidence_score: tacticalReasoning ? tacticalReasoning.confidence_score : 99,
+            physical_audit_summary: tacticalReasoning ? (tacticalReasoning.physical_consistency_audit || tacticalReasoning.causal_attribution) : "Nominal hydrological equilibrium.",
+            action_taken: groqDismissed ? "ALARM_SUPPRESSED_FALSE_ALARM" : (groqVerified ? "CRITICAL_ALARM_DISPATCHED" : "ROUTINE_MONITORING"),
+          }
+        };
+
+        console.log(`[FLOOD_AUDIT_LOG] Lat:${lat.toFixed(3)}, Lon:${lon.toFixed(3)} | NeuralDepth:+1h=${neuralPred.depth_trajectory_cm?.h1}cm | GroqVerdict:${floodAuditLog.adversarial_groq_audit.groq_verdict} | Action:${floodAuditLog.adversarial_groq_audit.action_taken}`);
+
         if (!scenario && !hasCustomOverrides && !forceReasoning && telem.r0 === 0.0 && telem.r48 < 2.0 && telem.tideSurge < 1.5) {
           return jsonResponse(request, env, {
             status: "ALL_CLEAR",
             forecast_mode: forecastMode,
             threat_level: "NOMINAL",
+            groq_audit_verdict: "ALL_CLEAR_ZERO_METEOROLOGY",
+            flood_audit_log: floodAuditLog,
             depth_cm: 0.0,
             confidence_score: 99,
             latency_ms: 0.15,
@@ -1641,10 +1697,12 @@ export default {
           telemetry: telem,
           basin_parameters: basin,
           neural_predictions: neuralPred,
-          threat_level: isThreat ? "CRITICAL_INUNDATION" : "MONITORED_NOMINAL",
+          threat_level: finalThreatLevel,
+          groq_audit_verdict: floodAuditLog.adversarial_groq_audit.groq_verdict,
+          flood_audit_log: floodAuditLog,
           dual_trigger_black_swan: isBlackSwan,
           quota: quotaStatus,
-          tactical_reasoning: tacticalReasoning,
+          tactical_reasoning: groqDismissed ? null : tacticalReasoning,
         }, 200, qosHeaders);
       }
 

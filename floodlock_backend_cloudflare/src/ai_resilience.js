@@ -2,11 +2,15 @@
  * cloudflare_worker/src/ai_resilience.js
  * ============================================================================
  * FloodLock v3.2 Gold — 3-Tier Distributed Tactical AI Reasoning Engine:
- *  - Tier 1: Groq LPU Qwen (env.GROQ_MODEL, reasoning_effort: "none", 2500ms)
+ *  - Tier 1: Groq LPU (env.GROQ_MODEL, openai/gpt-oss-120b, 3500ms)
  *  - Tier 2: Google Cloud Gemini GA Flash (env.GEMINI_MODEL, thinkingLevel: "low",
  *    x-goog-api-key header, 3500ms)
  *  - Tier 3: Deterministic V8 Edge Hydrological SOP + Life-Safety Hazard Guard
+ *  - Adversarial Verification Gate: Rigorously verifies physical consistency.
+ *    If Groq detects physical inconsistency, it flags FALSE_ALARM_DOWNGRADED
+ *    and suppress alerts so false alarms never trigger civic panics.
  *  - Anti-Cache-Poisoning: Custom what-if simulations bypass shared KV cache.
+ * ============================================================================
  */
 
 async function fetchWithTimeout(url, options, timeoutMs) {
@@ -22,22 +26,32 @@ async function fetchWithTimeout(url, options, timeoutMs) {
 function normalizeTacticalPayload(raw, engineLabel, fallbackObj) {
   if (!raw || typeof raw !== "object") return fallbackObj;
 
-  let status = fallbackObj.verification_status;
-  if (fallbackObj.verification_status === "VERIFIED_FLOOD_HAZARD") {
+  let status = "LOW_RISK_MONITORED";
+  let isVerified = false;
+
+  // Adversarial check from LLM output
+  if (raw.threat_verified === false || raw.verification_status === "FALSE_ALARM_DOWNGRADED") {
+    status = "FALSE_ALARM_DOWNGRADED";
+    isVerified = false;
+  } else if (raw.threat_verified === true || raw.verification_status === "VERIFIED_FLOOD_HAZARD") {
     status = "VERIFIED_FLOOD_HAZARD";
-  } else if (
-    raw.verification_status === "VERIFIED_FLOOD_HAZARD" ||
-    raw.verification_status === "FALSE_ALARM_DOWNGRADED"
-  ) {
-    status = raw.verification_status;
+    isVerified = true;
+  } else if (fallbackObj.verification_status === "VERIFIED_FLOOD_HAZARD") {
+    status = "VERIFIED_FLOOD_HAZARD";
+    isVerified = true;
   }
 
   return {
     engine: engineLabel,
     verification_status: status,
+    threat_verified: isVerified,
     confidence_score: Number.isFinite(Number(raw.confidence_score))
       ? Math.max(1, Math.min(100, Math.round(Number(raw.confidence_score))))
       : fallbackObj.confidence_score,
+    physical_consistency_audit:
+      typeof raw.physical_consistency_audit === "string" && raw.physical_consistency_audit.length > 5
+        ? raw.physical_consistency_audit.slice(0, 500)
+        : (typeof raw.causal_attribution === "string" ? raw.causal_attribution.slice(0, 500) : fallbackObj.physical_consistency_audit),
     causal_attribution:
       typeof raw.causal_attribution === "string" && raw.causal_attribution.length > 5
         ? raw.causal_attribution.slice(0, 400)
@@ -70,30 +84,40 @@ function normalizeTacticalPayload(raw, engineLabel, fallbackObj) {
 }
 
 export function buildDeterministicEdgeSop(telemetry, predictions, lat, lon) {
-  const h1 = predictions.depth_trajectory_cm.h1;
-  const h3 = predictions.depth_trajectory_cm.h3;
+  const h1 = predictions.depth_trajectory_cm?.h1 ?? 0;
+  const h3 = predictions.depth_trajectory_cm?.h3 ?? 0;
   const isCritical = h1 >= 15 || h3 >= 30 || telemetry.tideSurge >= 3.0;
 
   return {
     engine: "Tier-3 Deterministic Hydrological Edge SOP (Zero-API Guarantee)",
     verification_status: isCritical ? "VERIFIED_FLOOD_HAZARD" : "LOW_RISK_MONITORED",
+    threat_verified: isCritical,
     confidence_score: 91,
+    physical_consistency_audit:
+      `Deterministic continuity at (${lat.toFixed(3)}, ${lon.toFixed(3)}): ` +
+      `R0=${telemetry.r0.toFixed(1)} mm/hr, R48=${telemetry.r48.toFixed(1)} mm, SoilSat=${Math.round(telemetry.soilSat * 100)}%, TideSurge=${telemetry.tideSurge.toFixed(2)} m.`,
     causal_attribution:
       `Deterministic continuity check at (${lat.toFixed(3)}, ${lon.toFixed(3)}): ` +
       `${telemetry.r0.toFixed(1)} mm/hr rainfall over ${Math.round(telemetry.soilSat * 100)}% saturated soil ` +
       `with ${telemetry.tideSurge.toFixed(2)} m coastal surge projects +1h depth ${h1} cm and +3h depth ${h3} cm.`,
-    danger_zone_perimeter: "Low-lying drainage sinks, rail underpasses, and basements within 500m radius.",
-    safe_evacuation_corridors: [
-      "Nearest elevated arterial flyover or viaduct (+8m above street datum)",
-      "Primary ridge-line evacuation road outside storm-drainage depression",
-    ],
-    impassable_infrastructure: [
-      "Submerged road/rail underpasses",
-      "Ground-level basement parking and stormwater culverts",
-    ],
+    danger_zone_perimeter: isCritical
+      ? "Low-lying drainage sinks, rail underpasses, and basements within 500m radius."
+      : "Nominal drainage profile; localized surface puddling only.",
+    safe_evacuation_corridors: isCritical
+      ? [
+          "Nearest elevated arterial flyover or viaduct (+8m above street datum)",
+          "Primary ridge-line evacuation road outside storm-drainage depression",
+        ]
+      : ["All primary and secondary roads passable"],
+    impassable_infrastructure: isCritical
+      ? [
+          "Submerged road/rail underpasses",
+          "Ground-level basement parking and stormwater culverts",
+        ]
+      : ["None reported"],
     nearest_open_hospital: {
       name: "Nearest Municipal Emergency Trauma Facility (Verify local route elevation)",
-      status: "CHECK_ELEVATED_ACCESS",
+      status: isCritical ? "CHECK_ELEVATED_ACCESS" : "FULL_ACCESS_OPEN",
       distance_km: 1.5,
     },
     tactical_civic_advisory: isCritical
@@ -121,22 +145,35 @@ export async function runTacticalReasoning(env, telemetry, predictions, lat, lon
     ? env.CIRCUIT_BREAKER_DO.get(env.CIRCUIT_BREAKER_DO.idFromName("global-ai-cb"))
     : null;
 
-  const prompt = `You are the Lead Hydrological Intelligence Officer for FloodLock.
-Return ONLY a valid JSON object matching the exact schema below.
+  const prompt = `You are the Adversarial Senior Hydrological Auditor for FloodLock Planetary Defense.
+A 14-feature neural network flagged this location as a potential inundation risk.
+You MUST rigorously audit the physical consistency between meteorology, terrain saturation, and projected flood depth:
 
-Coordinates: Lat ${lat}, Lon ${lon}
+Coordinates: Lat ${lat.toFixed(4)}, Lon ${lon.toFixed(4)}
 Meteorology: R0=${telemetry.r0} mm/hr, R48=${telemetry.r48} mm, R120=${telemetry.r120} mm, CAPE=${telemetry.cape} J/kg, SoilSat=${Math.round(telemetry.soilSat * 100)}%, TideSurge=${telemetry.tideSurge} m.
 Neural Edge Forecast: +1h=${predictions.depth_trajectory_cm.h1}cm, +3h=${predictions.depth_trajectory_cm.h3}cm, +6h=${predictions.depth_trajectory_cm.h6}cm, Q=${predictions.runoff_q_m3s} m3/s, Prob=${predictions.flash_flood_probability}.
 
-REQUIRED JSON SCHEMA:
+AUDIT RULES:
+1. If high rainfall (R0 > 15 mm/h or R48 > 50 mm) or extreme coastal surge (> 1.5m) or severe soil saturation (> 80%) creates genuine flood inundation:
+   - "threat_verified": true
+   - "verification_status": "VERIFIED_FLOOD_HAZARD"
+   - Provide concrete evacuation corridors and impassable infrastructure.
+2. If rainfall is low, soil has ample absorption capacity, or tidal surge is nominal, this is a FALSE POSITIVE or benign localized ponding:
+   - "threat_verified": false
+   - "verification_status": "FALSE_ALARM_DOWNGRADED"
+   - In "physical_consistency_audit", explain why the physics refute an actual civic flood disaster.
+
+Return ONLY a valid JSON object matching the exact schema below:
 {
+  "threat_verified": true or false,
   "verification_status": "VERIFIED_FLOOD_HAZARD" or "FALSE_ALARM_DOWNGRADED",
   "confidence_score": 1-100,
+  "physical_consistency_audit": "1-2 sentences explaining why this threat is verified or refuted by physical telemetry",
   "causal_attribution": "1-2 concise physical sentences",
-  "danger_zone_perimeter": "Low-lying basin description",
+  "danger_zone_perimeter": "Low-lying basin description or 'Nominal terrain'",
   "safe_evacuation_corridors": ["Specific elevated road or flyover"],
-  "impassable_infrastructure": ["Specific underpass or tunnel"],
-  "nearest_open_hospital": {"name": "Hospital", "status": "PASSABLE ON HIGH GROUND", "distance_km": 1.2},
+  "impassable_infrastructure": ["Specific underpass or tunnel or 'None'"],
+  "nearest_open_hospital": {"name": "Hospital Name", "status": "PASSABLE ON HIGH GROUND", "distance_km": 1.2},
   "tactical_civic_advisory": "1-2 actionable safety sentences"
 }`;
 
@@ -152,7 +189,7 @@ REQUIRED JSON SCHEMA:
             headers: {
               Authorization: `Bearer ${env.GROQ_API_KEY}`,
               "Content-Type": "application/json",
-              "User-Agent": "MeteoFlood/3.2",
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
             },
             body: JSON.stringify({
               model: groqModel,
@@ -162,7 +199,7 @@ REQUIRED JSON SCHEMA:
               max_tokens: 800,
             }),
           },
-          3500
+          4500
         );
         if (qRes.ok) {
           const qData = await qRes.json();
@@ -193,6 +230,7 @@ REQUIRED JSON SCHEMA:
             headers: {
               "Content-Type": "application/json",
               "x-goog-api-key": env.GEMINI_API_KEY,
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
             },
             body: JSON.stringify({
               contents: [{ parts: [{ text: prompt }] }],

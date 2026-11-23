@@ -66,6 +66,10 @@
       "service": "floodlock-core-neural"
     },
     {
+      "binding": "CLICK_PROCESSOR",
+      "service": "floodlock-click-processor"
+    },
+    {
       "binding": "SHARD_ASIA_SOUTH",
       "service": "floodlock-shard-asia-south"
     },
