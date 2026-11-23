@@ -140,7 +140,7 @@ REQUIRED JSON SCHEMA:
   "tactical_civic_advisory": "1-2 actionable safety sentences"
 }`;
 
-  const groqModel = env.GROQ_MODEL || "llama-3.1-8b-instant";
+  const groqModel = env.GROQ_MODEL || "openai/gpt-oss-120b";
   if (env.GROQ_API_KEY) {
     const groqTripped = cbStub ? await cbStub.isOpen("groq") : false;
     if (!groqTripped) {
@@ -152,17 +152,17 @@ REQUIRED JSON SCHEMA:
             headers: {
               Authorization: `Bearer ${env.GROQ_API_KEY}`,
               "Content-Type": "application/json",
+              "User-Agent": "MeteoFlood/3.2",
             },
             body: JSON.stringify({
               model: groqModel,
               messages: [{ role: "user", content: prompt }],
               response_format: { type: "json_object" },
-              reasoning_effort: "none",
               temperature: 0.1,
               max_tokens: 800,
             }),
           },
-          2500
+          3500
         );
         if (qRes.ok) {
           const qData = await qRes.json();

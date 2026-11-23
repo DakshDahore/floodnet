@@ -57,6 +57,22 @@ const SCENARIO_PROFILES = {
     telem: { r0: 165.0, r48: 80.0, r120: 120.0, cape: 2600.0, dp: -8.0, wind: 65.0, soilSat: 0.85, tideSurge: 0.4 },
     basin: { spi30: 1.2, spi90: 1.5, ks_mm_hr: 4.0, water_prox: 0.95, twi: 0.99, impervious: 0.55 },
   },
+  danube: {
+    telem: { r0: 42.0, r48: 110.0, r120: 195.0, cape: 1200.0, dp: -3.0, wind: 45.0, soilSat: 0.92, tideSurge: 0.2 },
+    basin: { spi30: 2.1, spi90: 2.4, ks_mm_hr: 3.5, water_prox: 0.98, twi: 0.94, impervious: 0.65 },
+  },
+  rhine: {
+    telem: { r0: 35.0, r48: 95.0, r120: 160.0, cape: 900.0, dp: -2.5, wind: 40.0, soilSat: 0.88, tideSurge: 0.1 },
+    basin: { spi30: 1.8, spi90: 2.0, ks_mm_hr: 5.0, water_prox: 0.96, twi: 0.91, impervious: 0.70 },
+  },
+  ganges: {
+    telem: { r0: 95.0, r48: 220.0, r120: 380.0, cape: 2800.0, dp: -6.0, wind: 55.0, soilSat: 0.94, tideSurge: 1.2 },
+    basin: { spi30: 2.3, spi90: 2.7, ks_mm_hr: 2.0, water_prox: 0.95, twi: 0.97, impervious: 0.60 },
+  },
+  neworleans: {
+    telem: { r0: 80.0, r48: 160.0, r120: 270.0, cape: 2500.0, dp: -5.0, wind: 65.0, soilSat: 0.90, tideSurge: 3.2 },
+    basin: { spi30: 1.9, spi90: 2.2, ks_mm_hr: 1.8, water_prox: 0.99, twi: 0.98, impervious: 0.75 },
+  },
 };
 
 function buildCorsHeaders(request, env) {
@@ -1486,19 +1502,7 @@ export default {
           forecastMode = hasCustomOverrides ? "CUSTOM_WHAT_IF_SIMULATION" : "OFFICIAL_LIVE_TELEMETRY";
         }
 
-        if (!scenario && !hasCustomOverrides && telem.r0 === 0.0 && telem.r48 < 2.0 && telem.tideSurge < 1.5) {
-          return jsonResponse(request, env, {
-            status: "ALL_CLEAR",
-            forecast_mode: forecastMode,
-            threat_level: "NOMINAL",
-            depth_cm: 0.0,
-            confidence_score: 99,
-            latency_ms: 0.15,
-            quota: quotaStatus,
-            message: "Zero precipitation and nominal sea level detected. Basin dry.",
-            timestamp: new Date().toISOString(),
-          });
-        }
+        const forceReasoning = url.searchParams.get("reasoning") === "true" || url.searchParams.get("force_ai") === "true";
 
         const features = [
           Math.min(1.0, telem.r0 / 250.0),
@@ -1523,14 +1527,32 @@ export default {
           isBlackSwan ||
           neuralPred.depth_trajectory_cm.h1 > 10.0 ||
           neuralPred.flash_flood_probability > 0.60 ||
-          telem.tideSurge >= 3.0;
+          telem.tideSurge >= 3.0 ||
+          forceReasoning;
 
         // Prevent custom what-if overrides from poisoning shared KV AI cache
         const tacticalReasoning = isThreat
           ? await runTacticalReasoning(env, telem, neuralPred, lat, lon, {
               skipCache: forecastMode === "CUSTOM_WHAT_IF_SIMULATION",
+              scenarioName: scenario || null,
             })
           : null;
+
+        if (!scenario && !hasCustomOverrides && !forceReasoning && telem.r0 === 0.0 && telem.r48 < 2.0 && telem.tideSurge < 1.5) {
+          return jsonResponse(request, env, {
+            status: "ALL_CLEAR",
+            forecast_mode: forecastMode,
+            threat_level: "NOMINAL",
+            depth_cm: 0.0,
+            confidence_score: 99,
+            latency_ms: 0.15,
+            quota: quotaStatus,
+            neural_predictions: neuralPred,
+            tactical_reasoning: null,
+            message: "Zero precipitation and nominal sea level detected. Basin dry.",
+            timestamp: new Date().toISOString(),
+          });
+        }
 
         return jsonResponse(request, env, {
           timestamp: new Date().toISOString(),

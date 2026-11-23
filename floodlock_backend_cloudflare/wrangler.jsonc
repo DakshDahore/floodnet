@@ -42,7 +42,7 @@
     }
   ],
   "vars": {
-    "GROQ_MODEL": "llama-3.1-8b-instant",
+    "GROQ_MODEL": "openai/gpt-oss-120b",
     "GEMINI_MODEL": "gemini-2.5-flash",
     "ALLOWED_ORIGINS": "https://metoflood.netlify.app,https://floodlock.pages.dev,https://floodnet.netlify.app,https://dakshdahore1995-design.github.io,http://localhost:3000,http://127.0.0.1:3000,http://localhost:8000,http://127.0.0.1:8000",
     "FOUNDER_ALERT_EMAIL": "dakshdahore.d@gmail.com,lantern.mech@gmail.com",

@@ -855,6 +855,99 @@ print("════════════════════════�
         <div id="map"></div>
       </div>
 
+      <!-- ══════════════════════════════════════════════════════════════════
+           LIVE NEURAL EDGE & GROQ LPU TACTICAL INTELLIGENCE CONSOLE
+           ══════════════════════════════════════════════════════════════════ -->
+      <div class="card-luxury" id="tacticalAiConsole" style="margin-bottom: 2rem; border-color: rgba(56, 189, 248, 0.3);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem;">
+              <span id="aiConsoleBadge" style="font-family: var(--font-mono); font-size: 0.72rem; padding: 0.2rem 0.6rem; border-radius: 4px; font-weight: 700; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3);">
+                ⚡ 14-FEATURE NEURAL EDGE SURROGATE + GROQ LPU REASONING
+              </span>
+              <span id="aiConsoleModel" style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--c-sage);">
+                Model: GlobalHydrology-14F-v3.2-Gold • Engine: Tier-1 Groq LPU (openai/gpt-oss-120b)
+              </span>
+            </div>
+            <h3 style="font-family: var(--font-display); font-size: 2rem;" id="aiConsoleTitle">
+              Active Basin Tactical Intelligence: <span id="aiConsoleBasinName">Ulhas-Mithi Coastal Basin (Mumbai)</span>
+            </h3>
+          </div>
+          <div id="aiConsoleThreatBadge" style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: 700; padding: 0.4rem 1rem; border-radius: 999px; background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid #10b981;">
+            NOMINAL
+          </div>
+        </div>
+
+        <!-- 14-Feature Neural Predictions Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem; margin-bottom: 1.25rem;">
+          <div style="background: rgba(10, 7, 5, 0.7); padding: 0.85rem; border-radius: 10px; border: 1px solid var(--c-card-border);">
+            <div style="font-size: 0.7rem; color: var(--c-text-muted); font-family: var(--font-mono);">+1H DEPTH (NEURAL)</div>
+            <div style="font-size: 1.5rem; font-family: var(--font-mono); font-weight: 700; color: #38bdf8;" id="neuralH1">0.0 cm</div>
+            <div style="font-size: 0.7rem; color: var(--c-sage);">Immediate surface ponding</div>
+          </div>
+          <div style="background: rgba(10, 7, 5, 0.7); padding: 0.85rem; border-radius: 10px; border: 1px solid var(--c-card-border);">
+            <div style="font-size: 0.7rem; color: var(--c-text-muted); font-family: var(--font-mono);">+3H DEPTH (CREST)</div>
+            <div style="font-size: 1.5rem; font-family: var(--font-mono); font-weight: 700; color: #f59e0b;" id="neuralH3">0.0 cm</div>
+            <div style="font-size: 0.7rem; color: var(--c-sage);">Runoff wave convergence</div>
+          </div>
+          <div style="background: rgba(10, 7, 5, 0.7); padding: 0.85rem; border-radius: 10px; border: 1px solid var(--c-card-border);">
+            <div style="font-size: 0.7rem; color: var(--c-text-muted); font-family: var(--font-mono);">+6H SUBSIDENCE</div>
+            <div style="font-size: 1.5rem; font-family: var(--font-mono); font-weight: 700; color: #a855f7;" id="neuralH6">0.0 cm</div>
+            <div style="font-size: 0.7rem; color: var(--c-sage);">Drainage tail projection</div>
+          </div>
+          <div style="background: rgba(10, 7, 5, 0.7); padding: 0.85rem; border-radius: 10px; border: 1px solid var(--c-card-border);">
+            <div style="font-size: 0.7rem; color: var(--c-text-muted); font-family: var(--font-mono);">RUNOFF PEAK FLOW (Q)</div>
+            <div style="font-size: 1.5rem; font-family: var(--font-mono); font-weight: 700; color: #ec4899;" id="neuralQ">0.0 m³/s</div>
+            <div style="font-size: 0.7rem; color: var(--c-sage);">Kinematic wave surrogate</div>
+          </div>
+          <div style="background: rgba(10, 7, 5, 0.7); padding: 0.85rem; border-radius: 10px; border: 1px solid var(--c-card-border);">
+            <div style="font-size: 0.7rem; color: var(--c-text-muted); font-family: var(--font-mono);">FLASH FLOOD RISK</div>
+            <div style="font-size: 1.5rem; font-family: var(--font-mono); font-weight: 700; color: #10b981;" id="neuralProb">0%</div>
+            <div style="font-size: 0.7rem; color: var(--c-sage);">Sigmoid confidence</div>
+          </div>
+        </div>
+
+        <!-- Groq LPU Tactical Reasoning Drawer -->
+        <div id="aiReasoningDrawer" style="background: rgba(18, 13, 9, 0.85); border: 1px solid rgba(214, 197, 179, 0.15); border-radius: 12px; padding: 1.25rem;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+            <div style="font-family: var(--font-mono); font-size: 0.75rem; color: #f59e0b; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700;" id="aiEngineLabel">
+              🧠 Lead Hydrological Officer Synthesis (Groq LPU Reasoning)
+            </div>
+            <div id="aiConfidenceScore" style="font-family: var(--font-mono); font-size: 0.75rem; color: #10b981;">
+              Confidence: 95/100
+            </div>
+          </div>
+          <div id="aiCausalAttribution" style="font-size: 0.95rem; color: var(--c-linen); line-height: 1.6; margin-bottom: 1rem;">
+            Zero compound flood surge detected. Infiltration capacity nominal across regional topsoil. Gravity outfalls clear.
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; border-top: 1px solid rgba(214, 197, 179, 0.1); padding-top: 1rem;">
+            <div>
+              <div style="font-family: var(--font-mono); font-size: 0.7rem; color: #10b981; margin-bottom: 0.35rem; font-weight: 700;">🟢 DESIGNATED EVACUATION CORRIDORS</div>
+              <ul id="aiCorridors" style="font-size: 0.82rem; color: var(--c-text-muted); margin-left: 1.2rem; line-height: 1.5;">
+                <li>Primary arterial flyovers (+8m datum)</li>
+              </ul>
+            </div>
+            <div>
+              <div style="font-family: var(--font-mono); font-size: 0.7rem; color: #ef4444; margin-bottom: 0.35rem; font-weight: 700;">🔴 IMPASSABLE SINK LOCATIONS</div>
+              <ul id="aiImpassable" style="font-size: 0.82rem; color: var(--c-text-muted); margin-left: 1.2rem; line-height: 1.5;">
+                <li>Low-lying drainage sumps & railway underpasses</li>
+              </ul>
+            </div>
+            <div>
+              <div style="font-family: var(--font-mono); font-size: 0.7rem; color: #38bdf8; margin-bottom: 0.35rem; font-weight: 700;">🏥 NEAREST EMERGENCY ACCESS</div>
+              <div id="aiHospital" style="font-size: 0.82rem; color: var(--c-linen); line-height: 1.5;">
+                Municipal Trauma Center (1.2 km) — Passable on High Ground
+              </div>
+            </div>
+          </div>
+
+          <div id="aiAdvisoryBox" style="margin-top: 1rem; padding: 0.75rem 1rem; border-radius: 8px; background: rgba(6, 182, 212, 0.08); border-left: 3px solid #06b6d4; font-size: 0.85rem; color: var(--c-linen);">
+            <strong>Tactical Advisory:</strong> <span id="aiAdvisoryText">Perimeter secure. Continue passive telemetry monitoring.</span>
+          </div>
+        </div>
+      </div>
+
       <!-- Zero-AI Quota Calm Area Report Box -->
       <div class="card-luxury" id="calmAreaReportBox" style="margin-bottom: 2rem;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
@@ -2238,23 +2331,27 @@ print(response.json())</code></pre>
               }
             });
 
-            mapInstance.on('click', 'active-floods-core', (e) => {
+            mapInstance.on('click', 'active-floods-core', async (e) => {
               const f = e.features[0];
               if (!f) return;
               const coords = f.geometry.coordinates.slice();
               const p = f.properties;
-              new maplibregl.Popup({ offset: 12, closeButton: false })
+              const popup = new maplibregl.Popup({ offset: 12, closeButton: true })
                 .setLngLat(coords)
                 .setHTML(`
-                  <div style="font-family:sans-serif;color:#120d09;padding:6px 8px;">
+                  <div style="font-family:sans-serif;color:#120d09;padding:6px 8px;min-width:210px;">
                     <div style="font-weight:700;font-size:13px;margin-bottom:2px;">${p.name}</div>
                     <div style="font-size:11px;color:#555;">Discharge: <b>${p.discharge} m³/s</b> (Threshold: ${p.threshold} m³/s)</div>
                     <div style="font-size:11px;color:${p.threat_level === 'CRITICAL_SURGE' ? '#dc2626' : (p.threat_level === 'ELEVATED_WATCH' ? '#d97706' : '#16a34a')};font-weight:600;margin-top:2px;">Threat: ${p.threat_level}</div>
+                    <div id="popupAiContent" style="margin-top:5px;padding-top:5px;border-top:1px solid rgba(0,0,0,0.12);font-size:10px;color:#0284c7;">
+                      ⏳ Loading Neural Edge Forecast & Groq AI Reasoning...
+                    </div>
                   </div>
                 `)
                 .addTo(mapInstance);
 
               loadBasinTelemetry(coords[1], coords[0], p.name);
+              await loadTacticalForecast(coords[1], coords[0], p.name, p.id, p.threat_level, popup);
             });
 
             mapInstance.on('mouseenter', 'active-floods-core', () => {
@@ -2276,6 +2373,95 @@ print(response.json())</code></pre>
       mapInstance.flyTo({ center: b.center, zoom: b.zoom, pitch: b.pitch, duration: 2200 });
       if (key !== 'global') {
         loadBasinTelemetry(b.lat, b.lon, b.name);
+        loadTacticalForecast(b.lat, b.lon, b.name, key, 'MONITORED');
+      }
+    }
+
+    async function loadTacticalForecast(lat, lon, basinName, basinId, threatLevel, popup) {
+      const basinTitle = document.getElementById('aiConsoleBasinName');
+      const threatBadge = document.getElementById('aiConsoleThreatBadge');
+      if (basinTitle) basinTitle.textContent = basinName;
+      if (threatBadge) {
+        threatBadge.textContent = threatLevel || 'MONITORED';
+        threatBadge.style.color = threatLevel === 'CRITICAL_SURGE' ? '#ef4444' : (threatLevel === 'ELEVATED_WATCH' ? '#f59e0b' : '#10b981');
+        threatBadge.style.borderColor = threatBadge.style.color;
+        threatBadge.style.background = threatLevel === 'CRITICAL_SURGE' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)';
+      }
+
+      const scenarioParam = basinId && basinId !== 'global' ? `&scenario=${basinId}` : '';
+      const url = `${window.FloodConfig.getBaseUrl()}/api/forecast?lat=${lat}&lon=${lon}${scenarioParam}&reasoning=true`;
+
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        if (!res.ok) return;
+
+        const np = data.neural_predictions || {};
+        const tr = data.tactical_reasoning || {};
+        const telem = data.telemetry || {};
+
+        // Update Neural Metrics in Console
+        const h1 = np.depth_trajectory_cm ? np.depth_trajectory_cm.h1 : (data.depth_cm || 0);
+        const h3 = np.depth_trajectory_cm ? np.depth_trajectory_cm.h3 : 0;
+        const h6 = np.depth_trajectory_cm ? np.depth_trajectory_cm.h6 : 0;
+        const q = np.runoff_q_m3s || 0;
+        const prob = Math.round((np.flash_flood_probability || 0) * 100);
+
+        if (document.getElementById('neuralH1')) document.getElementById('neuralH1').textContent = `${h1.toFixed(1)} cm`;
+        if (document.getElementById('neuralH3')) document.getElementById('neuralH3').textContent = `${h3.toFixed(1)} cm`;
+        if (document.getElementById('neuralH6')) document.getElementById('neuralH6').textContent = `${h6.toFixed(1)} cm`;
+        if (document.getElementById('neuralQ')) document.getElementById('neuralQ').textContent = `${q.toFixed(1)} m³/s`;
+        if (document.getElementById('neuralProb')) {
+          const el = document.getElementById('neuralProb');
+          el.textContent = `${prob}%`;
+          el.style.color = prob > 50 ? '#ef4444' : (prob > 20 ? '#f59e0b' : '#10b981');
+        }
+
+        // Update Groq LPU Tactical Reasoning Drawer
+        if (tr.engine && document.getElementById('aiEngineLabel')) {
+          document.getElementById('aiEngineLabel').textContent = `🧠 Hydrological Officer Synthesis: ${tr.engine}`;
+        }
+        if (tr.confidence_score && document.getElementById('aiConfidenceScore')) {
+          document.getElementById('aiConfidenceScore').textContent = `Confidence: ${tr.confidence_score}/100`;
+        }
+        if (tr.causal_attribution && document.getElementById('aiCausalAttribution')) {
+          document.getElementById('aiCausalAttribution').textContent = tr.causal_attribution;
+        }
+        if (Array.isArray(tr.safe_evacuation_corridors) && document.getElementById('aiCorridors')) {
+          document.getElementById('aiCorridors').innerHTML = tr.safe_evacuation_corridors.map(c => `<li>${c}</li>`).join('');
+        }
+        if (Array.isArray(tr.impassable_infrastructure) && document.getElementById('aiImpassable')) {
+          document.getElementById('aiImpassable').innerHTML = tr.impassable_infrastructure.map(c => `<li>${c}</li>`).join('');
+        }
+        if (tr.nearest_open_hospital && document.getElementById('aiHospital')) {
+          const h = tr.nearest_open_hospital;
+          document.getElementById('aiHospital').textContent = `${h.name} (${h.distance_km} km) — ${h.status}`;
+        }
+        if (tr.tactical_civic_advisory && document.getElementById('aiAdvisoryText')) {
+          document.getElementById('aiAdvisoryText').textContent = tr.tactical_civic_advisory;
+        }
+
+        // Update Real Physical Telemetry Boxes below
+        if (document.getElementById('reportPrecip')) document.getElementById('reportPrecip').textContent = `${(telem.r0 || 0).toFixed(1)} mm/h`;
+        if (document.getElementById('reportNextHour')) document.getElementById('reportNextHour').textContent = `${((telem.r0 || 0) * 1.2).toFixed(1)} mm`;
+        if (document.getElementById('reportSoil')) document.getElementById('reportSoil').textContent = `${Math.round((telem.soilSat || 0.3) * 100)}% Saturation`;
+        if (document.getElementById('reportTide')) document.getElementById('reportTide').textContent = `${(telem.tideSurge || 0).toFixed(2)} m Surge`;
+
+        // Update popup with live neural predictions & Groq engine
+        if (popup && popup.isOpen()) {
+          const popupAi = document.getElementById('popupAiContent');
+          if (popupAi) {
+            popupAi.innerHTML = `
+              <div style="font-weight:700;color:#0284c7;margin-bottom:2px;">🧠 14-Feature Neural Forecast:</div>
+              <div>+1h Depth: <b>${h1.toFixed(1)} cm</b> | Runoff: <b>${q.toFixed(1)} m³/s</b></div>
+              <div>Flash Risk: <b>${prob}%</b> | Threat: <b style="color:${prob>50?'#dc2626':'#16a34a'}">${data.threat_level || 'NOMINAL'}</b></div>
+              <div style="font-size:10px;color:#d97706;margin-top:3px;font-weight:600;">⚡ ${tr.engine || 'Deterministic SOP'}</div>
+              <div style="font-size:10px;color:#333;font-style:italic;margin-top:2px;">"${(tr.tactical_civic_advisory || '').slice(0, 80)}..."</div>
+            `;
+          }
+        }
+      } catch (err) {
+        console.warn('loadTacticalForecast error:', err);
       }
     }
 
