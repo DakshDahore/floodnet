@@ -755,7 +755,7 @@ print("════════════════════════�
           <!-- Email OTP Form -->
           <div id="authStep1">
             <label style="font-size: 0.85rem; color: var(--c-beige); display: block; margin-bottom: 0.4rem;">Engineering Email Address</label>
-            <input type="email" id="authEmailInput" placeholder="hydrologist@agency.org" style="width: 100%; padding: 0.85rem 1.1rem; border-radius: 12px; background: rgba(10, 7, 5, 0.8); border: 1px solid var(--c-card-border); color: var(--c-linen); margin-bottom: 1.2rem; font-size: 1rem; outline: none;">
+            <input type="email" id="authEmailInput" placeholder="name@example.com" style="width: 100%; padding: 0.85rem 1.1rem; border-radius: 12px; background: rgba(10, 7, 5, 0.8); border: 1px solid var(--c-card-border); color: var(--c-linen); margin-bottom: 1.2rem; font-size: 1rem; outline: none;">
 
             <!-- Mandatory Legal & Age Checkboxes -->
             <div style="display: flex; flex-direction: column; gap: 0.65rem; margin-bottom: 1.5rem; font-size: 0.85rem; color: var(--c-text-muted);">
@@ -1006,14 +1006,14 @@ print(response.json())</code></pre>
 
           <div style="display: flex; gap: 2rem; align-items: center; margin-bottom: 2rem; flex-wrap: wrap;">
             <div style="position: relative;">
-              <img id="accountAvatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop" alt="Profile Avatar" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 2px solid var(--c-cognac);">
+              <img id="accountAvatar" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%231a130e'/><circle cx='50' cy='40' r='18' fill='%23554030'/><path d='M22 82 C24 62 40 58 50 58 C60 58 76 62 78 82 Z' fill='%23554030'/></svg>" alt="Profile Avatar" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 2px solid var(--c-cognac);">
               <label for="avatarFileInput" style="position: absolute; bottom: 0; right: 0; background: var(--c-cognac); color: #fff; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.85rem;" title="Upload Avatar">📷</label>
               <input type="file" id="avatarFileInput" accept="image/*" style="display: none;" onchange="handleAvatarUpload(this)">
             </div>
             <div>
-              <h3 style="font-family: var(--font-display); font-size: 1.6rem;" id="accountDisplayName">Hydrologist Engineer</h3>
-              <p style="color: var(--c-text-muted); font-size: 0.9rem;" id="accountEmail">user@agency.gov</p>
-              <span id="accountPlanBadge" style="background: rgba(146, 84, 43, 0.3); border: 1px solid var(--c-cognac); color: var(--c-linen); padding: 0.2rem 0.7rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">FREE TIER</span>
+              <h3 style="font-family: var(--font-display); font-size: 1.6rem;" id="accountDisplayName">Unauthenticated Visitor</h3>
+              <p style="color: var(--c-text-muted); font-size: 0.9rem;" id="accountEmail">Not Signed In</p>
+              <span id="accountPlanBadge" style="background: rgba(146, 84, 43, 0.3); border: 1px solid var(--c-cognac); color: var(--c-linen); padding: 0.2rem 0.7rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">NO ACTIVE SESSION</span>
             </div>
           </div>
 
@@ -1978,32 +1978,60 @@ print(response.json())</code></pre>
     }
 
     function applyLoggedInState(user) {
+      if (!user || (!user.email && !user.identity)) {
+        logoutSession();
+        return;
+      }
       document.getElementById('dockPreLogin').style.display = 'none';
       document.getElementById('dockPostLogin').style.display = 'flex';
-      const container = document.getElementById('headerAuthBtnContainer');
-      if (container) {
-        container.innerHTML = `
-          <button onclick="switchView('account')" class="btn-water" style="padding:0.4rem 0.9rem; font-size:0.85rem;">
-            👤 ${user.email.split('@')[0]} (${(user.plan || 'free').toUpperCase()})
-          </button>
-        `;
-      }
+      
+      const email = user.email || user.identity || '';
+      const name = user.name || (email ? email.split('@')[0] : 'User');
+      const plan = (user.plan || 'free').toUpperCase();
+      
       const accEmail = document.getElementById('accountEmail');
       const accName = document.getElementById('accountDisplayName');
       const accBadge = document.getElementById('accountPlanBadge');
-      if (accEmail) accEmail.textContent = user.email;
-      if (accName) accName.textContent = user.email.split('@')[0];
-      if (accBadge) accBadge.textContent = (user.plan || 'free').toUpperCase() + ' TIER';
+      if (accEmail) accEmail.textContent = email;
+      if (accName) accName.textContent = name;
+      if (accBadge) accBadge.textContent = `${plan} TIER`;
+      
+      const accAvatar = document.getElementById('accountAvatar');
+      const savedAvatar = localStorage.getItem('floodlock_avatar');
+      if (accAvatar) {
+        if (savedAvatar) {
+          accAvatar.src = savedAvatar;
+        } else if (user.picture || user.avatar_url) {
+          accAvatar.src = user.picture || user.avatar_url;
+        } else {
+          const initial = (name[0] || 'U').toUpperCase();
+          accAvatar.src = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" rx="50" fill="%23261a12"/><text x="50" y="58" font-size="38" font-family="sans-serif" font-weight="700" fill="%23d6c5b3" text-anchor="middle" dominant-baseline="middle">${initial}</text></svg>`;
+        }
+      }
+      
+      const quotaText = document.getElementById('accountQuotaText');
+      const quotaBar = document.getElementById('accountQuotaBar');
+      const dailyQuota = user.daily_quota || (user.is_admin ? 500 : 10);
+      if (quotaText) quotaText.textContent = `0 / ${dailyQuota} Queries Used Today`;
+      if (quotaBar) quotaBar.style.width = '0%';
     }
 
     function logoutSession() {
       window.FloodConfig.clearSession();
       document.getElementById('dockPreLogin').style.display = 'flex';
       document.getElementById('dockPostLogin').style.display = 'none';
-      const container = document.getElementById('headerAuthBtnContainer');
-      if (container) {
-        container.innerHTML = `<button onclick="switchView('auth')" class="btn-water" style="padding: 0.4rem 1.1rem; font-size: 0.85rem;">Login / Register</button>`;
+      
+      const accEmail = document.getElementById('accountEmail');
+      const accName = document.getElementById('accountDisplayName');
+      const accBadge = document.getElementById('accountPlanBadge');
+      const accAvatar = document.getElementById('accountAvatar');
+      if (accEmail) accEmail.textContent = 'Not Signed In';
+      if (accName) accName.textContent = 'Unauthenticated Visitor';
+      if (accBadge) accBadge.textContent = 'NO ACTIVE SESSION';
+      if (accAvatar) {
+        accAvatar.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%231a130e'/><circle cx='50' cy='40' r='18' fill='%23554030'/><path d='M22 82 C24 62 40 58 50 58 C60 58 76 62 78 82 Z' fill='%23554030'/></svg>";
       }
+      
       switchView('welcome');
     }
 
@@ -2406,14 +2434,14 @@ print(response.json())</code></pre>
           }
         }).then(res => {
           const token = res.data?.session_token || res.data?.token;
-          if (res.ok && token) {
-            const user = res.data.user || { email: 'engineer@google.com', plan: 'free' };
+          const user = res.data?.user;
+          if (res.ok && token && user && (user.email || user.identity)) {
             window.FloodConfig.setSession(token, user);
             applyLoggedInState(user);
             history.replaceState(null, '', window.location.pathname);
             switchView('dashboard');
           } else {
-            if (status) status.innerHTML = `<span style="color:#ef4444;">Google Sign-In failed: ${res.data?.message || res.data?.detail || 'Token exchange error'}</span>`;
+            if (status) status.innerHTML = `<span style="color:#ef4444;">Google Sign-In failed: ${res.data?.message || res.data?.detail || 'Authentication failed'}</span>`;
             history.replaceState(null, '', window.location.pathname);
           }
         }).catch(err => {
@@ -2428,8 +2456,8 @@ print(response.json())</code></pre>
           const hashParams = new URLSearchParams(window.location.hash.substring(1));
           const token = hashParams.get('session_token');
           const userStr = hashParams.get('user');
-          if (token) {
-            const userObj = userStr ? JSON.parse(decodeURIComponent(userStr)) : { email: 'engineer@verified', plan: 'free' };
+          const userObj = userStr ? JSON.parse(decodeURIComponent(userStr)) : null;
+          if (token && userObj && (userObj.email || userObj.identity)) {
             window.FloodConfig.setSession(token, userObj);
             applyLoggedInState(userObj);
             history.replaceState(null, '', window.location.pathname);
@@ -2446,8 +2474,13 @@ print(response.json())</code></pre>
         history.replaceState(null, '', window.location.pathname);
       }
 
+      const session = window.FloodConfig.getSessionToken();
       const user = window.FloodConfig.getUserProfile();
-      if (user) applyLoggedInState(user);
+      if (session && user && (user.email || user.identity)) {
+        applyLoggedInState(user);
+      } else {
+        logoutSession();
+      }
     });
   </script>
 </body>

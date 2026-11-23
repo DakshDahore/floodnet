@@ -865,7 +865,7 @@ export default {
               daily_quota: dailyQuota,
               is_admin: isAdmin,
               created_at: new Date().toISOString(),
-              name: userName,
+              name: userName || (userEmail ? userEmail.split('@')[0] : "User"),
               provider: "google",
             };
             if (env.FLOODLOCK_KV) {
@@ -1008,7 +1008,7 @@ export default {
               user_id: uid,
               identity_raw: userEmail,
               identity_masked: maskIdentity(userEmail),
-              name: userName || "Engineer",
+              name: userName || (userEmail ? userEmail.split('@')[0] : "User"),
               plan: isAdmin ? "ultra" : "free",
               daily_quota: isAdmin ? 500 : 10,
               active_order_id: null,
