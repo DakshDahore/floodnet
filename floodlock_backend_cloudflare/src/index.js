@@ -20,7 +20,7 @@
  */
 
 import { WEIGHTS_14F } from "./weights_14f.js";
-import { generatePlanetaryAMRHeatGrid, PLANETARY_MACRO_LATTICE } from "./planetary_grid.js";
+import { generatePlanetaryAMRHeatGrid, aggregateDistributedShards, PLANETARY_MACRO_LATTICE } from "./planetary_grid.js";
 import {
   deriveDomainSecret,
   hmacSha256Hex,
@@ -1319,7 +1319,7 @@ export default {
           }
         }
 
-        const freshGrid = await generatePlanetaryAMRHeatGrid();
+        const freshGrid = await aggregateDistributedShards(env);
 
         if (env.FLOODLOCK_KV) {
           try {
@@ -2277,12 +2277,12 @@ ${sanitizeText(message, 2000)}
   },
   async scheduled(event, env, ctx) {
     try {
-      const freshGrid = await generatePlanetaryAMRHeatGrid();
+      const freshGrid = await aggregateDistributedShards(env);
       if (env.FLOODLOCK_KV) {
         await env.FLOODLOCK_KV.put("flood:planetary_quadtree_heatgrid_v1", JSON.stringify(freshGrid), { expirationTtl: 3600 });
       }
     } catch (err) {
-      console.error("Scheduled AMR Grid sync error:", err);
+      console.error("Scheduled distributed mesh sync error:", err);
     }
   },
 };

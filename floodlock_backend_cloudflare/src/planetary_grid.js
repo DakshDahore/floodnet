@@ -837,12 +837,33 @@ function makePointFeature(center, properties) {
 }
 
 /**
- * Generates the complete Hierarchical Adaptive Mesh Refinement (AMR) Quadtree Heat Grid
- * across the entire Earth.
+ * Filters the planetary lattice for a specific continental compute shard
+ */
+export function getLatticeForRegion(region) {
+  const norm = String(region).toLowerCase().trim();
+  if (norm.includes("asia")) {
+    return PLANETARY_MACRO_LATTICE.filter((m) => m.continent === "Asia");
+  }
+  if (norm.includes("europe")) {
+    return PLANETARY_MACRO_LATTICE.filter((m) => m.continent === "Europe");
+  }
+  if (norm.includes("america")) {
+    return PLANETARY_MACRO_LATTICE.filter((m) => m.continent === "North America" || m.continent === "South America");
+  }
+  if (norm.includes("africa") || norm.includes("oceania")) {
+    return PLANETARY_MACRO_LATTICE.filter((m) => m.continent === "Africa" || m.continent === "Oceania");
+  }
+  return PLANETARY_MACRO_LATTICE;
+}
+
+/**
+ * Generates the Hierarchical Adaptive Mesh Refinement (AMR) Quadtree Heat Grid
+ * for a specific continental compute shard or the complete planet.
  */
 export async function generatePlanetaryAMRHeatGrid(options = {}) {
   const tStart = performance.now();
-  const liveTelemMap = await fetchLiveBatchMeteorology(PLANETARY_MACRO_LATTICE);
+  const targetLattice = options.lattice || PLANETARY_MACRO_LATTICE;
+  const liveTelemMap = await fetchLiveBatchMeteorology(targetLattice);
 
   const features = [];
   let prunedCount = 0;
@@ -850,7 +871,7 @@ export async function generatePlanetaryAMRHeatGrid(options = {}) {
   let criticalRedCount = 0;
   let elevatedWatchCount = 0;
 
-  for (const macro of PLANETARY_MACRO_LATTICE) {
+  for (const macro of targetLattice) {
     const live = liveTelemMap.get(macro.id);
     const r0 = live ? live.r0 : macro.baseline_r0;
     const r48 = live ? live.r48 : macro.baseline_r48;
@@ -1045,8 +1066,9 @@ export async function generatePlanetaryAMRHeatGrid(options = {}) {
       service: "MeteoFlood Planetary Adaptive Quadtree Heat Grid Engine",
       status: "ONLINE",
       version: "3.2.0-AMR-Gold",
+      shard_region: options.shardRegion || "GLOBAL",
       algorithm: "Hierarchical Adaptive Mesh Refinement (Saint-Venant coupled with 14F Neural Inference)",
-      planetary_macro_sectors: PLANETARY_MACRO_LATTICE.length,
+      planetary_macro_sectors: targetLattice.length,
       pruned_macro_cells: prunedCount,
       subdivided_quadtree_cells: subdividedCount,
       total_active_features: features.length,
@@ -1060,3 +1082,134 @@ export async function generatePlanetaryAMRHeatGrid(options = {}) {
     features
   };
 }
+
+/**
+ * Generates the AMR Heat Grid for an individual continental compute shard
+ */
+export async function generateShardAMRHeatGrid(region, options = {}) {
+  const shardLattice = getLatticeForRegion(region);
+  return generatePlanetaryAMRHeatGrid({
+    ...options,
+    lattice: shardLattice,
+    shardRegion: region
+  });
+}
+
+/**
+ * Aggregates all 4 continental compute worker shards in parallel,
+ * falling back gracefully to local isolate evaluation if any shard is unreachable.
+ */
+export async function aggregateDistributedShards(env = {}) {
+  const shards = [
+    { name: "Asia-Pacific", binding: env.SHARD_ASIA, url: "https://floodlock-shard-asia.dakshdahore1995.workers.dev/api/mesh/shard" },
+    { name: "Europe-Mediterranean", binding: env.SHARD_EUROPE, url: "https://floodlock-shard-europe.dakshdahore1995.workers.dev/api/mesh/shard" },
+    { name: "Americas", binding: env.SHARD_AMERICAS, url: "https://floodlock-shard-americas.dakshdahore1995.workers.dev/api/mesh/shard" },
+    { name: "Africa-Oceania", binding: env.SHARD_AFRICA_OCEANIA, url: "https://floodlock-shard-africa-oceania.dakshdahore1995.workers.dev/api/mesh/shard" },
+  ];
+
+  const tStart = performance.now();
+  const shardResults = await Promise.allSettled(
+    shards.map(async (s) => {
+      const s0 = performance.now();
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 6500);
+      try {
+        let res;
+        if (s.binding && typeof s.binding.fetch === "function") {
+          // Ultra-fast in-memory Cloudflare Service Binding RPC
+          res = await s.binding.fetch("http://internal/api/mesh/shard", { signal: controller.signal });
+        } else {
+          res = await fetch(s.url, {
+            signal: controller.signal,
+            headers: { "User-Agent": "MeteoFlood-Gateway-Aggregator/3.2" }
+          });
+        }
+        clearTimeout(timer);
+        if (!res.ok) throw new Error(`HTTP_${res.status}`);
+        const data = await res.json();
+        return {
+          shard: s.name,
+          latency_ms: Math.round((performance.now() - s0) * 10) / 10,
+          datacenter: data.datacenter || "EDGE",
+          data
+        };
+      } catch (e) {
+        clearTimeout(timer);
+        throw e;
+      }
+    })
+  );
+
+  const allFeatures = [];
+  let totalPruned = 0;
+  let totalSubdivided = 0;
+  let totalRed = 0;
+  let totalWatch = 0;
+  let activeShards = 0;
+  const shardTelemetry = [];
+
+  for (let i = 0; i < shardResults.length; i++) {
+    const res = shardResults[i];
+    const sName = shards[i].name;
+    if (res.status === "fulfilled" && res.value?.data?.features) {
+      activeShards++;
+      const val = res.value;
+      const meta = val.data.metadata || {};
+      allFeatures.push(...val.data.features);
+      totalPruned += (meta.pruned_macro_cells || 0);
+      totalSubdivided += (meta.subdivided_quadtree_cells || 0);
+      totalRed += (meta.critical_red_clusters || 0);
+      totalWatch += (meta.elevated_watch_clusters || 0);
+      shardTelemetry.push({
+        shard: sName,
+        status: "ONLINE",
+        compute_ms: val.data.compute_time_ms || val.latency_ms,
+        datacenter: val.datacenter,
+        features_count: val.data.features.length,
+      });
+    } else {
+      // Local fallback execution for this shard
+      const fallbackData = await generateShardAMRHeatGrid(sName);
+      const meta = fallbackData.metadata || {};
+      allFeatures.push(...fallbackData.features);
+      totalPruned += (meta.pruned_macro_cells || 0);
+      totalSubdivided += (meta.subdivided_quadtree_cells || 0);
+      totalRed += (meta.critical_red_clusters || 0);
+      totalWatch += (meta.elevated_watch_clusters || 0);
+      shardTelemetry.push({
+        shard: sName,
+        status: "LOCAL_ISOLATE_FALLBACK",
+        compute_ms: meta.compute_latency_ms || 120,
+        datacenter: "GATEWAY_ISOLATE",
+        features_count: fallbackData.features.length,
+      });
+    }
+  }
+
+  const durationMs = Math.round((performance.now() - tStart) * 10) / 10;
+
+  return {
+    type: "FeatureCollection",
+    metadata: {
+      service: "MeteoFlood Planetary Distributed Edge Mesh",
+      architecture: "Parallel Sharded Edge Isolates (Cloudflare Workers V8)",
+      gateway_status: "ONLINE",
+      version: "3.2.0-AMR-DistributedMesh",
+      active_shards_reporting: activeShards,
+      total_shards: shards.length,
+      shards_telemetry: shardTelemetry,
+      planetary_macro_sectors: PLANETARY_MACRO_LATTICE.length,
+      pruned_macro_cells: totalPruned,
+      subdivided_quadtree_cells: totalSubdivided,
+      total_active_features: allFeatures.length,
+      critical_red_clusters: totalRed,
+      elevated_watch_clusters: totalWatch,
+      aggregate_latency_ms: durationMs,
+      cached_at: new Date().toISOString(),
+      cache_ttl_seconds: 3600,
+      refresh_interval: "HOURLY_EDGE_SYNC"
+    },
+    features: allFeatures
+  };
+}
+

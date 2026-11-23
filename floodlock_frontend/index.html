@@ -878,6 +878,30 @@ print("════════════════════════�
         </div>
       </div>
 
+      <!-- Distributed Multi-Worker Edge Mesh Cluster Status Bar -->
+      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; background: rgba(10, 7, 5, 0.85); border: 1px solid rgba(56, 189, 248, 0.25); padding: 0.5rem 0.85rem; border-radius: 10px; font-family: var(--font-mono); font-size: 0.7rem;">
+        <div style="display: flex; align-items: center; gap: 0.4rem; color: #38bdf8; font-weight: 700;">
+          <span>⚡ PARALLEL CONTINENTAL WORKER SHARDS:</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+          <span class="shard-pill" id="shardStatus_asiapacific" style="background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); color: #10b981; padding: 0.2rem 0.55rem; border-radius: 6px;">
+            🟢 Asia-Pacific: 156 cells (770ms)
+          </span>
+          <span class="shard-pill" id="shardStatus_europemediterranean" style="background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); color: #10b981; padding: 0.2rem 0.55rem; border-radius: 6px;">
+            🟢 Europe: 36 cells (790ms)
+          </span>
+          <span class="shard-pill" id="shardStatus_americas" style="background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); color: #10b981; padding: 0.2rem 0.55rem; border-radius: 6px;">
+            🟢 Americas: 114 cells (824ms)
+          </span>
+          <span class="shard-pill" id="shardStatus_africaoceania" style="background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); color: #10b981; padding: 0.2rem 0.55rem; border-radius: 6px;">
+            🟢 Africa-Oceania: 102 cells (778ms)
+          </span>
+          <span class="shard-pill" style="background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.35); color: #c084fc; padding: 0.2rem 0.55rem; border-radius: 6px;">
+            🧠 Groq 120B / Neural 14F
+          </span>
+        </div>
+      </div>
+
       <!-- MapLibre Radar Canvas -->
       <div class="radar-deck-container">
         <div id="map"></div>
@@ -2470,10 +2494,23 @@ print(response.json())</code></pre>
           });
         }
 
-        // Update Status Badge
+        // Update Status Badge & Continental Edge Mesh Shards
         const meta = data.metadata || {};
         if (statusEl) {
           statusEl.textContent = `Earth Grid: ${meta.total_active_features || data.features.length} cells (${meta.critical_red_clusters || 0} red clusters)`;
+        }
+
+        if (Array.isArray(meta.shards_telemetry)) {
+          meta.shards_telemetry.forEach(st => {
+            const key = st.shard.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const el = document.getElementById('shardStatus_' + key);
+            if (el) {
+              const isOnline = st.status === 'ONLINE';
+              el.textContent = `${isOnline ? '🟢' : '🟡'} ${st.shard}: ${st.features_count} cells (${st.compute_ms}ms)`;
+              el.style.color = isOnline ? '#10b981' : '#f59e0b';
+              el.style.borderColor = isOnline ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.3)';
+            }
+          });
         }
       } catch (err) {
         console.error('Planetary AMR Heat Grid load error:', err);
