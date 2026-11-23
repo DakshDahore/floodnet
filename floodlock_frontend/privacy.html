@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy — MeteoFlood Intelligence</title>
+  <meta name="description" content="Privacy Policy for MeteoFlood Planetary Disaster Intelligence & Compound Flood Physics.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --c-obsidian: #120D09;
+      --c-umber: #2A1F17;
+      --c-cognac: #92542B;
+      --c-cognac-hover: #b86b38;
+      --c-sage: #788279;
+      --c-beige: #D6C5B3;
+      --c-linen: #F8F5EE;
+      --c-water: #06b6d4;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background-color: var(--c-obsidian);
+      color: var(--c-linen);
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      line-height: 1.7;
+      padding: 40px 20px;
+    }
+    .container {
+      max-width: 840px;
+      margin: 0 auto;
+      background: var(--c-umber);
+      border: 1px solid rgba(214, 197, 179, 0.15);
+      border-radius: 12px;
+      padding: 48px;
+    }
+    .header {
+      border-bottom: 1px solid rgba(214, 197, 179, 0.15);
+      padding-bottom: 24px;
+      margin-bottom: 32px;
+    }
+    .brand {
+      font-family: 'Instrument Serif', Georgia, serif;
+      font-size: 2.2rem;
+      color: var(--c-linen);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .brand em {
+      color: var(--c-cognac);
+      font-style: italic;
+    }
+    h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-top: 16px;
+      color: var(--c-linen);
+    }
+    .last-updated {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      color: var(--c-sage);
+      margin-top: 6px;
+    }
+    h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--c-beige);
+      margin-top: 28px;
+      margin-bottom: 12px;
+    }
+    p {
+      color: #d1d5db;
+      font-size: 0.95rem;
+      margin-bottom: 16px;
+    }
+    ul {
+      margin-left: 24px;
+      margin-bottom: 16px;
+      color: #d1d5db;
+    }
+    li {
+      margin-bottom: 8px;
+    }
+    a {
+      color: var(--c-water);
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    .footer {
+      margin-top: 40px;
+      padding-top: 24px;
+      border-top: 1px solid rgba(214, 197, 179, 0.15);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+      color: var(--c-sage);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <a href="/" class="brand">METEO<em>FLOOD</em></a>
+      <h1>Privacy Policy</h1>
+      <div class="last-updated">Effective Date: November 23, 2026 | Version 2.0</div>
+    </div>
+
+    <h2>1. Overview</h2>
+    <p>MeteoFlood ("we", "our", or "us") provides planetary compound flood intelligence, antecedent soil saturation modeling, and tidal telemetry for urban disaster preparedness. This Privacy Policy explains how we collect, handle, and protect user information when accessing our platforms (including metoflood.netlify.app and floodlock.pages.dev).</p>
+
+    <h2>2. Information We Collect</h2>
+    <p>We believe in strict data minimization. We only collect the minimal credentials required to provide secure authentication and rate-limiting:</p>
+    <ul>
+      <li><strong>OAuth Authentication Data:</strong> When signing in with Google or GitHub, we receive basic profile information provided by the provider with your consent: your verified email address, display name, and avatar image URL.</li>
+      <li><strong>Session & Telemetry Identifiers:</strong> We generate cryptographic HMAC session tokens to maintain your session state and enforce query tier limits (e.g., Free vs. Ultra).</li>
+      <li><strong>Hydrological Query Logs:</strong> Anonymous coordinate queries and radar bounding boxes requested during active analysis, devoid of personally identifiable information (PII).</li>
+    </ul>
+
+    <h2>3. How We Use Information</h2>
+    <p>We process data exclusively for:</p>
+    <ul>
+      <li>Authenticating access to the MeteoFlood Tactical Radar and Hydrological Simulation Suite.</li>
+      <li>Enforcing query quotas and preventing denial-of-service abuse via Cloudflare Edge Durable Objects.</li>
+      <li>Delivering requested passwordless OTP verification tokens via Resend transactional delivery.</li>
+    </ul>
+
+    <h2>4. Data Protection & Security</h2>
+    <p>All sensitive authentication tokens and session hashes are encrypted at rest using AES-GCM-256 and verified through HMAC-SHA256 signatures at edge nodes. We never sell, rent, or monetize personal user data or telemetry queries.</p>
+
+    <h2>5. Third-Party Services</h2>
+    <p>We integrate with established, privacy-compliant infrastructure providers:</p>
+    <ul>
+      <li><strong>Google Identity Services:</strong> For single sign-on authentication using OpenID Connect.</li>
+      <li><strong>GitHub OAuth:</strong> For developer identity authentication.</li>
+      <li><strong>Cloudflare Inc.:</strong> For DNS routing, edge CDN delivery, and edge security.</li>
+    </ul>
+
+    <h2>6. Contact & Data Deletion</h2>
+    <p>Users may request complete erasure of their account records or session history at any time. For privacy inquiries or deletion requests, contact our engineering desk at <a href="mailto:dakshdahore.d@gmail.com">dakshdahore.d@gmail.com</a>.</p>
+
+    <div class="footer">
+      <div>&copy; 2026 MeteoFlood Intelligence. All rights reserved.</div>
+      <div><a href="/">← Return to Tactical Radar</a></div>
+    </div>
+  </div>
+</body>
+</html>
