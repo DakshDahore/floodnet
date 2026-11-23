@@ -221,3 +221,39 @@ export function containsMaliciousPayload(str) {
   ];
   return badPatterns.some((pat) => pat.test(str));
 }
+
+export async function createSignedOAuthState(masterSecret, payload = {}) {
+  const nonce = typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : toHex(crypto.getRandomValues(new Uint8Array(16)));
+  const issuedAt = Math.floor(Date.now() / 1000);
+  const data = JSON.stringify({ ...payload, nonce, iat: issuedAt });
+  const b64Data = toBase64Url(enc.encode(data));
+  const subkey = await deriveDomainSecret(masterSecret, "oauth-state-nonce");
+  const sigHex = await hmacSha256Hex(subkey, b64Data);
+  return `${b64Data}.${sigHex}`;
+}
+
+export async function verifySignedOAuthState(masterSecret, stateString, maxAgeSec = 900) {
+  if (!stateString || typeof stateString !== "string" || !stateString.includes(".")) return null;
+  const parts = stateString.split(".");
+  if (parts.length !== 2) return null;
+  const [b64Data, sigHex] = parts;
+  if (!b64Data || !sigHex) return null;
+
+  try {
+    const subkey = await deriveDomainSecret(masterSecret, "oauth-state-nonce");
+    const expectedSig = await hmacSha256Hex(subkey, b64Data);
+    if (!constantTimeEqual(expectedSig, sigHex)) return null;
+
+    const rawJson = dec.decode(fromBase64Url(b64Data));
+    const parsed = JSON.parse(rawJson);
+    const now = Math.floor(Date.now() / 1000);
+    if (!parsed.iat || typeof parsed.iat !== "number" || Math.abs(now - parsed.iat) > maxAgeSec) {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}

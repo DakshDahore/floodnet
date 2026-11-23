@@ -15,17 +15,13 @@
  */
 
 import { WEIGHTS_14F } from "./weights_14f.js";
-import { runTacticalReasoning, isDeterministicPhysicalHazard } from "./ai_resilience.js";
+import { runTacticalReasoning, isDeterministicPhysicalHazard, buildDeterministicEdgeSop } from "./ai_resilience.js";
 
 const DEFAULT_ORIGINS = [
   "https://metoflood.netlify.app",
   "https://floodlock.pages.dev",
   "https://floodnet.netlify.app",
   "https://dakshdahore1995-design.github.io",
-  "http://localhost:3000",
-  "http://127.0.0.1:3000",
-  "http://localhost:8000",
-  "http://127.0.0.1:8000"
 ];
 
 const KNOWN_BASINS = [
@@ -336,9 +332,10 @@ export default {
         auditAction = groqDismissed ? "OVERRIDDEN_BY_PHYSICAL_SAFETY_FLOOR" : "CRITICAL_ALARM_DISPATCHED";
       } else if (isThreat) {
         if (groqDismissed) {
-          finalThreatLevel = "NOMINAL";
-          auditVerdict = "FALSE_ALARM_DOWNGRADED";
-          auditAction = "ALARM_SUPPRESSED_FALSE_ALARM";
+          // Finding 2 Fix: In sub-floor band, AI refutation downgrades to ELEVATED_WATCH (not NOMINAL)
+          finalThreatLevel = "ELEVATED_WATCH";
+          auditVerdict = "SUB_HAZARD_WATCH_ADVISORY";
+          auditAction = "ALARM_DOWNGRADED_TO_WATCH";
         } else if (groqVerified || !tacticalReasoning) {
           finalThreatLevel = "CRITICAL_INUNDATION";
           auditVerdict = "CONFIRMED_FLOOD_HAZARD";
@@ -396,7 +393,9 @@ export default {
         groq_audit_verdict: floodAuditLog.adversarial_groq_audit.groq_verdict,
         flood_audit_log: floodAuditLog,
         dual_trigger_black_swan: isBlackSwan,
-        tactical_reasoning: groqDismissed ? null : tacticalReasoning,
+        tactical_reasoning: isPhysicalHazard
+          ? (tacticalReasoning || buildDeterministicEdgeSop(telem, neuralPred, lat, lon))
+          : (finalThreatLevel === "NOMINAL" || finalThreatLevel === "MONITORED_NOMINAL" ? null : tacticalReasoning),
       }, 200, {
         "X-Worker-Core": "Core-3-ClickProcessor",
         "X-Response-Time-Ms": `${neuralPred.latency_ms}`,

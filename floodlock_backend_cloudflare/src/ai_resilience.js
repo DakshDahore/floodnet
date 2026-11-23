@@ -45,11 +45,11 @@ export function isDeterministicPhysicalHazard(telemetry, predictions) {
   );
 }
 
-function normalizeTacticalPayload(raw, engineLabel, fallbackObj, isPhysicalHazard = false) {
+export function normalizeTacticalPayload(raw, engineLabel, fallbackObj, isPhysicalHazard = false) {
   if (!raw || typeof raw !== "object") return fallbackObj;
 
-  let status = "LOW_RISK_MONITORED";
-  let isVerified = false;
+  let status = fallbackObj.verification_status || "LOW_RISK_MONITORED";
+  let isVerified = fallbackObj.threat_verified ?? false;
 
   // Civil Defense Invariant: If hard physical telemetry indicates severe flood disaster,
   // the AI model is strictly FORBIDDEN from downgrading or cancelling the alert.
@@ -63,9 +63,10 @@ function normalizeTacticalPayload(raw, engineLabel, fallbackObj, isPhysicalHazar
   } else if (raw.threat_verified === true || raw.verification_status === "VERIFIED_FLOOD_HAZARD") {
     status = "VERIFIED_FLOOD_HAZARD";
     isVerified = true;
-  } else if (fallbackObj.verification_status === "VERIFIED_FLOOD_HAZARD") {
-    status = "VERIFIED_FLOOD_HAZARD";
-    isVerified = true;
+  } else {
+    // Incomplete/unspecified AI response: fail-safe to preserving fallback threat verification
+    status = fallbackObj.verification_status || "VERIFIED_FLOOD_HAZARD";
+    isVerified = fallbackObj.threat_verified ?? true;
   }
 
   const physicalAudit = isPhysicalHazard && (raw.threat_verified === false || raw.verification_status === "FALSE_ALARM_DOWNGRADED")
@@ -73,6 +74,28 @@ function normalizeTacticalPayload(raw, engineLabel, fallbackObj, isPhysicalHazar
     : (typeof raw.physical_consistency_audit === "string" && raw.physical_consistency_audit.length > 5
         ? raw.physical_consistency_audit.slice(0, 500)
         : (typeof raw.causal_attribution === "string" ? raw.causal_attribution.slice(0, 500) : fallbackObj.physical_consistency_audit));
+
+  const safeCorridors = (Array.isArray(raw.safe_evacuation_corridors) && raw.safe_evacuation_corridors.length > 0)
+    ? raw.safe_evacuation_corridors.slice(0, 5).map((s) => String(s).slice(0, 120))
+    : fallbackObj.safe_evacuation_corridors;
+
+  const impassable = (Array.isArray(raw.impassable_infrastructure) && raw.impassable_infrastructure.length > 0)
+    ? raw.impassable_infrastructure.slice(0, 5).map((s) => String(s).slice(0, 120))
+    : fallbackObj.impassable_infrastructure;
+
+  const hospital = (raw.nearest_open_hospital && typeof raw.nearest_open_hospital === "object")
+    ? {
+        name: String(raw.nearest_open_hospital.name || fallbackObj.nearest_open_hospital.name).slice(0, 100),
+        status: String(raw.nearest_open_hospital.status || fallbackObj.nearest_open_hospital.status || "PASSABLE ON HIGH GROUND").slice(0, 60),
+        distance_km: Number.isFinite(Number(raw.nearest_open_hospital.distance_km))
+          ? Number(raw.nearest_open_hospital.distance_km)
+          : fallbackObj.nearest_open_hospital.distance_km,
+      }
+    : fallbackObj.nearest_open_hospital;
+
+  const advisory = (typeof raw.tactical_civic_advisory === "string" && raw.tactical_civic_advisory.length > 5)
+    ? raw.tactical_civic_advisory.slice(0, 400)
+    : fallbackObj.tactical_civic_advisory;
 
   return {
     engine: engineLabel,
@@ -90,26 +113,10 @@ function normalizeTacticalPayload(raw, engineLabel, fallbackObj, isPhysicalHazar
       typeof raw.danger_zone_perimeter === "string" && raw.danger_zone_perimeter.length > 5
         ? raw.danger_zone_perimeter.slice(0, 300)
         : fallbackObj.danger_zone_perimeter,
-    safe_evacuation_corridors: Array.isArray(raw.safe_evacuation_corridors)
-      ? raw.safe_evacuation_corridors.slice(0, 5).map((s) => String(s).slice(0, 120))
-      : fallbackObj.safe_evacuation_corridors,
-    impassable_infrastructure: Array.isArray(raw.impassable_infrastructure)
-      ? raw.impassable_infrastructure.slice(0, 5).map((s) => String(s).slice(0, 120))
-      : fallbackObj.impassable_infrastructure,
-    nearest_open_hospital:
-      raw.nearest_open_hospital && typeof raw.nearest_open_hospital === "object"
-        ? {
-            name: String(raw.nearest_open_hospital.name || fallbackObj.nearest_open_hospital.name).slice(0, 100),
-            status: String(raw.nearest_open_hospital.status || "PASSABLE ON HIGH GROUND").slice(0, 60),
-            distance_km: Number.isFinite(Number(raw.nearest_open_hospital.distance_km))
-              ? Number(raw.nearest_open_hospital.distance_km)
-              : fallbackObj.nearest_open_hospital.distance_km,
-          }
-        : fallbackObj.nearest_open_hospital,
-    tactical_civic_advisory:
-      typeof raw.tactical_civic_advisory === "string" && raw.tactical_civic_advisory.length > 5
-        ? raw.tactical_civic_advisory.slice(0, 400)
-        : fallbackObj.tactical_civic_advisory,
+    safe_evacuation_corridors: safeCorridors,
+    impassable_infrastructure: impassable,
+    nearest_open_hospital: hospital,
+    tactical_civic_advisory: advisory,
   };
 }
 
@@ -159,20 +166,48 @@ export function buildDeterministicEdgeSop(telemetry, predictions, lat, lon) {
 
 export async function runTacticalReasoning(env, telemetry, predictions, lat, lon, options = {}) {
   const isPhysicalHazard = isDeterministicPhysicalHazard(telemetry, predictions);
+  const deterministicFloor = buildDeterministicEdgeSop(telemetry, predictions, lat, lon);
   const skipCache = Boolean(options.skipCache);
+
+  const r0 = Number(telemetry?.r0) || 0;
+  const r48 = Number(telemetry?.r48) || 0;
+  const soilSat = Number(telemetry?.soilSat) || 0;
+  const tideSurge = Number(telemetry?.tideSurge) || 0;
+  const h1 = Number(predictions?.depth_trajectory_cm?.h1) || 0;
+  const h3 = Number(predictions?.depth_trajectory_cm?.h3) || 0;
+  const prob = Number(predictions?.flash_flood_probability) || 0;
+  const q = Number(predictions?.runoff_q_m3s) || 0;
+
+  // High Finding 1 Fix: Cache key strictly partitions physical hazards from sub-hazards,
+  // uses 2 mm/hr rain resolution to prevent cross-boundary cache collision, and incorporates
+  // neural forecast outputs.
   const clusterKey =
     `ai_cache:${lat.toFixed(2)}_${lon.toFixed(2)}` +
-    `_r0_${Math.round(telemetry.r0 / 5)}` +
-    `_r48_${Math.round(telemetry.r48 / 20)}` +
-    `_sat_${Math.round(telemetry.soilSat * 10)}` +
-    `_tide_${Math.round(telemetry.tideSurge * 2)}`;
+    `_floor_${isPhysicalHazard ? "1" : "0"}` +
+    `_r0_${Math.floor(r0 / 2)}` +
+    `_r48_${Math.floor(r48 / 10)}` +
+    `_sat_${Math.floor(soilSat * 10)}` +
+    `_tide_${Math.floor(tideSurge * 2)}` +
+    `_h1_${Math.floor(h1 / 5)}` +
+    `_h3_${Math.floor(h3 / 10)}` +
+    `_prob_${Math.floor(prob * 10)}` +
+    `_q_${Math.floor(q / 25)}`;
 
   if (!skipCache && env.FLOODLOCK_KV) {
     const cached = await env.FLOODLOCK_KV.get(clusterKey, "json");
-    if (cached) return { ...cached, cache_hit: true };
+    if (cached) {
+      // High Finding 1 Fix: Always re-normalize cached payload with live deterministicFloor
+      // and live isPhysicalHazard flag so a cached dismissal can NEVER defeat the life-safety floor!
+      const normalized = normalizeTacticalPayload(
+        cached,
+        cached.engine || "KV Tactical Cache",
+        deterministicFloor,
+        isPhysicalHazard
+      );
+      return { ...normalized, cache_hit: true };
+    }
   }
 
-  const deterministicFloor = buildDeterministicEdgeSop(telemetry, predictions, lat, lon);
   const cbStub = env.CIRCUIT_BREAKER_DO
     ? env.CIRCUIT_BREAKER_DO.get(env.CIRCUIT_BREAKER_DO.idFromName("global-ai-cb"))
     : null;

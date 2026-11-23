@@ -20,14 +20,20 @@
  *     - Rolling 60-second failure window per AI provider.
  */
 
-import { DurableObject } from "cloudflare:workers";
+let BaseDO;
+try {
+  const cf = await import("cloudflare:workers");
+  BaseDO = cf.DurableObject || class { constructor(ctx, env) { this.ctx = ctx; this.env = env; } };
+} catch {
+  BaseDO = class { constructor(ctx, env) { this.ctx = ctx; this.env = env; } };
+}
 import { constantTimeEqual } from "./crypto_utils.js";
 
 function utcDayKey(nowMs = Date.now()) {
   return new Date(nowMs).toISOString().slice(0, 10);
 }
 
-export class SecurityStateDO extends DurableObject {
+export class SecurityStateDO extends BaseDO {
   constructor(ctx, env) {
     super(ctx, env);
     this.ctx = ctx;
@@ -103,10 +109,11 @@ export class SecurityStateDO extends DurableObject {
     return { allowed: true, remaining: Math.max(0, limit - (currentCount + 1)), resetAt: now + windowMs };
   }
 
-  async issueOtp(identityHash, otpHash, ttlMs = 300000, cooldownMs = 30000) {
+  async issueOtp(identityHash, otpHash, ttlMs = 300000, cooldownMs = 30000, clientIp = "global") {
     const now = Date.now();
+    const lockoutKey = clientIp ? `${identityHash}:${clientIp}` : identityHash;
     const lockRow = this.sql
-      .exec("SELECT locked_until FROM lockouts WHERE identity_hash = ?", identityHash)
+      .exec("SELECT locked_until FROM lockouts WHERE identity_hash = ?", lockoutKey)
       .toArray()[0];
     if (lockRow && lockRow.locked_until > now) {
       return { ok: false, code: "ACCOUNT_LOCKED", retryAfterSec: Math.ceil((lockRow.locked_until - now) / 1000) };
@@ -120,7 +127,7 @@ export class SecurityStateDO extends DurableObject {
     }
 
     const strikeRow = this.sql
-      .exec("SELECT strikes, window_start FROM otp_strikes WHERE identity_hash = ?", identityHash)
+      .exec("SELECT strikes, window_start FROM otp_strikes WHERE identity_hash = ?", lockoutKey)
       .toArray()[0];
     const rollingStrikes = strikeRow && now - strikeRow.window_start < 15 * 60 * 1000 ? Number(strikeRow.strikes || 0) : 0;
     const prevAttempts = existing && now - existing.last_sent_at < 15 * 60 * 1000 ? Number(existing.attempts || 0) : 0;
@@ -148,9 +155,9 @@ export class SecurityStateDO extends DurableObject {
     return { rolledBack: true };
   }
 
-  _incrementStrikeAndMaybeLock(identityHash, now, currentAttempts = 0) {
+  _incrementStrikeAndMaybeLock(targetKey, now, currentAttempts = 0) {
     const strikeRow = this.sql
-      .exec("SELECT strikes, window_start FROM otp_strikes WHERE identity_hash = ?", identityHash)
+      .exec("SELECT strikes, window_start FROM otp_strikes WHERE identity_hash = ?", targetKey)
       .toArray()[0];
     const rollingStrikes = strikeRow && now - strikeRow.window_start < 15 * 60 * 1000 ? Number(strikeRow.strikes || 0) : 0;
     const nextAttempts = Math.max(rollingStrikes, Number(currentAttempts || 0)) + 1;
@@ -160,10 +167,9 @@ export class SecurityStateDO extends DurableObject {
       this.sql.exec(
         "INSERT INTO lockouts (identity_hash, locked_until) VALUES (?, ?) " +
           "ON CONFLICT(identity_hash) DO UPDATE SET locked_until = ?",
-        identityHash, lockedUntil, lockedUntil
+        targetKey, lockedUntil, lockedUntil
       );
-      this.sql.exec("DELETE FROM otp_challenges WHERE identity_hash = ?", identityHash);
-      this.sql.exec("DELETE FROM otp_strikes WHERE identity_hash = ?", identityHash);
+      this.sql.exec("DELETE FROM otp_strikes WHERE identity_hash = ?", targetKey);
       return { locked: true, nextAttempts };
     }
 
@@ -171,18 +177,19 @@ export class SecurityStateDO extends DurableObject {
     this.sql.exec(
       "INSERT INTO otp_strikes (identity_hash, strikes, window_start) VALUES (?, ?, ?) " +
         "ON CONFLICT(identity_hash) DO UPDATE SET strikes = ?, window_start = ?",
-      identityHash, nextAttempts, windowStart, nextAttempts, windowStart
+      targetKey, nextAttempts, windowStart, nextAttempts, windowStart
     );
     return { locked: false, nextAttempts };
   }
 
-  async verifyOtp(identityHash, submittedHash) {
+  async verifyOtp(identityHash, submittedHash, clientIp = "global") {
     const now = Date.now();
+    const lockoutKey = clientIp ? `${identityHash}:${clientIp}` : identityHash;
     const lockRow = this.sql
-      .exec("SELECT locked_until FROM lockouts WHERE identity_hash = ?", identityHash)
+      .exec("SELECT locked_until FROM lockouts WHERE identity_hash = ?", lockoutKey)
       .toArray()[0];
     if (lockRow && lockRow.locked_until > now) {
-      return { ok: false, status: 403, code: "ACCOUNT_LOCKED", message: "Too many failed attempts. Identity locked for 15 minutes." };
+      return { ok: false, status: 403, code: "ACCOUNT_LOCKED", message: "Too many failed attempts from this IP. Verification locked for 15 minutes." };
     }
 
     const challenge = this.sql
@@ -191,23 +198,23 @@ export class SecurityStateDO extends DurableObject {
 
     if (!challenge || challenge.expires_at <= now) {
       this.sql.exec("DELETE FROM otp_challenges WHERE identity_hash = ?", identityHash);
-      const res = this._incrementStrikeAndMaybeLock(identityHash, now, challenge?.attempts || 0);
+      const res = this._incrementStrikeAndMaybeLock(lockoutKey, now, challenge?.attempts || 0);
       if (res.locked) {
-        return { ok: false, status: 403, code: "ACCOUNT_LOCKED", message: "3 failed verification attempts. Identity locked for 15 minutes." };
+        return { ok: false, status: 403, code: "ACCOUNT_LOCKED", message: "3 failed verification attempts from this IP. Identity locked for 15 minutes." };
       }
       return { ok: false, status: 400, code: "NO_ACTIVE_OTP", message: "No active OTP request found or code expired." };
     }
 
     if (constantTimeEqual(challenge.otp_hash, submittedHash)) {
       this.sql.exec("DELETE FROM otp_challenges WHERE identity_hash = ?", identityHash);
-      this.sql.exec("DELETE FROM otp_strikes WHERE identity_hash = ?", identityHash);
-      this.sql.exec("DELETE FROM lockouts WHERE identity_hash = ?", identityHash);
+      this.sql.exec("DELETE FROM otp_strikes WHERE identity_hash = ?", lockoutKey);
+      this.sql.exec("DELETE FROM lockouts WHERE identity_hash = ?", lockoutKey);
       return { ok: true };
     }
 
-    const res = this._incrementStrikeAndMaybeLock(identityHash, now, challenge.attempts);
+    const res = this._incrementStrikeAndMaybeLock(lockoutKey, now, challenge.attempts);
     if (res.locked) {
-      return { ok: false, status: 403, code: "ACCOUNT_LOCKED", message: "3 failed verification attempts. Identity locked for 15 minutes." };
+      return { ok: false, status: 403, code: "ACCOUNT_LOCKED", message: "3 failed verification attempts from this IP. Identity locked for 15 minutes." };
     }
 
     this.sql.exec("UPDATE otp_challenges SET attempts = ? WHERE identity_hash = ?", res.nextAttempts, identityHash);
@@ -215,7 +222,7 @@ export class SecurityStateDO extends DurableObject {
   }
 }
 
-export class BillingStateDO extends DurableObject {
+export class BillingStateDO extends BaseDO {
   constructor(ctx, env) {
     super(ctx, env);
     this.ctx = ctx;
@@ -398,7 +405,7 @@ export class BillingStateDO extends DurableObject {
   }
 }
 
-export class CircuitBreakerDO extends DurableObject {
+export class CircuitBreakerDO extends BaseDO {
   constructor(ctx, env) {
     super(ctx, env);
     this.sql = ctx.storage.sql;

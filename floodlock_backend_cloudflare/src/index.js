@@ -33,8 +33,10 @@ import {
   isValidIdentity,
   sanitizeText,
   containsMaliciousPayload,
+  createSignedOAuthState,
+  verifySignedOAuthState,
 } from "./crypto_utils.js";
-import { runTacticalReasoning, isDeterministicPhysicalHazard } from "./ai_resilience.js";
+import { runTacticalReasoning, isDeterministicPhysicalHazard, buildDeterministicEdgeSop } from "./ai_resilience.js";
 
 export { SecurityStateDO, BillingStateDO, CircuitBreakerDO } from "./durable_objects.js";
 
@@ -95,7 +97,7 @@ function buildCorsHeaders(request, env) {
   };
 }
 
-function getSafeFrontendRedirect(rawOrigin, env) {
+export function getSafeFrontendRedirect(rawOrigin, env = {}) {
   const fallback = (env.FRONTEND_URL || "https://floodlock.pages.dev").replace(/\/+$/, "");
   if (!rawOrigin || typeof rawOrigin !== "string") return fallback;
   try {
@@ -115,7 +117,9 @@ function getSafeFrontendRedirect(rawOrigin, env) {
       return parsed.origin;
     }
 
+    // Finding 3 Fix: Disallow localhost & 127.0.0.1 in production environments
     if (
+      (env.ENVIRONMENT === "development" || env.IS_DEV === "true") &&
       (proto === "http:" || proto === "https:") &&
       (host === "localhost" || host === "127.0.0.1")
     ) {
@@ -583,42 +587,22 @@ function findClosestBasin(lat, lon) {
 
 const ADMIN_EMAILS = new Set(["dakshdahore.d@gmail.com", "lantern.mech@gmail.com", "lanternmech.official@gmail.com"]);
 
-async function verifyAdminAccess(env, request) {
+export async function verifyAdminAccess(env, request) {
   const authHeader = request.headers.get("Authorization") || "";
   const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : authHeader.trim();
   if (!token) return { ok: false, reason: "MISSING_AUTH" };
 
-  // Finding 4 Fix: Dedicated Admin API Secret explicitly decoupled from root MASTER_SECRET
-  if (env.ADMIN_SECRET && constantTimeEqual(token, env.ADMIN_SECRET)) {
+  // Finding 4 Fix: Dedicated Admin API Secret strictly enforced (>= 32 chars).
+  // Master secret derivation, user session tokens, and OTP logins are FORBIDDEN from granting admin access.
+  if (!env.ADMIN_SECRET || typeof env.ADMIN_SECRET !== "string" || env.ADMIN_SECRET.length < 32) {
+    return { ok: false, reason: "ADMIN_SECRET_UNCONFIGURED_OR_WEAK" };
+  }
+
+  if (constantTimeEqual(token, env.ADMIN_SECRET)) {
     return { ok: true, admin_email: "dakshdahore.d@gmail.com", method: "ADMIN_SECRET" };
   }
 
-  // Domain-separated HKDF fallback ensuring raw MASTER_SECRET is never accepted as bearer token
-  if (env.MASTER_SECRET) {
-    const adminDomainKey = await deriveDomainSecret(env.MASTER_SECRET, "floodlock-admin-bearer-token");
-    const adminKeyHex = await hmacSha256Hex(adminDomainKey, "admin-authorization-v3");
-    if (constantTimeEqual(token, adminKeyHex)) {
-      return { ok: true, admin_email: "dakshdahore.d@gmail.com", method: "DERIVED_ADMIN_KEY" };
-    }
-
-    const session = await verifySessionToken(env.MASTER_SECRET, `Bearer ${token}`);
-    if (session) {
-      if (session.isAdmin) {
-        return { ok: true, admin_email: session.sub, method: "SESSION_TOKEN" };
-      }
-      if (env.FLOODLOCK_KV && env.PII_ENCRYPTION_KEY && session.idh) {
-        const uBlob = await env.FLOODLOCK_KV.get(`user_enc:${session.idh}`);
-        if (uBlob) {
-          const prof = await decryptPiiAtRest(env.PII_ENCRYPTION_KEY, uBlob, session.idh);
-          if (prof && ADMIN_EMAILS.has(prof.identity_raw)) {
-            return { ok: true, admin_email: prof.identity_raw, method: "SESSION_USER" };
-          }
-        }
-      }
-    }
-  }
-
-  return { ok: false, reason: "NOT_ADMIN" };
+  return { ok: false, reason: "INVALID_ADMIN_CREDENTIALS" };
 }
 
 export default {
@@ -754,8 +738,9 @@ export default {
         const otpCode = String(100000 + (codeNum % 900000));
         const otpHash = await hmacSha256Hex(otpKey, `otp:${identityHash}:${otpCode}`);
 
+        const clientIp = request.headers.get("cf-connecting-ip") || request.headers.get("x-forwarded-for") || "127.0.0.1";
         const secStub = env.SECURITY_STATE_DO.get(env.SECURITY_STATE_DO.idFromName(`sec:${identityHash}`));
-        const issued = await secStub.issueOtp(identityHash, otpHash, 300000, 30000);
+        const issued = await secStub.issueOtp(identityHash, otpHash, 300000, 30000, clientIp);
 
         if (!issued.ok) {
           const status = issued.code === "ACCOUNT_LOCKED" ? 403 : 429;
@@ -807,8 +792,9 @@ export default {
         const identityHash = await hmacSha256Hex(idKey, `id:${rawIdentity}`);
         const submittedHash = await hmacSha256Hex(otpKey, `otp:${identityHash}:${submittedOtp}`);
 
+        const clientIp = request.headers.get("cf-connecting-ip") || request.headers.get("x-forwarded-for") || "127.0.0.1";
         const secStub = env.SECURITY_STATE_DO.get(env.SECURITY_STATE_DO.idFromName(`sec:${identityHash}`));
-        const verdict = await secStub.verifyOtp(identityHash, submittedHash);
+        const verdict = await secStub.verifyOtp(identityHash, submittedHash, clientIp);
         if (!verdict.ok) {
           return jsonResponse(request, env, { error: verdict.code, message: verdict.message }, verdict.status);
         }
@@ -868,14 +854,19 @@ export default {
       // ── GET /api/auth/oauth/google (1-Click Google OAuth Entrypoint) ──
       if (path === "/api/auth/oauth/google" && method === "GET") {
         const clientId = (env.GOOGLE_CLIENT_ID || "").trim();
-        const frontendUrl = getSafeFrontendRedirect(env.FRONTEND_URL, env);
+        const originParam = url.searchParams.get("origin") || env.FRONTEND_URL || "";
+        const safeFrontendUrl = getSafeFrontendRedirect(originParam, env);
         if (!clientId) {
-          return Response.redirect(`${frontendUrl}/#oauth_error=google_unconfigured`, 302);
+          return Response.redirect(`${safeFrontendUrl}/#oauth_error=google_unconfigured`, 302);
         }
-        const stateParam = url.searchParams.get("state") || "";
+        const masterSecret = env.MASTER_SECRET || "default_local_master_secret_floodlock_32b";
+        const signedState = await createSignedOAuthState(masterSecret, {
+          origin: safeFrontendUrl,
+          provider: "google",
+        });
         const workerOrigin = new URL(request.url).origin;
         const redirectUri = `${workerOrigin}/api/auth/oauth/callback`;
-        const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=openid%20email%20profile&prompt=select_account&state=${encodeURIComponent(stateParam)}`;
+        const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=openid%20email%20profile&prompt=select_account&state=${encodeURIComponent(signedState)}`;
         return Response.redirect(googleAuthUrl, 302);
       }
 
@@ -1054,34 +1045,40 @@ export default {
 
       // ── GET /api/auth/oauth/github (1-Click GitHub OAuth Entrypoint) ──
       if (path === "/api/auth/oauth/github" && method === "GET") {
-        const clientId = env.GITHUB_CLIENT_ID;
-        const frontendUrl = getSafeFrontendRedirect(env.FRONTEND_URL, env);
+        const clientId = (env.GITHUB_CLIENT_ID || "").trim();
+        const originParam = url.searchParams.get("origin") || env.FRONTEND_URL || "";
+        const safeFrontendUrl = getSafeFrontendRedirect(originParam, env);
         if (!clientId) {
-          return Response.redirect(`${frontendUrl}/#oauth_error=github_unconfigured`, 302);
+          return Response.redirect(`${safeFrontendUrl}/#oauth_error=github_unconfigured`, 302);
         }
-        const stateParam = url.searchParams.get("state") || "";
+        const masterSecret = env.MASTER_SECRET || "default_local_master_secret_floodlock_32b";
+        const signedState = await createSignedOAuthState(masterSecret, {
+          origin: safeFrontendUrl,
+          provider: "github",
+        });
         const workerOrigin = new URL(request.url).origin;
         const redirectUri = `${workerOrigin}/api/auth/oauth/callback`;
-        const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=user:email&state=${encodeURIComponent(stateParam)}`;
+        const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=user:email&state=${encodeURIComponent(signedState)}`;
         return Response.redirect(githubAuthUrl, 302);
       }
 
       // ── GET /api/auth/oauth/callback (Universal OAuth Token Exchange & Auto-Provision) ──
       if ((path === "/api/auth/oauth/callback" || path === "/api/auth/oauth/github/callback") && method === "GET") {
         const code = url.searchParams.get("code");
-        let provider = url.searchParams.get("provider");
         let frontendUrl = getSafeFrontendRedirect(env.FRONTEND_URL, env);
-        const stateParam = url.searchParams.get("state");
-        if (stateParam) {
-          try {
-            const parsed = JSON.parse(stateParam);
-            // Finding 1 Fix: Strict origin validation - prevent open redirect / session hijacking
-            if (parsed.origin) frontendUrl = getSafeFrontendRedirect(parsed.origin, env);
-            if (parsed.provider) provider = parsed.provider;
-          } catch {}
+        const stateParam = url.searchParams.get("state") || "";
+
+        // Finding 3 Fix: Enforce HMAC-signed OAuth state nonce with 15-minute expiry
+        const masterSecret = env.MASTER_SECRET || "default_local_master_secret_floodlock_32b";
+        const verifiedState = await verifySignedOAuthState(masterSecret, stateParam, 900);
+        if (!verifiedState) {
+          return Response.redirect(`${frontendUrl}/#oauth_error=invalid_or_expired_state`, 302);
         }
-        if (!provider && path.includes("github")) provider = "github";
-        if (!provider) provider = "google";
+
+        if (verifiedState.origin) {
+          frontendUrl = getSafeFrontendRedirect(verifiedState.origin, env);
+        }
+        let provider = verifiedState.provider || (path.includes("github") ? "github" : "google");
 
         if (!code) {
           return Response.redirect(`${frontendUrl}/#oauth_error=missing_code`, 302);
@@ -1743,10 +1740,11 @@ export default {
             : "CRITICAL_ALARM_DISPATCHED";
         } else if (isThreat) {
           if (groqDismissed) {
-            // Adversarial Groq audit refuted sub-hazard false alarm; suppress civic alarm
-            finalThreatLevel = "NOMINAL";
-            auditVerdict = "FALSE_ALARM_DOWNGRADED";
-            auditAction = "ALARM_SUPPRESSED_FALSE_ALARM";
+            // Finding 2 Fix: In sub-floor neural alert band, if AI refutes,
+            // downgrade to ELEVATED_WATCH (NOT NOMINAL) and preserve tactical advisory
+            finalThreatLevel = "ELEVATED_WATCH";
+            auditVerdict = "SUB_HAZARD_WATCH_ADVISORY";
+            auditAction = "ALARM_DOWNGRADED_TO_WATCH";
           } else if (groqVerified || !tacticalReasoning) {
             finalThreatLevel = "CRITICAL_INUNDATION";
             auditVerdict = "CONFIRMED_FLOOD_HAZARD";
@@ -1822,7 +1820,9 @@ export default {
           flood_audit_log: floodAuditLog,
           dual_trigger_black_swan: isBlackSwan,
           quota: quotaStatus,
-          tactical_reasoning: groqDismissed ? null : tacticalReasoning,
+          tactical_reasoning: isPhysicalHazard
+            ? (tacticalReasoning || buildDeterministicEdgeSop(telem, neuralPred, lat, lon))
+            : (finalThreatLevel === "NOMINAL" || finalThreatLevel === "MONITORED_NOMINAL" ? null : tacticalReasoning),
         }, 200, qosHeaders);
       }
 
