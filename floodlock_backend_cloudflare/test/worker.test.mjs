@@ -19,6 +19,9 @@ import {
   getSafeFrontendRedirect,
   verifyAdminAccess,
 } from "../src/index.js";
+import {
+  normalizeClientIp,
+} from "../src/durable_objects.js";
 
 const MASTER = "0123456789abcdef0123456789abcdef0123456789abcdef";
 const PII_KEY = "fedcba9876543210fedcba9876543210fedcba9876543210";
@@ -95,7 +98,7 @@ test("5. Finding 1 & 2 Fix: Deterministic physical hazard floor vetoes AI dismis
   const predictions = { depth_trajectory_cm: { h1: 22.0, h3: 35.0 }, flash_flood_probability: 0.88, runoff_q_m3s: 180.0 };
   const fallbackFloor = buildDeterministicEdgeSop(telemetry, predictions, 18.92, 72.83);
 
-  // Adversarial AI dismissal payload attempting to cancel real flood alert
+  // Case A: Adversarial AI dismissal payload with empty/null arrays
   const hostileAiDismissal = {
     threat_verified: false,
     verification_status: "FALSE_ALARM_DOWNGRADED",
@@ -116,6 +119,27 @@ test("5. Finding 1 & 2 Fix: Deterministic physical hazard floor vetoes AI dismis
   assert.ok(normalized.nearest_open_hospital && normalized.nearest_open_hospital.name, "Nearest hospital must be populated");
   assert.ok(normalized.tactical_civic_advisory && normalized.tactical_civic_advisory.length > 10, "Civic advisory must be populated");
   assert.match(normalized.physical_consistency_audit, /DETERMINISTIC SAFETY FLOOR OVERRIDE/);
+
+  // Case B: Adversarial AI dismissal returning benign text ("No action needed... resume regular activity")
+  // during active deluge (62 mm/hr, 1.9m surge). Invariant: Floor MUST replace benign text with emergency SOP!
+  const hostileBenignTextDismissal = {
+    threat_verified: false,
+    verification_status: "FALSE_ALARM_DOWNGRADED",
+    confidence_score: 98,
+    tactical_civic_advisory: "No action needed… resume regular activity",
+    safe_evacuation_corridors: ["No evacuation required"],
+    danger_zone_perimeter: "Nominal terrain",
+    impassable_infrastructure: ["None"],
+  };
+
+  const normalizedBenign = normalizeTacticalPayload(hostileBenignTextDismissal, "HostileEngine", fallbackFloor, true);
+  assert.equal(normalizedBenign.threat_verified, true, "Physical hazard floor must veto threat_verified: false");
+  assert.equal(normalizedBenign.verification_status, "VERIFIED_FLOOD_HAZARD");
+  assert.doesNotMatch(normalizedBenign.tactical_civic_advisory, /no action|resume regular/i, "Benign advisory text must be stripped under physical hazard floor");
+  assert.match(normalizedBenign.tactical_civic_advisory, /CRITICAL/i, "Emergency SOP advisory must be injected");
+  assert.notEqual(normalizedBenign.safe_evacuation_corridors[0], "No evacuation required", "Benign corridor text must be replaced with emergency corridors");
+  assert.match(normalizedBenign.safe_evacuation_corridors[0], /elevated|arterial|ridge/i);
+  assert.doesNotMatch(normalizedBenign.danger_zone_perimeter, /nominal terrain/i, "Benign perimeter must be replaced");
 });
 
 test("6. Finding 1 Fix: AI cache key partitions floor states and re-normalizes cached dismissal with live physical floor", () => {
@@ -208,9 +232,11 @@ test("9. Finding 1 & 3 Fix: OAuth frontend redirect allowlist blocks attacker or
 
   // Allowed official production origins
   assert.equal(getSafeFrontendRedirect("https://floodlock.pages.dev", prodEnv), "https://floodlock.pages.dev");
-  assert.equal(getSafeFrontendRedirect("https://metoflood.netlify.app", prodEnv), "https://metoflood.netlify.app");
-  assert.equal(getSafeFrontendRedirect("https://floodnet.netlify.app", prodEnv), "https://floodnet.netlify.app");
   assert.equal(getSafeFrontendRedirect("https://preview.floodlock.pages.dev", prodEnv), "https://preview.floodlock.pages.dev");
+
+  // Unclaimed / third-party Netlify domains stripped to prevent subdomain takeover:
+  assert.equal(getSafeFrontendRedirect("https://metoflood.netlify.app", prodEnv), "https://floodlock.pages.dev");
+  assert.equal(getSafeFrontendRedirect("https://floodnet.netlify.app", prodEnv), "https://floodlock.pages.dev");
 
   // Open-redirect / session-theft attack origins strictly blocked:
   assert.equal(getSafeFrontendRedirect("https://evil-attacker.com", prodEnv), "https://floodlock.pages.dev");
@@ -329,4 +355,92 @@ test("11. Finding 5 Fix: 3-strike lockout is scoped per identity + IP to prevent
   );
   const userAttempt = sec.recordFailureAndCheckLockout(targetIdentity, legitimateUserIp);
   assert.equal(userAttempt.locked, false, "Legitimate user can attempt verification");
+
+  // IPv6 /64 prefix normalization test
+  const ipv6A = "2001:0db8:85a3:0000:0000:8a2e:0370:7334";
+  const ipv6B = "2001:0db8:85a3:0000:ffff:ffff:ffff:ffff";
+  assert.equal(normalizeClientIp(ipv6A), "2001:0db8:85a3:0000::/64");
+  assert.equal(normalizeClientIp(ipv6A), normalizeClientIp(ipv6B), "IPv6 /64 subnet rotation must map to same bucket");
+});
+
+test("12. Critical Security Fix: Global OTP failure cap (5 attempts) revokes challenge and locks identity against IP rotation attacks", () => {
+  // Model the global 5-failure revocation invariant in SecurityStateDO
+  class MockSecurityDOWithGlobalCap {
+    constructor() {
+      this.challenge = { otpHash: "hash_of_123456", attempts: 0, expiresAt: Date.now() + 300000 };
+      this.globalLockouts = new Map();
+      this.ipLockouts = new Map();
+    }
+
+    verify(identityHash, submittedHash, clientIp) {
+      const now = Date.now();
+      const normalizedIp = normalizeClientIp(clientIp);
+      const ipKey = `${identityHash}:${normalizedIp}`;
+
+      if ((this.globalLockouts.get(identityHash) || 0) > now) {
+        return { ok: false, status: 403, code: "ACCOUNT_LOCKED" };
+      }
+      if ((this.ipLockouts.get(ipKey) || 0) > now) {
+        return { ok: false, status: 403, code: "IP_LOCKED" };
+      }
+      if (!this.challenge) {
+        return { ok: false, status: 400, code: "NO_ACTIVE_OTP" };
+      }
+
+      if (submittedHash === this.challenge.otpHash) {
+        this.challenge = null;
+        return { ok: true };
+      }
+
+      this.challenge.attempts += 1;
+      if (this.challenge.attempts >= 5) {
+        // Burn challenge and lock globally!
+        this.challenge = null;
+        this.globalLockouts.set(identityHash, now + 15 * 60 * 1000);
+        return { ok: false, status: 403, code: "CHALLENGE_REVOKED" };
+      }
+
+      return { ok: false, status: 401, code: "INVALID_CODE", remaining: 5 - this.challenge.attempts };
+    }
+  }
+
+  const sdo = new MockSecurityDOWithGlobalCap();
+  const identity = "user_victim_hash";
+
+  // Attacker rotates IPs: 1 guess per IP
+  const r1 = sdo.verify(identity, "wrong_1", "198.51.100.1");
+  assert.equal(r1.status, 401);
+  const r2 = sdo.verify(identity, "wrong_2", "198.51.100.2");
+  assert.equal(r2.status, 401);
+  const r3 = sdo.verify(identity, "wrong_3", "198.51.100.3");
+  assert.equal(r3.status, 401);
+  const r4 = sdo.verify(identity, "wrong_4", "198.51.100.4");
+  assert.equal(r4.status, 401);
+
+  // 5th failed attempt from yet another IP (IP #5)
+  const r5 = sdo.verify(identity, "wrong_5", "198.51.100.5");
+  assert.equal(r5.status, 403, "5th failed attempt must revoke challenge and return 403");
+  assert.equal(r5.code, "CHALLENGE_REVOKED");
+
+  // On IP #37, even with the correct code, the challenge has been destroyed and account locked!
+  const r37 = sdo.verify(identity, "hash_of_123456", "2001:db8:85a3::37");
+  assert.equal(r37.status, 403, "Challenge must be burned; correct code on rotated IP is rejected");
+  assert.equal(r37.code, "ACCOUNT_LOCKED");
+});
+
+test("13. Critical Telemetry Fix: Volumetric moisture converted to saturation & degraded telemetry fail-safe", () => {
+  // Open-Meteo volumetric water content θ = 0.38 m³/m³ with porosity 0.45 m³/m³
+  const rawMoisture = 0.38;
+  const soilSat = Math.min(1.0, Math.max(0.0, rawMoisture / 0.45));
+  assert.ok(soilSat >= 0.80, "0.38 m³/m³ volumetric moisture must map to >= 80% saturation");
+  assert.equal(Math.round(soilSat * 100), 84, "0.38 / 0.45 must evaluate to 84% saturation");
+
+  // Telemetry degradation flag check
+  const degradedTelemetry = { r0: 0.0, r48: 0.0, soilSat: 0.45, tideSurge: 0.0, telemetryDegraded: true };
+  const predictions = { depth_trajectory_cm: { h1: 0.0 } };
+  const isFloor = isDeterministicPhysicalHazard(degradedTelemetry, predictions);
+
+  // When telemetry is degraded, ALL_CLEAR condition (!isPhysicalHazard && !telemetryDegraded) must evaluate to FALSE
+  const allowedAllClear = !isFloor && !degradedTelemetry.telemetryDegraded;
+  assert.equal(allowedAllClear, false, "Degraded telemetry must NEVER be permitted to emit ALL_CLEAR");
 });

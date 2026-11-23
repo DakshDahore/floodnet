@@ -126,40 +126,77 @@ async function fetchLiveTelemetryWithCache(lat, lon) {
 
   let weatherData = null;
   let marineData = null;
+  let telemetryDegraded = false;
   try {
     const [wRes, mRes] = await Promise.all([
-      fetch(weatherUrl, { headers: { "User-Agent": "FloodLock-ClickProcessor/3.2" }, signal: AbortSignal.timeout(3500) }),
-      fetch(marineUrl, { headers: { "User-Agent": "FloodLock-ClickProcessor/3.2" }, signal: AbortSignal.timeout(3500) }).catch(() => null),
+      fetch(weatherUrl, { headers: { "User-Agent": "FloodLock-ClickProcessor/3.2" }, signal: AbortSignal.timeout(4000) }),
+      fetch(marineUrl, { headers: { "User-Agent": "FloodLock-ClickProcessor/3.2" }, signal: AbortSignal.timeout(4000) }).catch(() => null),
     ]);
-    if (wRes && wRes.ok) weatherData = await wRes.json();
+    if (wRes && wRes.ok) {
+      weatherData = await wRes.json();
+    } else {
+      telemetryDegraded = true;
+    }
     if (mRes && mRes.ok) marineData = await mRes.json();
-  } catch {}
+  } catch {
+    telemetryDegraded = true;
+  }
 
   const current = weatherData?.current || {};
   const hourly = weatherData?.hourly || {};
-  const r0 = Math.max(0.0, Number(current.precipitation ?? current.rain ?? 0.0));
+  const hourlyTime = Array.isArray(hourly.time) ? hourly.time : [];
+
+  let currentIdx = -1;
+  if (current.time && hourlyTime.length) {
+    currentIdx = hourlyTime.indexOf(current.time);
+  }
+  if (currentIdx < 0 && hourlyTime.length) {
+    currentIdx = Math.min(hourlyTime.length - 1, 5 * 24);
+  }
+  if (currentIdx < 0) currentIdx = 0;
+
+  const pastRain = Array.isArray(hourly.precipitation) ? hourly.precipitation : [];
+  const r0 = Math.max(0.0, Number(current.precipitation ?? current.rain ?? (pastRain[currentIdx] ?? 0.0)));
   const cape = Math.max(0.0, Number(current.cape ?? 500.0));
   const pressure = Number(current.surface_pressure ?? 1013.25);
   const wind = Math.max(0.0, Number(current.wind_speed_10m ?? 15.0));
 
-  const pastRain = Array.isArray(hourly.precipitation) ? hourly.precipitation : [];
-  const r48 = pastRain.length ? pastRain.slice(-48).reduce((a, b) => a + Math.max(0, Number(b || 0)), 0) : r0 * 4.5;
-  const r120 = pastRain.length ? pastRain.slice(-120).reduce((a, b) => a + Math.max(0, Number(b || 0)), 0) : r0 * 12.0;
+  const past48Slice = pastRain.length
+    ? pastRain.slice(Math.max(0, currentIdx - 47), currentIdx + 1)
+    : [];
+  const r48 = past48Slice.length
+    ? past48Slice.reduce((a, b) => a + Math.max(0, Number(b || 0)), 0)
+    : (telemetryDegraded ? 0.0 : r0 * 4.5);
+
+  const past120Slice = pastRain.length
+    ? pastRain.slice(Math.max(0, currentIdx - 119), currentIdx + 1)
+    : [];
+  const r120 = past120Slice.length
+    ? past120Slice.reduce((a, b) => a + Math.max(0, Number(b || 0)), 0)
+    : (telemetryDegraded ? 0.0 : r0 * 12.0);
 
   const soilArr = Array.isArray(hourly.soil_moisture_0_to_100cm) ? hourly.soil_moisture_0_to_100cm : [];
-  const soilSat = soilArr.length ? Number(soilArr[soilArr.length - 1] ?? 0.45) : 0.45;
+  const rawMoisture = soilArr.length > currentIdx
+    ? Number(soilArr[currentIdx] ?? 0.35)
+    : (soilArr.length ? Number(soilArr[soilArr.length - 1] ?? 0.35) : 0.35);
+  const soilSat = Math.min(1.0, Math.max(0.0, rawMoisture / 0.45));
+
   const waves = Array.isArray(marineData?.hourly?.wave_height) ? marineData.hourly.wave_height : [];
-  const tideSurge = waves.length ? Math.max(0.0, Number(waves[waves.length - 1] ?? 0.0)) : 0.0;
+  const waveVal = waves.length > currentIdx
+    ? Number(waves[currentIdx] ?? 0.0)
+    : (waves.length ? Number(waves[waves.length - 1] ?? 0.0) : 0.0);
+  const tideSurge = Math.min(6.0, Math.max(0.0, waveVal));
 
   const result = {
-    r0,
+    r0: Math.round(r0 * 10) / 10,
     r48: Math.round(r48 * 10) / 10,
     r120: Math.round(r120 * 10) / 10,
     cape,
     dp: Math.round((pressure - 1013.25) * 10) / 10,
     wind,
-    soilSat: Math.min(1.0, Math.max(0.0, soilSat)),
-    tideSurge: Math.min(6.0, tideSurge),
+    soilSat: Math.round(soilSat * 100) / 100,
+    tideSurge: Math.round(tideSurge * 100) / 100,
+    telemetryDegraded,
   };
 
   TELEMETRY_CACHE.set(cacheKey, { timestamp: now, data: result });
@@ -249,6 +286,13 @@ export default {
       const hasTide = url.searchParams.has("tide") || url.searchParams.has("tideSurge");
       const forceThreat = url.searchParams.get("force_threat") === "true";
 
+      const parseNonNeg = (val, fallback) => {
+        const n = parseFloat(val);
+        return Number.isFinite(n) && n >= 0 ? n : fallback;
+      };
+
+      const hasCustomOverrides = Boolean(scenario) || hasR0 || hasR48 || hasSoil || hasTide;
+
       if (scenario.includes("mumbai") || scenario.includes("monsoon") || scenario.includes("extreme")) {
         telem = {
           ...telem,
@@ -272,10 +316,10 @@ export default {
       } else if (hasR0 || hasR48 || hasSoil || hasTide) {
         telem = {
           ...telem,
-          r0: hasR0 ? parseFloat(url.searchParams.get("r0")) : telem.r0,
-          r48: hasR48 ? parseFloat(url.searchParams.get("r48")) : telem.r48,
-          soilSat: hasSoil ? parseFloat(url.searchParams.get("soil_sat") || url.searchParams.get("soilSat")) : telem.soilSat,
-          tideSurge: hasTide ? parseFloat(url.searchParams.get("tide") || url.searchParams.get("tideSurge")) : telem.tideSurge,
+          r0: hasR0 ? parseNonNeg(url.searchParams.get("r0"), telem.r0) : telem.r0,
+          r48: hasR48 ? parseNonNeg(url.searchParams.get("r48"), telem.r48) : telem.r48,
+          soilSat: hasSoil ? Math.min(1.0, parseNonNeg(url.searchParams.get("soil_sat") || url.searchParams.get("soilSat"), telem.soilSat)) : telem.soilSat,
+          tideSurge: hasTide ? Math.min(6.0, parseNonNeg(url.searchParams.get("tide") || url.searchParams.get("tideSurge"), telem.tideSurge)) : telem.tideSurge,
         };
       }
 
@@ -301,19 +345,20 @@ export default {
 
       const neuralPred = predict14F(features);
       const isBlackSwan = telem.r0 > 50.0 && features[12] > 0.70;
+      // Synchronized thresholds matching Master Gateway index.js
       const isThreat =
         forceThreat ||
         isBlackSwan ||
-        neuralPred.depth_trajectory_cm.h1 > 8.0 ||
-        neuralPred.flash_flood_probability > 0.40 ||
-        (telem.r0 > 15.0 && telem.soilSat > 0.75);
+        neuralPred.depth_trajectory_cm.h1 > 10.0 ||
+        neuralPred.flash_flood_probability > 0.60 ||
+        telem.tideSurge >= 3.0;
 
       const isPhysicalHazard = isDeterministicPhysicalHazard(telem, neuralPred);
 
       let tacticalReasoning = null;
       if (isThreat || isPhysicalHazard) {
         tacticalReasoning = await runTacticalReasoning(env, telem, neuralPred, lat, lon, {
-          skipCache: false,
+          skipCache: hasCustomOverrides,
         });
       }
 
@@ -325,7 +370,12 @@ export default {
       let auditVerdict = "NOMINAL_MONITORED";
       let auditAction = "ROUTINE_MONITORING";
 
-      if (isPhysicalHazard) {
+      if (telem.telemetryDegraded && !isPhysicalHazard && !isThreat) {
+        finalThreatLevel = "ELEVATED_WATCH";
+        auditVerdict = "TELEMETRY_UNAVAILABLE_FAILSAFE_WATCH";
+        auditAction = "FAILSAFE_WATCH_ENGAGED";
+        tacticalReasoning = tacticalReasoning || buildDeterministicEdgeSop(telem, neuralPred, lat, lon);
+      } else if (isPhysicalHazard) {
         // SAFETY FLOOR INVARIANT: Hard physical disaster telemetry CANNOT be dismissed by AI.
         finalThreatLevel = "CRITICAL_INUNDATION";
         auditVerdict = "CONFIRMED_FLOOD_HAZARD";

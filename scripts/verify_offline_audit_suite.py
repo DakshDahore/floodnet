@@ -63,7 +63,7 @@ def run_physics_benchmark_suite():
 
 def run_node_worker_test_suite():
     print("=" * 70)
-    print("STEP 2: Node.js Serverless Edge Worker Test Suite (11 Tests)")
+    print("STEP 2: Node.js Serverless Edge Worker Test Suite (13 Tests)")
     print("=" * 70)
 
     backend_dir = PROJECT_ROOT / "floodlock_backend_cloudflare"
@@ -78,7 +78,7 @@ def run_node_worker_test_suite():
         print("[FAIL] Node worker test suite failed!")
         return False
 
-    print("[PASS] All 11 Node Worker unit tests passed cleanly.\n")
+    print("[PASS] All 13 Node Worker unit tests passed cleanly.\n")
     return True
 
 

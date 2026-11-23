@@ -33,6 +33,17 @@ function utcDayKey(nowMs = Date.now()) {
   return new Date(nowMs).toISOString().slice(0, 10);
 }
 
+export function normalizeClientIp(ip) {
+  if (!ip || typeof ip !== "string") return "global";
+  const clean = ip.trim();
+  if (clean.includes(":")) {
+    // IPv6: Key on the /64 routing prefix (first 4 segments) to block subnet rotation
+    const segments = clean.split(":");
+    return segments.slice(0, 4).join(":") + "::/64";
+  }
+  return clean;
+}
+
 export class SecurityStateDO extends BaseDO {
   constructor(ctx, env) {
     super(ctx, env);
@@ -111,14 +122,35 @@ export class SecurityStateDO extends BaseDO {
 
   async issueOtp(identityHash, otpHash, ttlMs = 300000, cooldownMs = 30000, clientIp = "global") {
     const now = Date.now();
-    const lockoutKey = clientIp ? `${identityHash}:${clientIp}` : identityHash;
-    const lockRow = this.sql
-      .exec("SELECT locked_until FROM lockouts WHERE identity_hash = ?", lockoutKey)
+    const normalizedIp = normalizeClientIp(clientIp);
+    const ipLockoutKey = `${identityHash}:${normalizedIp}`;
+
+    // 1. Global lockout check on identity
+    const globalLock = this.sql
+      .exec("SELECT locked_until FROM lockouts WHERE identity_hash = ?", identityHash)
       .toArray()[0];
-    if (lockRow && lockRow.locked_until > now) {
-      return { ok: false, code: "ACCOUNT_LOCKED", retryAfterSec: Math.ceil((lockRow.locked_until - now) / 1000) };
+    if (globalLock && globalLock.locked_until > now) {
+      return { ok: false, code: "ACCOUNT_LOCKED", retryAfterSec: Math.ceil((globalLock.locked_until - now) / 1000) };
     }
 
+    // 2. IP-scoped lockout check
+    const ipLock = this.sql
+      .exec("SELECT locked_until FROM lockouts WHERE identity_hash = ?", ipLockoutKey)
+      .toArray()[0];
+    if (ipLock && ipLock.locked_until > now) {
+      return { ok: false, code: "IP_LOCKED", retryAfterSec: Math.ceil((ipLock.locked_until - now) / 1000) };
+    }
+
+    // 3. Rate-limit OTP issuance: max 3 per 10 minutes per identity to prevent spam
+    const issueBucket = `otp_issue:${identityHash}`;
+    const recentIssues = this.sql
+      .exec("SELECT COUNT(*) as cnt FROM rate_limit_events WHERE bucket_key = ? AND ts > ?", issueBucket, now - 10 * 60 * 1000)
+      .toArray()[0];
+    if (Number(recentIssues?.cnt || 0) >= 3) {
+      return { ok: false, code: "RATE_LIMITED", message: "Too many OTP requests for this identity. Please wait 10 minutes." };
+    }
+
+    // 4. Cooldown check between resends
     const existing = this.sql
       .exec("SELECT last_sent_at, attempts FROM otp_challenges WHERE identity_hash = ?", identityHash)
       .toArray()[0];
@@ -126,20 +158,16 @@ export class SecurityStateDO extends BaseDO {
       return { ok: false, code: "OTP_COOLDOWN", retryAfterSec: Math.ceil((cooldownMs - (now - existing.last_sent_at)) / 1000) };
     }
 
-    const strikeRow = this.sql
-      .exec("SELECT strikes, window_start FROM otp_strikes WHERE identity_hash = ?", lockoutKey)
-      .toArray()[0];
-    const rollingStrikes = strikeRow && now - strikeRow.window_start < 15 * 60 * 1000 ? Number(strikeRow.strikes || 0) : 0;
-    const prevAttempts = existing && now - existing.last_sent_at < 15 * 60 * 1000 ? Number(existing.attempts || 0) : 0;
-    const preservedAttempts = Math.max(rollingStrikes, prevAttempts);
+    // Record issuance event in rate_limit_events
+    this.sql.exec("INSERT INTO rate_limit_events (bucket_key, ts) VALUES (?, ?)", issueBucket, now);
 
     const expiresAt = now + ttlMs;
     this.sql.exec(
       "INSERT INTO otp_challenges (identity_hash, otp_hash, attempts, expires_at, last_sent_at) " +
-        "VALUES (?, ?, ?, ?, ?) " +
-        "ON CONFLICT(identity_hash) DO UPDATE SET otp_hash = ?, attempts = ?, expires_at = ?, last_sent_at = ?",
-      identityHash, otpHash, preservedAttempts, expiresAt, now,
-      otpHash, preservedAttempts, expiresAt, now
+        "VALUES (?, ?, 0, ?, ?) " +
+        "ON CONFLICT(identity_hash) DO UPDATE SET otp_hash = ?, attempts = 0, expires_at = ?, last_sent_at = ?",
+      identityHash, otpHash, expiresAt, now,
+      otpHash, expiresAt, now
     );
     await this._ensureCleanupAlarm();
     return { ok: true, expiresAt };
@@ -155,12 +183,12 @@ export class SecurityStateDO extends BaseDO {
     return { rolledBack: true };
   }
 
-  _incrementStrikeAndMaybeLock(targetKey, now, currentAttempts = 0) {
+  _incrementStrikeAndMaybeLock(targetKey, now) {
     const strikeRow = this.sql
       .exec("SELECT strikes, window_start FROM otp_strikes WHERE identity_hash = ?", targetKey)
       .toArray()[0];
     const rollingStrikes = strikeRow && now - strikeRow.window_start < 15 * 60 * 1000 ? Number(strikeRow.strikes || 0) : 0;
-    const nextAttempts = Math.max(rollingStrikes, Number(currentAttempts || 0)) + 1;
+    const nextAttempts = rollingStrikes + 1;
 
     if (nextAttempts >= 3) {
       const lockedUntil = now + 15 * 60 * 1000;
@@ -184,12 +212,23 @@ export class SecurityStateDO extends BaseDO {
 
   async verifyOtp(identityHash, submittedHash, clientIp = "global") {
     const now = Date.now();
-    const lockoutKey = clientIp ? `${identityHash}:${clientIp}` : identityHash;
-    const lockRow = this.sql
-      .exec("SELECT locked_until FROM lockouts WHERE identity_hash = ?", lockoutKey)
+    const normalizedIp = normalizeClientIp(clientIp);
+    const ipLockoutKey = `${identityHash}:${normalizedIp}`;
+
+    // 1. Global lockout check
+    const globalLock = this.sql
+      .exec("SELECT locked_until FROM lockouts WHERE identity_hash = ?", identityHash)
       .toArray()[0];
-    if (lockRow && lockRow.locked_until > now) {
-      return { ok: false, status: 403, code: "ACCOUNT_LOCKED", message: "Too many failed attempts from this IP. Verification locked for 15 minutes." };
+    if (globalLock && globalLock.locked_until > now) {
+      return { ok: false, status: 403, code: "ACCOUNT_LOCKED", message: "Account verification locked due to excessive failed attempts. Please wait 15 minutes." };
+    }
+
+    // 2. IP subnet lockout check
+    const ipLock = this.sql
+      .exec("SELECT locked_until FROM lockouts WHERE identity_hash = ?", ipLockoutKey)
+      .toArray()[0];
+    if (ipLock && ipLock.locked_until > now) {
+      return { ok: false, status: 403, code: "ACCOUNT_LOCKED", message: "Too many failed attempts from this IP network. Verification locked for 15 minutes." };
     }
 
     const challenge = this.sql
@@ -198,27 +237,53 @@ export class SecurityStateDO extends BaseDO {
 
     if (!challenge || challenge.expires_at <= now) {
       this.sql.exec("DELETE FROM otp_challenges WHERE identity_hash = ?", identityHash);
-      const res = this._incrementStrikeAndMaybeLock(lockoutKey, now, challenge?.attempts || 0);
+      const res = this._incrementStrikeAndMaybeLock(ipLockoutKey, now);
       if (res.locked) {
-        return { ok: false, status: 403, code: "ACCOUNT_LOCKED", message: "3 failed verification attempts from this IP. Identity locked for 15 minutes." };
+        return { ok: false, status: 403, code: "ACCOUNT_LOCKED", message: "3 failed verification attempts from this IP network. Verification locked for 15 minutes." };
       }
       return { ok: false, status: 400, code: "NO_ACTIVE_OTP", message: "No active OTP request found or code expired." };
     }
 
+    // 3. Global failure budget check: if 5 or more total failures across ALL IPs, burn challenge immediately
+    const totalFailures = Number(challenge.attempts || 0);
+    if (totalFailures >= 5) {
+      this.sql.exec("DELETE FROM otp_challenges WHERE identity_hash = ?", identityHash);
+      this.sql.exec(
+        "INSERT INTO lockouts (identity_hash, locked_until) VALUES (?, ?) " +
+          "ON CONFLICT(identity_hash) DO UPDATE SET locked_until = ?",
+        identityHash, now + 15 * 60 * 1000, now + 15 * 60 * 1000
+      );
+      return { ok: false, status: 403, code: "CHALLENGE_REVOKED", message: "Maximum verification attempts exceeded across network. Challenge revoked and identity locked for 15 minutes." };
+    }
+
+    // 4. Verify code using constant-time comparison
     if (constantTimeEqual(challenge.otp_hash, submittedHash)) {
       this.sql.exec("DELETE FROM otp_challenges WHERE identity_hash = ?", identityHash);
-      this.sql.exec("DELETE FROM otp_strikes WHERE identity_hash = ?", lockoutKey);
-      this.sql.exec("DELETE FROM lockouts WHERE identity_hash = ?", lockoutKey);
+      this.sql.exec("DELETE FROM otp_strikes WHERE identity_hash = ?", ipLockoutKey);
+      this.sql.exec("DELETE FROM lockouts WHERE identity_hash = ?", ipLockoutKey);
       return { ok: true };
     }
 
-    const res = this._incrementStrikeAndMaybeLock(lockoutKey, now, challenge.attempts);
-    if (res.locked) {
-      return { ok: false, status: 403, code: "ACCOUNT_LOCKED", message: "3 failed verification attempts from this IP. Identity locked for 15 minutes." };
+    // 5. Code incorrect: increment global challenge failures AND IP-scoped strikes
+    const nextTotalFailures = totalFailures + 1;
+    if (nextTotalFailures >= 5) {
+      this.sql.exec("DELETE FROM otp_challenges WHERE identity_hash = ?", identityHash);
+      this.sql.exec(
+        "INSERT INTO lockouts (identity_hash, locked_until) VALUES (?, ?) " +
+          "ON CONFLICT(identity_hash) DO UPDATE SET locked_until = ?",
+        identityHash, now + 15 * 60 * 1000, now + 15 * 60 * 1000
+      );
+      return { ok: false, status: 403, code: "CHALLENGE_REVOKED", message: "Maximum verification attempts exceeded across network. Challenge revoked and identity locked for 15 minutes." };
     }
 
-    this.sql.exec("UPDATE otp_challenges SET attempts = ? WHERE identity_hash = ?", res.nextAttempts, identityHash);
-    return { ok: false, status: 401, code: "INVALID_CODE", message: `Incorrect verification code. ${3 - res.nextAttempts} attempts remaining.` };
+    this.sql.exec("UPDATE otp_challenges SET attempts = ? WHERE identity_hash = ?", nextTotalFailures, identityHash);
+
+    const ipStrikeRes = this._incrementStrikeAndMaybeLock(ipLockoutKey, now);
+    if (ipStrikeRes.locked) {
+      return { ok: false, status: 403, code: "ACCOUNT_LOCKED", message: "3 failed verification attempts from this IP network. Identity locked for 15 minutes." };
+    }
+
+    return { ok: false, status: 401, code: "INVALID_CODE", message: `Incorrect verification code. ${5 - nextTotalFailures} total challenge attempts remaining.` };
   }
 }
 

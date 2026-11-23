@@ -109,9 +109,6 @@ export function getSafeFrontendRedirect(rawOrigin, env = {}) {
       proto === "https:" &&
       (host === "floodlock.pages.dev" ||
        host.endsWith(".floodlock.pages.dev") ||
-       host === "metoflood.netlify.app" ||
-       host === "floodnet.netlify.app" ||
-       host === "dakshdahore1995-design.github.io" ||
        (env.FRONTEND_URL && parsed.origin === new URL(env.FRONTEND_URL).origin))
     ) {
       return parsed.origin;
@@ -205,40 +202,82 @@ async function fetchLiveTelemetry(lat, lon) {
 
   let weatherData = null;
   let marineData = null;
+  let telemetryDegraded = false;
   try {
     const [wRes, mRes] = await Promise.all([
-      fetch(weatherUrl, { headers: { "User-Agent": "FloodLock-Planetary/3.2" } }),
-      fetch(marineUrl, { headers: { "User-Agent": "FloodLock-Planetary/3.2" } }).catch(() => null),
+      fetch(weatherUrl, { headers: { "User-Agent": "FloodLock-Planetary/3.2" }, signal: AbortSignal.timeout(4000) }),
+      fetch(marineUrl, { headers: { "User-Agent": "FloodLock-Planetary/3.2" }, signal: AbortSignal.timeout(4000) }).catch(() => null),
     ]);
-    if (wRes && wRes.ok) weatherData = await wRes.json();
+    if (wRes && wRes.ok) {
+      weatherData = await wRes.json();
+    } else {
+      telemetryDegraded = true;
+    }
     if (mRes && mRes.ok) marineData = await mRes.json();
-  } catch {}
+  } catch {
+    telemetryDegraded = true;
+  }
 
   const current = weatherData?.current || {};
   const hourly = weatherData?.hourly || {};
-  const r0 = Math.max(0.0, Number(current.precipitation ?? current.rain ?? 0.0));
+  const hourlyTime = Array.isArray(hourly.time) ? hourly.time : [];
+
+  // Find current time index in hourly array to prevent slicing future forecast days
+  let currentIdx = -1;
+  if (current.time && hourlyTime.length) {
+    currentIdx = hourlyTime.indexOf(current.time);
+  }
+  if (currentIdx < 0 && hourlyTime.length) {
+    // past_days=5 corresponds to 120 hours of antecedent history
+    currentIdx = Math.min(hourlyTime.length - 1, 5 * 24);
+  }
+  if (currentIdx < 0) currentIdx = 0;
+
+  const pastRain = Array.isArray(hourly.precipitation) ? hourly.precipitation : [];
+  const r0 = Math.max(0.0, Number(current.precipitation ?? current.rain ?? (pastRain[currentIdx] ?? 0.0)));
   const cape = Math.max(0.0, Number(current.cape ?? 500.0));
   const pressure = Number(current.surface_pressure ?? 1013.25);
   const wind = Math.max(0.0, Number(current.wind_speed_10m ?? 15.0));
 
-  const pastRain = Array.isArray(hourly.precipitation) ? hourly.precipitation : [];
-  const r48 = pastRain.length ? pastRain.slice(-48).reduce((a, b) => a + Math.max(0, Number(b || 0)), 0) : r0 * 4.5;
-  const r120 = pastRain.length ? pastRain.slice(-120).reduce((a, b) => a + Math.max(0, Number(b || 0)), 0) : r0 * 12.0;
+  // Antecedent rainfall: slice strictly from currentIdx backward into the past
+  const past48Slice = pastRain.length
+    ? pastRain.slice(Math.max(0, currentIdx - 47), currentIdx + 1)
+    : [];
+  const r48 = past48Slice.length
+    ? past48Slice.reduce((a, b) => a + Math.max(0, Number(b || 0)), 0)
+    : (telemetryDegraded ? 0.0 : r0 * 4.5);
 
+  const past120Slice = pastRain.length
+    ? pastRain.slice(Math.max(0, currentIdx - 119), currentIdx + 1)
+    : [];
+  const r120 = past120Slice.length
+    ? past120Slice.reduce((a, b) => a + Math.max(0, Number(b || 0)), 0)
+    : (telemetryDegraded ? 0.0 : r0 * 12.0);
+
+  // Open-Meteo volumetric water content theta (m3/m3) to degree of soil saturation (porosity approx 0.45 m3/m3)
   const soilArr = Array.isArray(hourly.soil_moisture_0_to_100cm) ? hourly.soil_moisture_0_to_100cm : [];
-  const soilSat = soilArr.length ? Number(soilArr[soilArr.length - 1] ?? 0.45) : 0.45;
+  const rawMoisture = soilArr.length > currentIdx
+    ? Number(soilArr[currentIdx] ?? 0.35)
+    : (soilArr.length ? Number(soilArr[soilArr.length - 1] ?? 0.35) : 0.35);
+  const soilSat = Math.min(1.0, Math.max(0.0, rawMoisture / 0.45));
+
+  // Coastal wave height proxy for marine surge
   const waves = Array.isArray(marineData?.hourly?.wave_height) ? marineData.hourly.wave_height : [];
-  const tideSurge = waves.length ? Math.max(0.0, Number(waves[waves.length - 1] ?? 0.0)) : 0.0;
+  const waveVal = waves.length > currentIdx
+    ? Number(waves[currentIdx] ?? 0.0)
+    : (waves.length ? Number(waves[waves.length - 1] ?? 0.0) : 0.0);
+  const tideSurge = Math.min(6.0, Math.max(0.0, waveVal));
 
   return {
-    r0,
+    r0: Math.round(r0 * 10) / 10,
     r48: Math.round(r48 * 10) / 10,
     r120: Math.round(r120 * 10) / 10,
     cape,
     dp: Math.round((pressure - 1013.25) * 10) / 10,
     wind,
-    soilSat: Math.min(1.0, Math.max(0.0, soilSat)),
-    tideSurge: Math.min(6.0, tideSurge),
+    soilSat: Math.round(soilSat * 100) / 100,
+    tideSurge: Math.round(tideSurge * 100) / 100,
+    telemetryDegraded,
   };
 }
 
@@ -704,7 +743,7 @@ export default {
           return jsonResponse(request, env, { error: "INVALID_IDENTITY", message: "Valid email or E.164 phone required." }, 400);
         }
 
-        // Optional Cloudflare Turnstile verification (non-blocking for legitimate UX)
+        // Cloudflare Turnstile verification: hard fail on rejection
         const turnstileToken = body["cf-turnstile-response"] || body.turnstile_token;
         if (turnstileToken && env.TURNSTILE_SECRET_KEY && turnstileToken !== "BYPASS_NETWORK_FALLBACK") {
           try {
@@ -720,9 +759,13 @@ export default {
             });
             const tsData = await tsRes.json();
             if (!tsData.success) {
-              console.warn("Turnstile check non-fatal rejection:", tsData);
+              return jsonResponse(request, env, { error: "BOT_CHALLENGE_FAILED", message: "Cloudflare Turnstile bot challenge rejected." }, 403);
             }
-          } catch {}
+          } catch {
+            if (env.ENVIRONMENT === "production") {
+              return jsonResponse(request, env, { error: "BOT_CHALLENGE_ERROR", message: "Bot verification service temporarily unreachable." }, 503);
+            }
+          }
         }
 
         const idKey = await deriveDomainSecret(env.MASTER_SECRET, "identity-hash");
@@ -859,7 +902,10 @@ export default {
         if (!clientId) {
           return Response.redirect(`${safeFrontendUrl}/#oauth_error=google_unconfigured`, 302);
         }
-        const masterSecret = env.MASTER_SECRET || "default_local_master_secret_floodlock_32b";
+        if (!env.MASTER_SECRET || env.MASTER_SECRET.length < 32) {
+          return Response.redirect(`${safeFrontendUrl}/#oauth_error=server_secret_misconfigured`, 302);
+        }
+        const masterSecret = env.MASTER_SECRET;
         const signedState = await createSignedOAuthState(masterSecret, {
           origin: safeFrontendUrl,
           provider: "google",
@@ -1051,7 +1097,10 @@ export default {
         if (!clientId) {
           return Response.redirect(`${safeFrontendUrl}/#oauth_error=github_unconfigured`, 302);
         }
-        const masterSecret = env.MASTER_SECRET || "default_local_master_secret_floodlock_32b";
+        if (!env.MASTER_SECRET || env.MASTER_SECRET.length < 32) {
+          return Response.redirect(`${safeFrontendUrl}/#oauth_error=server_secret_misconfigured`, 302);
+        }
+        const masterSecret = env.MASTER_SECRET;
         const signedState = await createSignedOAuthState(masterSecret, {
           origin: safeFrontendUrl,
           provider: "github",
@@ -1069,7 +1118,10 @@ export default {
         const stateParam = url.searchParams.get("state") || "";
 
         // Finding 3 Fix: Enforce HMAC-signed OAuth state nonce with 15-minute expiry
-        const masterSecret = env.MASTER_SECRET || "default_local_master_secret_floodlock_32b";
+        if (!env.MASTER_SECRET || env.MASTER_SECRET.length < 32) {
+          return Response.redirect(`${frontendUrl}/#oauth_error=server_secret_misconfigured`, 302);
+        }
+        const masterSecret = env.MASTER_SECRET;
         const verifiedState = await verifySignedOAuthState(masterSecret, stateParam, 900);
         if (!verifiedState) {
           return Response.redirect(`${frontendUrl}/#oauth_error=invalid_or_expired_state`, 302);
@@ -1790,7 +1842,25 @@ export default {
 
         console.log(`[FLOOD_AUDIT_LOG] Lat:${lat.toFixed(3)}, Lon:${lon.toFixed(3)} | NeuralDepth:+1h=${neuralPred.depth_trajectory_cm?.h1}cm | GroqVerdict:${floodAuditLog.adversarial_groq_audit.groq_verdict} | Action:${floodAuditLog.adversarial_groq_audit.action_taken}`);
 
-        if (!scenario && !hasCustomOverrides && !forceReasoning && telem.r0 === 0.0 && telem.r48 < 2.0 && telem.tideSurge < 1.5) {
+        if (telem.telemetryDegraded) {
+          return jsonResponse(request, env, {
+            status: "DEGRADED_TELEMETRY",
+            forecast_mode: forecastMode,
+            threat_level: "ELEVATED_WATCH",
+            groq_audit_verdict: "TELEMETRY_UNAVAILABLE_FAILSAFE_WATCH",
+            flood_audit_log: floodAuditLog,
+            depth_cm: neuralPred?.depth_trajectory_cm?.h1 || 0.0,
+            confidence_score: 50,
+            latency_ms: 0.15,
+            quota: quotaStatus,
+            neural_predictions: neuralPred,
+            tactical_reasoning: tacticalReasoning || buildDeterministicEdgeSop(telem, neuralPred, lat, lon),
+            message: "Live hydrometeorological telemetry unavailable from meteorological provider. Fail-safe elevated watch engaged.",
+            timestamp: new Date().toISOString(),
+          }, 200, qosHeaders);
+        }
+
+        if (!scenario && !hasCustomOverrides && !forceReasoning && !isPhysicalHazard && !telem.telemetryDegraded && telem.r0 === 0.0 && telem.r48 < 2.0 && telem.tideSurge < 1.5) {
           return jsonResponse(request, env, {
             status: "ALL_CLEAR",
             forecast_mode: forecastMode,

@@ -74,7 +74,7 @@ $$\text{If } H_{\text{tide}} > Z_{\text{invert}}: \quad Q_{\text{out}} = Q_{\tex
 ### The 85 / 15 Holdout Split
 To ensure the neural surrogate does not memorize synthetic rows, the 100,000 generated sequences are strictly partitioned:
 1. **85,000 Training Sequences (`X_train`)**: Gradient updates are computed *exclusively* on these.
-2. **15,000 Holdout Validation Sequences (`X_val`)**: Kept in an isolated vault. The raw neural multi-head MLP evaluates at **$3.96\text{ cm}$** depth MAE ($9.50\text{ m}^3/\text{s}$ runoff MAE, $0.0102$ probability MAE). When calibrated with terrain TWI and hydrodynamic continuity damping in the forward pass, end-to-end depth MAE reaches **$2.81\text{ cm}$**, proving true physical generalization.
+2. **15,000 Holdout Validation Sequences (`X_val`)**: Kept in an isolated vault. The raw neural multi-head MLP evaluates at **$3.96\text{ cm}$** depth MAE ($9.50\text{ m}^3/\text{s}$ runoff MAE, $0.0102$ probability MAE) against the 0D lumped physics simulator. When evaluated against real-world 2D historical gauge observations across complex topography (e.g. Valencia canyon flash flood, Zhengzhou subway breach), lumped models inherently diverge from localized 2D gauge peaks (MAE ~75 cm). This physical limitation is precisely why FloodLock enforces the Deterministic Physical Hazard Floor directly on precipitation and surge telemetry.
 
 ### 10 Historical Disaster Benchmark Calibrations
 The dataset is calibrated against ten landmark global disasters:

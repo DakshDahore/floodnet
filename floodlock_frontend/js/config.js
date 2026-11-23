@@ -12,23 +12,23 @@ const DEFAULT_CONFIG = {
   // Primary 24/7 Cloudflare Edge Backend (Account 1 / Active)
   CLOUDFLARE_EDGE_URL: "https://floodlock-backend.dakshdahore1995.workers.dev",
 
-  // Hot Standby Cloudflare Edge Backend (Account 1 / Redundant Pair for Zero Downtime)
+  // Hot Standby Cloudflare Edge Backend (Standby Pair for Zero Downtime)
   CLOUDFLARE_STANDBY_URL: "https://floodlock-backend-standby.dakshdahore1995.workers.dev",
 
-  // Mirror Alpha Edge Backend (Account 2: dahoremugdha@gmail.com)
+  // Mirror Alpha Edge Backend (Pool Alpha)
   CLOUDFLARE_MIRROR_ALPHA_URL: "https://floodlock-backend.dahoremugdha.workers.dev",
 
-  // Mirror Beta Edge Backend (Account 3: dakshdadafit@gmail.com)
+  // Mirror Beta Edge Backend (Pool Beta)
   CLOUDFLARE_MIRROR_BETA_URL: "https://floodlock-backend.dakshdadafit.workers.dev",
 
-  // Mirror Gamma Edge Backend (Account 4: lantern.mech@gmail.com)
+  // Mirror Gamma Edge Backend (Pool Gamma)
   CLOUDFLARE_MIRROR_GAMMA_URL: "https://floodlock-backend.lanternmech.workers.dev",
 
-  // Public HTTPS Cloudflare Tunnel directly to Windows Laptop (YuvaMPS1 @ 192.168.1.106)
+  // Direct Edge Tunnel Gateway
   PUBLIC_TUNNEL_URL: "https://subscribers-sustained-cannon-moderator.trycloudflare.com",
   
-  // Local network fallback (if accessed on the same Wi-Fi)
-  LOCAL_BACKEND_URL: "http://192.168.1.106:8000",
+  // Local development fallback
+  LOCAL_BACKEND_URL: "http://localhost:8000",
 
   // Cloud secondary fallback (Render / Fly.io)
   CLOUD_BACKEND_URL: "https://floodlock-backend-cloud.onrender.com",
@@ -309,12 +309,11 @@ class ConfigManager {
       }
     }
 
-    // 3. Try Direct Local / LAN Backend (only if HTTP to avoid mixed content block, 800ms timeout)
+    // 3. Try Direct Local Backend (only if HTTP to avoid mixed content block, 800ms timeout)
     const localCandidates = [
       "http://127.0.0.1:8000",
       "http://localhost:8000",
-      this.get("LOCAL_BACKEND_URL"),
-      "http://192.168.1.106:8000"
+      this.get("LOCAL_BACKEND_URL")
     ];
     for (const localUrl of localCandidates) {
       if (localUrl && window.location.protocol === "http:") {
@@ -339,7 +338,7 @@ class ConfigManager {
 
     // 4. Try Cloud Serverless API (Hosted directly on Netlify / same origin, 1500ms timeout)
     const currentOrigin = (typeof window !== "undefined" && window.location && window.location.origin) ? window.location.origin : "";
-    if (currentOrigin && !currentOrigin.includes("127.0.0.1") && !currentOrigin.includes("localhost") && !currentOrigin.includes("192.168.")) {
+    if (currentOrigin && !currentOrigin.includes("127.0.0.1") && !currentOrigin.includes("localhost")) {
       const res = await timedFetch(`${currentOrigin}/api/health`, 1500);
       if (res && res.ok) {
         try {

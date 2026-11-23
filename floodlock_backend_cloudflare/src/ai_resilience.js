@@ -69,33 +69,64 @@ export function normalizeTacticalPayload(raw, engineLabel, fallbackObj, isPhysic
     isVerified = fallbackObj.threat_verified ?? true;
   }
 
-  const physicalAudit = isPhysicalHazard && (raw.threat_verified === false || raw.verification_status === "FALSE_ALARM_DOWNGRADED")
+  const isBenignAdvice = (text) => {
+    if (!text || typeof text !== "string") return false;
+    return /no action|resume regular|nominal|no evac|false alarm|safe to stay|no threat|no flooding|all clear/i.test(text);
+  };
+
+  const isModelRefutingHazard = (
+    raw.threat_verified === false ||
+    raw.verification_status === "FALSE_ALARM_DOWNGRADED" ||
+    isBenignAdvice(raw.tactical_civic_advisory) ||
+    (Array.isArray(raw.safe_evacuation_corridors) && raw.safe_evacuation_corridors.some(isBenignAdvice))
+  );
+
+  const physicalAudit = isPhysicalHazard && isModelRefutingHazard
     ? "DETERMINISTIC SAFETY FLOOR OVERRIDE: Physical rainfall/surge/depth telemetry confirms flood hazard; AI model dismissal vetoed."
     : (typeof raw.physical_consistency_audit === "string" && raw.physical_consistency_audit.length > 5
         ? raw.physical_consistency_audit.slice(0, 500)
         : (typeof raw.causal_attribution === "string" ? raw.causal_attribution.slice(0, 500) : fallbackObj.physical_consistency_audit));
 
-  const safeCorridors = (Array.isArray(raw.safe_evacuation_corridors) && raw.safe_evacuation_corridors.length > 0)
-    ? raw.safe_evacuation_corridors.slice(0, 5).map((s) => String(s).slice(0, 120))
-    : fallbackObj.safe_evacuation_corridors;
+  // Life-Safety Invariant: When the physical safety floor is active, if the AI model
+  // refutes the threat or emits benign / non-actionable text, we MUST strictly overwrite
+  // all actionable tactical guidance with the deterministic emergency SOP.
+  const enforceSop = isPhysicalHazard && isModelRefutingHazard;
 
-  const impassable = (Array.isArray(raw.impassable_infrastructure) && raw.impassable_infrastructure.length > 0)
-    ? raw.impassable_infrastructure.slice(0, 5).map((s) => String(s).slice(0, 120))
-    : fallbackObj.impassable_infrastructure;
+  const safeCorridors = enforceSop
+    ? fallbackObj.safe_evacuation_corridors
+    : ((Array.isArray(raw.safe_evacuation_corridors) && raw.safe_evacuation_corridors.length > 0 && !raw.safe_evacuation_corridors.some(isBenignAdvice))
+        ? raw.safe_evacuation_corridors.slice(0, 5).map((s) => String(s).slice(0, 120))
+        : fallbackObj.safe_evacuation_corridors);
 
-  const hospital = (raw.nearest_open_hospital && typeof raw.nearest_open_hospital === "object")
-    ? {
-        name: String(raw.nearest_open_hospital.name || fallbackObj.nearest_open_hospital.name).slice(0, 100),
-        status: String(raw.nearest_open_hospital.status || fallbackObj.nearest_open_hospital.status || "PASSABLE ON HIGH GROUND").slice(0, 60),
-        distance_km: Number.isFinite(Number(raw.nearest_open_hospital.distance_km))
-          ? Number(raw.nearest_open_hospital.distance_km)
-          : fallbackObj.nearest_open_hospital.distance_km,
-      }
-    : fallbackObj.nearest_open_hospital;
+  const impassable = enforceSop
+    ? fallbackObj.impassable_infrastructure
+    : ((Array.isArray(raw.impassable_infrastructure) && raw.impassable_infrastructure.length > 0)
+        ? raw.impassable_infrastructure.slice(0, 5).map((s) => String(s).slice(0, 120))
+        : fallbackObj.impassable_infrastructure);
 
-  const advisory = (typeof raw.tactical_civic_advisory === "string" && raw.tactical_civic_advisory.length > 5)
-    ? raw.tactical_civic_advisory.slice(0, 400)
-    : fallbackObj.tactical_civic_advisory;
+  const hospital = enforceSop
+    ? fallbackObj.nearest_open_hospital
+    : ((raw.nearest_open_hospital && typeof raw.nearest_open_hospital === "object")
+        ? {
+            name: String(raw.nearest_open_hospital.name || fallbackObj.nearest_open_hospital.name).slice(0, 100),
+            status: String(raw.nearest_open_hospital.status || fallbackObj.nearest_open_hospital.status || "PASSABLE ON HIGH GROUND").slice(0, 60),
+            distance_km: Number.isFinite(Number(raw.nearest_open_hospital.distance_km))
+              ? Number(raw.nearest_open_hospital.distance_km)
+              : fallbackObj.nearest_open_hospital.distance_km,
+          }
+        : fallbackObj.nearest_open_hospital);
+
+  const advisory = (enforceSop || isBenignAdvice(raw.tactical_civic_advisory))
+    ? fallbackObj.tactical_civic_advisory
+    : ((typeof raw.tactical_civic_advisory === "string" && raw.tactical_civic_advisory.length > 5)
+        ? raw.tactical_civic_advisory.slice(0, 400)
+        : fallbackObj.tactical_civic_advisory);
+
+  const perimeter = (enforceSop || isBenignAdvice(raw.danger_zone_perimeter))
+    ? fallbackObj.danger_zone_perimeter
+    : ((typeof raw.danger_zone_perimeter === "string" && raw.danger_zone_perimeter.length > 5)
+        ? raw.danger_zone_perimeter.slice(0, 300)
+        : fallbackObj.danger_zone_perimeter);
 
   return {
     engine: engineLabel,
@@ -109,10 +140,7 @@ export function normalizeTacticalPayload(raw, engineLabel, fallbackObj, isPhysic
       typeof raw.causal_attribution === "string" && raw.causal_attribution.length > 5
         ? raw.causal_attribution.slice(0, 400)
         : fallbackObj.causal_attribution,
-    danger_zone_perimeter:
-      typeof raw.danger_zone_perimeter === "string" && raw.danger_zone_perimeter.length > 5
-        ? raw.danger_zone_perimeter.slice(0, 300)
-        : fallbackObj.danger_zone_perimeter,
+    danger_zone_perimeter: perimeter,
     safe_evacuation_corridors: safeCorridors,
     impassable_infrastructure: impassable,
     nearest_open_hospital: hospital,
