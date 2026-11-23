@@ -786,10 +786,9 @@ export default {
         if (!clientId) {
           return jsonResponse(request, env, { error: "OAUTH_UNCONFIGURED", message: "Google Client ID not configured on Worker." }, 500);
         }
-        const frontendUrl = env.FRONTEND_URL || "https://floodlock.pages.dev";
-        // Pre-authorized Google OAuth callback (whitelisted in Google Cloud Console)
-        const redirectUri = env.GOOGLE_REDIRECT_URI || "https://antigravity-token-tracker.netlify.app/auth/callback";
-        const stateObj = { origin: frontendUrl, provider: "google", ts: Date.now() };
+        const reqOrigin = request.headers.get("Origin") || url.searchParams.get("origin") || env.FRONTEND_URL || "https://metoflood.netlify.app";
+        const redirectUri = url.searchParams.get("redirect_uri") || `${reqOrigin}/auth/callback`;
+        const stateObj = { origin: reqOrigin, provider: "google", ts: Date.now() };
         const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=openid%20email%20profile&prompt=select_account&state=${encodeURIComponent(JSON.stringify(stateObj))}`;
         return Response.redirect(googleAuthUrl, 302);
       }
@@ -809,7 +808,7 @@ export default {
           let userName = "";
 
           if (provider === "google") {
-            const redirectUri = body.redirect_uri || env.GOOGLE_REDIRECT_URI || "https://antigravity-token-tracker.netlify.app/auth/callback";
+            const redirectUri = body.redirect_uri || `${env.FRONTEND_URL || "https://metoflood.netlify.app"}/auth/callback`;
             const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
               method: "POST",
               headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -874,11 +873,12 @@ export default {
             }
           }
 
-          const sessionToken = await createSessionToken(env.MASTER_SECRET, {
-            sub: profile.user_id,
-            idh: identityHash,
-            plan: profile.plan,
+          const sessionToken = await issueSessionToken(env.MASTER_SECRET, {
+            userId: profile.user_id,
+            identityHash,
+            plan: assignedPlan,
             isAdmin,
+            ttlSec: 86400 * 7,
           });
 
           return jsonResponse(request, env, {
@@ -890,10 +890,13 @@ export default {
               identity_masked: profile.identity_masked,
               identity: userEmail,
               email: userEmail,
-              plan: profile.plan,
-              daily_quota: profile.daily_quota,
+              name: profile.name || userName,
+              plan: assignedPlan,
+              daily_quota: dailyQuota,
               is_admin: isAdmin,
               created_at: profile.created_at,
+              picture: userData?.picture || null,
+              avatar_url: userData?.picture || null,
             },
           });
         } catch (err) {
@@ -904,21 +907,32 @@ export default {
       // ── GET /api/auth/oauth/github (1-Click GitHub OAuth Entrypoint) ──
       if (path === "/api/auth/oauth/github" && method === "GET") {
         const clientId = env.GITHUB_CLIENT_ID;
-        const frontendUrl = env.FRONTEND_URL || "https://floodlock.pages.dev";
+        const frontendUrl = env.FRONTEND_URL || "https://metoflood.netlify.app";
         if (!clientId) {
           return Response.redirect(`${frontendUrl}/#oauth_error=github_unconfigured`, 302);
         }
+        const stateParam = url.searchParams.get("state") || "";
         const workerOrigin = new URL(request.url).origin;
-        const redirectUri = `${workerOrigin}/api/auth/oauth/callback?provider=github`;
-        const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=user:email`;
+        const redirectUri = `${workerOrigin}/api/auth/oauth/callback`;
+        const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=user:email&state=${encodeURIComponent(stateParam)}`;
         return Response.redirect(githubAuthUrl, 302);
       }
 
       // ── GET /api/auth/oauth/callback (Universal OAuth Token Exchange & Auto-Provision) ──
-      if (path === "/api/auth/oauth/callback" && method === "GET") {
+      if ((path === "/api/auth/oauth/callback" || path === "/api/auth/oauth/github/callback") && method === "GET") {
         const code = url.searchParams.get("code");
-        const provider = url.searchParams.get("provider") || "google";
-        const frontendUrl = env.FRONTEND_URL || "https://floodlock.pages.dev";
+        let provider = url.searchParams.get("provider");
+        let frontendUrl = env.FRONTEND_URL || "https://metoflood.netlify.app";
+        const stateParam = url.searchParams.get("state");
+        if (stateParam) {
+          try {
+            const parsed = JSON.parse(stateParam);
+            if (parsed.origin) frontendUrl = parsed.origin;
+            if (parsed.provider) provider = parsed.provider;
+          } catch {}
+        }
+        if (!provider && path.includes("github")) provider = "github";
+        if (!provider) provider = "google";
 
         if (!code) {
           return Response.redirect(`${frontendUrl}/#oauth_error=missing_code`, 302);
@@ -927,9 +941,10 @@ export default {
         try {
           let userEmail = "";
           let userName = "";
+          let userPicture = null;
 
           if (provider === "google") {
-            const redirectUri = env.GOOGLE_REDIRECT_URI || "https://antigravity-token-tracker.netlify.app/auth/callback";
+            const redirectUri = env.GOOGLE_REDIRECT_URI || `${frontendUrl}/auth/callback`;
             const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
               method: "POST",
               headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -956,9 +971,10 @@ export default {
             const userData = await userRes.json();
             userEmail = String(userData.email || "").toLowerCase().trim();
             userName = String(userData.name || "").trim();
+            userPicture = userData.picture || null;
           } else if (provider === "github") {
             const workerOrigin = new URL(request.url).origin;
-            const redirectUri = `${workerOrigin}/api/auth/oauth/callback?provider=github`;
+            const redirectUri = `${workerOrigin}/api/auth/oauth/callback`;
             const tokenRes = await fetch("https://github.com/login/oauth/access_token", {
               method: "POST",
               headers: { "Content-Type": "application/json", "Accept": "application/json" },
@@ -973,16 +989,40 @@ export default {
             if (!tokenData.access_token) {
               return Response.redirect(`${frontendUrl}/#oauth_error=github_token_failed`, 302);
             }
-            const emailsRes = await fetch("https://api.github.com/user/emails", {
-              headers: {
-                Authorization: `Bearer ${tokenData.access_token}`,
-                "User-Agent": "FloodLock-Worker",
-              },
-            });
-            const emails = await emailsRes.json();
-            const primary = Array.isArray(emails) ? emails.find((e) => e.primary && e.verified) || emails[0] : null;
-            userEmail = primary?.email ? String(primary.email).toLowerCase().trim() : "";
-            userName = "GitHub User";
+
+            // Fetch GitHub user profile (name, avatar, public email)
+            try {
+              const ghUserRes = await fetch("https://api.github.com/user", {
+                headers: {
+                  Authorization: `Bearer ${tokenData.access_token}`,
+                  "User-Agent": "MeteoFlood-Worker",
+                },
+              });
+              if (ghUserRes.ok) {
+                const ghUser = await ghUserRes.json();
+                userName = ghUser.name || ghUser.login || "GitHub User";
+                userPicture = ghUser.avatar_url || null;
+                if (ghUser.email) userEmail = String(ghUser.email).toLowerCase().trim();
+              }
+            } catch (e) {
+              console.warn("GitHub user fetch error:", e);
+            }
+
+            // Fallback to /user/emails if primary email is private
+            if (!userEmail) {
+              const emailsRes = await fetch("https://api.github.com/user/emails", {
+                headers: {
+                  Authorization: `Bearer ${tokenData.access_token}`,
+                  "User-Agent": "MeteoFlood-Worker",
+                },
+              });
+              if (emailsRes.ok) {
+                const emails = await emailsRes.json();
+                const primary = Array.isArray(emails) ? emails.find((e) => e.primary && e.verified) || emails.find((e) => e.verified) || emails[0] : null;
+                userEmail = primary?.email ? String(primary.email).toLowerCase().trim() : "";
+              }
+            }
+            if (!userName) userName = "GitHub User";
           }
 
           if (!userEmail || !isValidIdentity(userEmail)) {
@@ -1013,6 +1053,7 @@ export default {
               daily_quota: isAdmin ? 500 : 10,
               active_order_id: null,
               created_at: new Date().toISOString(),
+              avatar_url: userPicture,
             };
             if (env.FLOODLOCK_KV) {
               const cipher = await encryptPiiAtRest(env.PII_ENCRYPTION_KEY, profile, identityHash);
@@ -1033,9 +1074,12 @@ export default {
             user_id: profile.user_id,
             identity: userEmail,
             email: userEmail,
+            name: profile.name || userName,
             plan: profile.plan,
             daily_quota: profile.daily_quota,
             is_admin: isAdmin,
+            picture: userPicture,
+            avatar_url: userPicture,
           }));
 
           return Response.redirect(`${frontendUrl}/#session_token=${encodeURIComponent(sessionToken)}&user=${userObj}`, 302);

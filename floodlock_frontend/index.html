@@ -2321,8 +2321,8 @@ print(response.json())</code></pre>
 
     // ── 1-Click OAuth Handlers ──
     function loginWithGoogle() {
-      const clientId = "719271873086-kpujid5noaftp00cc3lgf50fns212g3m.apps.googleusercontent.com";
-      const redirectUri = "https://antigravity-token-tracker.netlify.app/auth/callback";
+      const clientId = "665808449308-0m3lp5romjn2o4cq0510tm3os8r5nc7e.apps.googleusercontent.com";
+      const redirectUri = `${window.location.origin}/auth/callback`;
       const stateObj = {
         origin: window.location.origin,
         provider: "google",
@@ -2333,12 +2333,13 @@ print(response.json())</code></pre>
     }
 
     function loginWithGitHub() {
-      alert(
-        "GitHub OAuth Notice:\n\n" +
-        "GitHub OAuth Client App is currently pending registration.\n" +
-        "Please use the instant Passwordless Email OTP below for 1-click verification."
-      );
-      document.getElementById('authEmailInput')?.focus();
+      const base = window.FloodConfig.getBaseUrl().replace(/\/+$/, '');
+      const stateObj = {
+        origin: window.location.origin,
+        provider: "github",
+        ts: Date.now()
+      };
+      window.location.href = `${base}/api/auth/oauth/github?state=${encodeURIComponent(JSON.stringify(stateObj))}`;
     }
 
     // ── XSS-safe HTML escaper (RED-1 fix) ──
@@ -2430,7 +2431,7 @@ print(response.json())</code></pre>
           body: {
             code: oauthCode,
             provider: 'google',
-            redirect_uri: 'https://antigravity-token-tracker.netlify.app/auth/callback'
+            redirect_uri: `${window.location.origin}/auth/callback`
           }
         }).then(res => {
           const token = res.data?.session_token || res.data?.token;
