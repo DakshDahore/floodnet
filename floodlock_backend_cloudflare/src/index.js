@@ -809,14 +809,19 @@ export default {
 
           if (provider === "google") {
             const redirectUri = body.redirect_uri || `${env.FRONTEND_URL || "https://metoflood.netlify.app"}/auth/callback`;
+            const clientId = String(env.GOOGLE_CLIENT_ID || "").trim();
+            const clientSecret = String(env.GOOGLE_CLIENT_SECRET || "").trim();
+            const cleanRedirectUri = String(redirectUri || "").trim();
+            const cleanCode = String(code || "").trim();
+
             const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
               method: "POST",
               headers: { "Content-Type": "application/x-www-form-urlencoded" },
               body: new URLSearchParams({
-                code,
-                client_id: env.GOOGLE_CLIENT_ID || "",
-                client_secret: env.GOOGLE_CLIENT_SECRET || "",
-                redirect_uri: redirectUri,
+                code: cleanCode,
+                client_id: clientId,
+                client_secret: clientSecret,
+                redirect_uri: cleanRedirectUri,
                 grant_type: "authorization_code",
               }),
             });
@@ -945,14 +950,19 @@ export default {
 
           if (provider === "google") {
             const redirectUri = env.GOOGLE_REDIRECT_URI || `${frontendUrl}/auth/callback`;
+            const clientId = String(env.GOOGLE_CLIENT_ID || "").trim();
+            const clientSecret = String(env.GOOGLE_CLIENT_SECRET || "").trim();
+            const cleanRedirectUri = String(redirectUri || "").trim();
+            const cleanCode = String(code || "").trim();
+
             const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
               method: "POST",
               headers: { "Content-Type": "application/x-www-form-urlencoded" },
               body: new URLSearchParams({
-                code,
-                client_id: env.GOOGLE_CLIENT_ID || "",
-                client_secret: env.GOOGLE_CLIENT_SECRET || "",
-                redirect_uri: redirectUri,
+                code: cleanCode,
+                client_id: clientId,
+                client_secret: clientSecret,
+                redirect_uri: cleanRedirectUri,
                 grant_type: "authorization_code",
               }),
             });

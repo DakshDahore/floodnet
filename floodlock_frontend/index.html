@@ -403,6 +403,10 @@
     .blip-critical { color: #ef4444; background: #ef4444; }
     .blip-watch { color: #f59e0b; background: #f59e0b; }
     .blip-nominal { color: #10b981; background: #10b981; }
+    .user-gps-marker { width: 28px; height: 28px; position: relative; pointer-events: none; }
+    .gps-dot { width: 14px; height: 14px; background: #06b6d4; border: 2.5px solid #ffffff; border-radius: 50%; box-shadow: 0 0 14px rgba(6, 182, 212, 1); position: absolute; top: 7px; left: 7px; z-index: 2; }
+    .gps-ring { width: 28px; height: 28px; border: 2px solid #06b6d4; border-radius: 50%; position: absolute; top: 0; left: 0; animation: gpsPulse 2s infinite ease-out; }
+    @keyframes gpsPulse { 0% { transform: scale(0.4); opacity: 1; } 100% { transform: scale(3.2); opacity: 0; } }
     .radius-selector-bar { display: flex; gap: 0.5rem; margin: 1.25rem 0; }
     .radius-pill {
       background: rgba(214, 197, 179, 0.1); border: 1px solid rgba(214, 197, 179, 0.25);
@@ -837,8 +841,8 @@ print("════════════════════════�
             <button class="radius-pill" onclick="setLocalRadius(4, this)">4 km</button>
             <button class="radius-pill" onclick="setLocalRadius(5, this)">5 km</button>
           </div>
-          <button onclick="scanUserLocation()" class="btn-water" id="btnGeoScan" style="font-size: 0.82rem; padding: 0.45rem 1rem;">
-            <span>📍</span> <strong>Scan My Location</strong>
+          <button onclick="recenterToUserLocation()" class="btn-water" id="btnGeoScan" style="font-size: 0.82rem; padding: 0.45rem 1rem;">
+            <span>🎯</span> <strong>Recenter on My Location</strong>
           </button>
         </div>
       </div>
@@ -2064,18 +2068,35 @@ print(response.json())</code></pre>
       valencia: { center: [-0.37, 39.46], zoom: 11, pitch: 45, name: "Turia River Catchment (Valencia)", lat: 39.46, lon: -0.37, flood_threshold_m3s: 100 }
     };
 
+    let userLocationMarker = null;
+
     function initMap() {
       if (mapInstance) return;
       try {
         mapInstance = new maplibregl.Map({
           container: 'map',
           style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
-          center: [20, 15],
+          center: [20, 20],
           zoom: 2.2,
-          pitch: 20
+          minZoom: 1.8,
+          maxZoom: 18,
+          renderWorldCopies: false,
+          maxBounds: [[-175, -80], [175, 84]],
+          pitch: 0
         });
 
         mapInstance.addControl(new maplibregl.NavigationControl(), 'top-right');
+
+        const geolocate = new maplibregl.GeolocateControl({
+          positionOptions: { enableHighAccuracy: true },
+          trackUserLocation: true,
+          showUserLocation: true
+        });
+        mapInstance.addControl(geolocate, 'top-right');
+        geolocate.on('geolocate', (e) => {
+          recenterToUserLocation(e.coords.latitude, e.coords.longitude);
+        });
+
         mapInstance.on('load', () => {
           loadActivePlanetaryFloods();
           loadBasinTelemetry(19.21, 73.10, "Ulhas-Mithi Coastal Basin (Mumbai)");
@@ -2090,22 +2111,109 @@ print(response.json())</code></pre>
         const res = await window.FloodConfig.fetchApi('FLOOD_ACTIVE', { method: 'GET' });
         if (res.ok && Array.isArray(res.data?.basins)) {
           const basins = res.data.basins;
-          activeMapMarkers.forEach(m => m.remove());
-          activeMapMarkers = [];
 
-          basins.forEach(b => {
-            const el = document.createElement('div');
-            el.className = 'radar-blip ' + (b.threat_level === 'CRITICAL_SURGE' ? 'blip-critical' : (b.threat_level === 'ELEVATED_WATCH' ? 'blip-watch' : 'blip-nominal'));
-            el.title = `${b.name}: ${b.current_discharge_m3s} m³/s`;
+          const geojson = {
+            type: 'FeatureCollection',
+            features: basins.map(b => ({
+              type: 'Feature',
+              geometry: {
+                type: 'Point',
+                coordinates: [Number(b.lon), Number(b.lat)]
+              },
+              properties: {
+                id: b.id,
+                name: b.name,
+                country: b.country || '',
+                threat_level: b.threat_level,
+                discharge: b.current_discharge_m3s,
+                threshold: b.flood_threshold_m3s,
+                risk_score: b.risk_score
+              }
+            }))
+          };
 
-            const marker = new maplibregl.Marker({ element: el })
-              .setLngLat([b.lon, b.lat])
-              .addTo(mapInstance);
+          if (mapInstance.getSource('active-floods')) {
+            mapInstance.getSource('active-floods').setData(geojson);
+          } else {
+            mapInstance.addSource('active-floods', {
+              type: 'geojson',
+              data: geojson
+            });
 
-            activeMapMarkers.push(marker);
-          });
+            mapInstance.addLayer({
+              id: 'active-floods-halo',
+              type: 'circle',
+              source: 'active-floods',
+              paint: {
+                'circle-radius': ['interpolate', ['linear'], ['zoom'], 2, 8, 8, 22],
+                'circle-color': [
+                  'match',
+                  ['get', 'threat_level'],
+                  'CRITICAL_SURGE', '#ef4444',
+                  'ELEVATED_WATCH', '#f59e0b',
+                  '#10b981'
+                ],
+                'circle-opacity': 0.35,
+                'circle-stroke-width': 1.5,
+                'circle-stroke-color': [
+                  'match',
+                  ['get', 'threat_level'],
+                  'CRITICAL_SURGE', '#ef4444',
+                  'ELEVATED_WATCH', '#f59e0b',
+                  '#10b981'
+                ]
+              }
+            });
+
+            mapInstance.addLayer({
+              id: 'active-floods-core',
+              type: 'circle',
+              source: 'active-floods',
+              paint: {
+                'circle-radius': ['interpolate', ['linear'], ['zoom'], 2, 4.5, 8, 10],
+                'circle-color': [
+                  'match',
+                  ['get', 'threat_level'],
+                  'CRITICAL_SURGE', '#ef4444',
+                  'ELEVATED_WATCH', '#f59e0b',
+                  '#10b981'
+                ],
+                'circle-opacity': 0.95,
+                'circle-stroke-width': 2,
+                'circle-stroke-color': '#0a0705'
+              }
+            });
+
+            mapInstance.on('click', 'active-floods-core', (e) => {
+              const f = e.features[0];
+              if (!f) return;
+              const coords = f.geometry.coordinates.slice();
+              const p = f.properties;
+              new maplibregl.Popup({ offset: 12, closeButton: false })
+                .setLngLat(coords)
+                .setHTML(`
+                  <div style="font-family:sans-serif;color:#120d09;padding:6px 8px;">
+                    <div style="font-weight:700;font-size:13px;margin-bottom:2px;">${p.name}</div>
+                    <div style="font-size:11px;color:#555;">Discharge: <b>${p.discharge} m³/s</b> (Threshold: ${p.threshold} m³/s)</div>
+                    <div style="font-size:11px;color:${p.threat_level === 'CRITICAL_SURGE' ? '#dc2626' : (p.threat_level === 'ELEVATED_WATCH' ? '#d97706' : '#16a34a')};font-weight:600;margin-top:2px;">Threat: ${p.threat_level}</div>
+                  </div>
+                `)
+                .addTo(mapInstance);
+
+              loadBasinTelemetry(coords[1], coords[0], p.name);
+            });
+
+            mapInstance.on('mouseenter', 'active-floods-core', () => {
+              mapInstance.getCanvas().style.cursor = 'pointer';
+            });
+            mapInstance.on('mouseleave', 'active-floods-core', () => {
+              mapInstance.getCanvas().style.cursor = '';
+            });
+          }
         }
-      } catch {}
+      } catch (err) {
+        console.error('Active floods layer:', err);
+      }
     }
 
     function flyToBasin(key) {
@@ -2206,23 +2314,64 @@ print(response.json())</code></pre>
       scanUserLocation();
     }
 
-    function scanUserLocation() {
-      if (!navigator.geolocation) {
-        executeRadiusCheck(19.076, 72.877);
+    function recenterToUserLocation(providedLat, providedLon) {
+      const btn = document.getElementById('btnGeoScan');
+      if (providedLat !== undefined && providedLon !== undefined) {
+        applyUserZoom(providedLat, providedLon);
         return;
       }
+
+      if (btn) btn.innerHTML = '<span>⏳</span> <strong>Locating...</strong>';
+
+      if (!navigator.geolocation) {
+        alert('Geolocation is not supported by your browser.');
+        if (btn) btn.innerHTML = '<span>🎯</span> <strong>Recenter on My Location</strong>';
+        return;
+      }
+
       navigator.geolocation.getCurrentPosition(
-        pos => executeRadiusCheck(pos.coords.latitude, pos.coords.longitude),
-        err => executeRadiusCheck(19.076, 72.877)
+        (pos) => {
+          applyUserZoom(pos.coords.latitude, pos.coords.longitude);
+          if (btn) btn.innerHTML = '<span>🎯</span> <strong>Recenter on My Location</strong>';
+        },
+        (err) => {
+          console.warn('Geolocation error:', err);
+          alert('Could not retrieve your live location. Please ensure location access is allowed in your browser permissions.');
+          if (btn) btn.innerHTML = '<span>🎯</span> <strong>Recenter on My Location</strong>';
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
     }
+
+    function applyUserZoom(lat, lon) {
+      if (mapInstance) {
+        mapInstance.flyTo({
+          center: [lon, lat],
+          zoom: 13,
+          pitch: 30,
+          duration: 2200,
+          essential: true
+        });
+
+        if (userLocationMarker) userLocationMarker.remove();
+        const el = document.createElement('div');
+        el.className = 'user-gps-marker';
+        el.innerHTML = '<div class="gps-dot"></div><div class="gps-ring"></div>';
+        userLocationMarker = new maplibregl.Marker({ element: el, anchor: 'center' })
+          .setLngLat([lon, lat])
+          .addTo(mapInstance);
+      }
+      executeRadiusCheck(lat, lon);
+    }
+
+    window.scanUserLocation = recenterToUserLocation;
 
     async function executeRadiusCheck(lat, lon) {
       const alertBox = document.getElementById('userRadiusAlert');
       try {
         const res = await window.FloodConfig.fetchApi('FLOOD_RADIUS_CHECK', {
           method: 'GET',
-          params: { lat, lon, radius_km: 150 }
+          params: { lat, lon, radius_km: currentFocusRadiusKm * 50 }
         });
 
         if (res.ok && res.data) {
@@ -2238,7 +2387,7 @@ print(response.json())</code></pre>
             } else {
               alertBox.innerHTML = `
                 <div style="background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; border-radius: 12px; padding: 0.85rem 1.5rem; color: #a7f3d0;">
-                  ✓ <strong>ALL CLEAR:</strong> No active river floods within 150 km. Closest basin: ${d.closest_basin_name} (${d.closest_basin_distance_km} km away, Flow: ${d.current_discharge_m3s} m³/s).
+                  ✓ <strong>ALL CLEAR:</strong> No active river floods within ${currentFocusRadiusKm * 50} km. Closest basin: ${d.closest_basin_name} (${d.closest_basin_distance_km} km away, Flow: ${d.current_discharge_m3s} m³/s).
                 </div>
               `;
             }
@@ -2451,7 +2600,17 @@ print(response.json())</code></pre>
             history.replaceState(null, '', window.location.pathname);
             switchView('dashboard');
           } else {
-            if (status) status.innerHTML = `<span style="color:#ef4444;">Google Sign-In failed: ${res.data?.message || res.data?.detail || 'Authentication failed'}</span>`;
+            let failText = res.data?.message || 'Authentication failed';
+            if (res.data?.detail) {
+              try {
+                const parsed = typeof res.data.detail === 'string' ? JSON.parse(res.data.detail) : res.data.detail;
+                if (parsed.error_description) failText = `${failText} (${parsed.error_description})`;
+                else if (parsed.error) failText = `${failText} (${parsed.error})`;
+              } catch {
+                failText = `${failText} (${res.data.detail})`;
+              }
+            }
+            if (status) status.innerHTML = `<span style="color:#ef4444;">Google Sign-In failed: ${failText}</span>`;
             history.replaceState(null, '', window.location.pathname);
           }
         }).catch(err => {
