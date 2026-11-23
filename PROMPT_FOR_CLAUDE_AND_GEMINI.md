@@ -23,20 +23,20 @@ FloodLock is a commercial planetary flood intelligence platform founded by Daksh
 Perform an exhaustive, line-by-line inspection across the 8 engineering pillars of the attached codebase:
 
 #### Pillar 1: Distributed 10-Core Cloudflare Architecture & Sharded Work Division
-- **Files:** `floodlock_backend_cloudflare/src/index.js`, `src/click_processor.js`, `src/neural_core_worker.js`, `src/shard_worker.js`, `src/planetary_grid.js`
+- **Files:** `floodlock_backend_cloudflare/src/index.js` (or `cloudflare_worker/src/index.js`), `src/click_processor.js`, `src/neural_core_worker.js`, `src/shard_worker.js`, `src/planetary_grid.js`
 - **Zero-Contention Click Core:** Verify that interactive user clicks and point queries are served by a dedicated isolate (`floodlock-click-processor`) with <50ms edge latency, ensuring that planetary background quadtree mesh tasks NEVER block user UI interaction.
 - **In-Memory Service Bindings:** Verify that the Master Gateway aggregates all 7 continental shards and the Neural 14F tensor core over zero-cost in-memory V8 service bindings without public network egress.
 - **Multi-Account Failover:** Verify automated client-side failover across 4 distinct Cloudflare accounts (Primary + Mirrors Alpha, Beta, Gamma) providing 400% operational headroom.
 
 #### Pillar 2: Adversarial Groq Verification Gate & Threat Suppression Policy
-- **Files:** `src/ai_resilience.js`, `src/click_processor.js`, `src/index.js`, `floodlock_frontend/index.html`
+- **Files:** `floodlock_backend_cloudflare/src/ai_resilience.js`, `src/click_processor.js`, `src/index.js`, `floodlock_frontend/index.html`
 - **Adversarial Auditor Protocol:** When the 14-feature neural network flags a flood strike, Groq LPU (`openai/gpt-oss-120b`) audits physical consistency against real-world rainfall ($R_0, R_{48}$), soil saturation %, and tidal surge:
   - **If Groq Confirms (`VERIFIED_FLOOD_HAZARD` / `threat_verified: true`):** The system displays `CRITICAL_INUNDATION`, triggers sirens, and provides concrete safe evacuation corridors, impassable infrastructure, and elevated hospital access.
   - **If Groq Refutes (`FALSE_ALARM_DOWNGRADED` / `threat_verified: false`):** The system enforces the founder's directive ("don't do anything") — suppresses civic alarms, sets threat level to `NOMINAL`, suppresses panic advisories, and clearly logs the physical contradiction.
 - **Structured Flood Audit Telemetry:** Verify that every forecast returns a comprehensive `flood_audit_log` detailing coordinates, water proximity, live rainfall, soil saturation %, neural trajectory, and the adversarial audit verdict.
 
 #### Pillar 3: Adaptive Mesh Refinement (AMR) & Full Earth Spatial Quadtree
-- **Files:** `src/planetary_grid.js`, `floodlock_frontend/index.html`
+- **Files:** `floodlock_backend_cloudflare/src/planetary_grid.js`, `floodlock_frontend/index.html`
 - **Planetary Coverage:** Verify that AMR quadtrees partition the entire planet, dynamically subdividing high-risk coastal and riverine cells from ~200km macro-sectors down to 10km and 2km local tiles while pruning arid interiors in $O(1)$ time.
 - **Priority Queue Execution:** Verify that planetary workers process red hotspot clusters first, followed by elevated amber watch cells, and finally nominal blue cells.
 
@@ -45,26 +45,36 @@ Perform an exhaustive, line-by-line inspection across the 8 engineering pillars 
 - **Precise Zoom Scaling:** Verify that clicking on any quadtree box, red hotspot, active flood marker, or arbitrary pinpoint on Earth triggers `mapInstance.flyTo({ center, zoom: 12.8, pitch: 35 })`, focusing the user immediately into the 1–10km ground scale (~3.5km visible span).
 
 #### Pillar 5: Real-Time ECMWF Copernicus GloFAS & Open-Meteo Ingestion
-- **Files:** `src/click_processor.js`, `src/index.js`, `floodlock_frontend/index.html`
+- **Files:** `floodlock_backend_cloudflare/src/click_processor.js`, `src/index.js`, `floodlock_frontend/index.html`
 - **Zero Mock Policy:** Verify all flood warnings and river discharge time-series are computed from live ECMWF GloFAS and Open-Meteo REST APIs — never fabricated arrays or static fixtures.
 - **90-Day Continuous Discharge Hydrograph:** Confirm `/api/flood/telemetry` delivers continuous 60-day historical + 30-day projected river discharge hydrographs rendered client-side with Chart.js.
 
 #### Pillar 6: Mathematical Hydrology & Mass Conservation
-- **Files:** `floodlock_physics_simulator.py`, `test_physics_conservation.py`
+- **Files:** `floodlock_physics_simulator.py` (and `physics/floodlock_physics_simulator.py`), `test_physics_conservation.py` (and `physics/test_physics_conservation.py`)
 - **Adaptive CFL Sub-stepping:** Verify the 36-step solver ($\Delta t = 600\text{ s}$, 6.0h horizon) with dynamic adaptive CFL sub-stepping ($12 \le \text{substeps} \le 120$).
 - **Strict Conservation:** Confirm $\sum (h_{t+\Delta t} - h_t) = \sum (P - I - Q)\Delta t$ with mass residual $< 1.20 \times 10^{-14}\text{ m}$ across all test regimes.
 
 #### Pillar 7: Cryptographic Zero-Trust Core & Atomic State Rollback
-- **Files:** `src/crypto_utils.js`, `src/durable_objects.js`
+- **Files:** `floodlock_backend_cloudflare/src/crypto_utils.js`, `src/durable_objects.js`
 - **Domain-Separated HKDF:** Verify HKDF-SHA256 isolating keys for `identity-hash`, `otp-hash`, `session-jwt-hs256`, and `aes-256-gcm-pii`.
 - **Atomic OTP State Rollback:** Confirm `SecurityStateDO.rollbackOtp()` clears challenges on delivery failures (HTTP 502) to prevent user cooldown trapping.
 
 #### Pillar 8: Automated Verification Suite Execution
-Run the automated test suite contained in the package:
+Run the verification suites contained in the package:
 ```bash
+# 1. 10-Core Cluster & Adversarial Groq Gate Verification (18/18 GREEN FLAGS)
 python3 scripts/verify_10core_cluster_and_groq_gate.py
+
+# 2. Physics Conservation Suite (7/7 Solvers OK in 0.013s)
+python3 physics/test_physics_conservation.py
+
+# 3. Offline WebCrypto & Billing Unit Tests (4/4 Tests OK)
+cd floodlock_backend_cloudflare && node --test test/worker.test.mjs
+
+# 4. Live 17-Vector Edge Security Red-Team Penetration Suite (17/17 PASSED, 0 FAILURES)
+python3 scripts/security_redteam_harness_v3.py https://floodlock-backend.dakshdahore1995.workers.dev
 ```
-Expected output: **18 / 18 GREEN FLAGS ACHIEVED**.
+Expected output: **100% PASS RATE ACROSS ALL 4 SUITES**.
 
 ---
 

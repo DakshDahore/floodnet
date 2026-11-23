@@ -20,7 +20,10 @@ import csv
 import math
 from typing import Dict, List, Optional, Tuple
 
-import numpy as np
+try:
+    import numpy as np
+except ImportError:
+    np = None
 
 
 class NumericalHydrologySimulator:
