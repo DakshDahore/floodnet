@@ -1,0 +1,14 @@
+{
+  "": "node_modules/wrangler/config-schema.json",
+  "name": "floodlock-core-neural",
+  "main": "src/neural_core_worker.js",
+  "compatibility_date": "2026-10-23",
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "CORE_NAME": "floodlock-core-neural",
+    "CORE_INDEX": "3",
+    "CORE_ROLE": "14F_NEURAL_TENSOR_ENGINE"
+  }
+}

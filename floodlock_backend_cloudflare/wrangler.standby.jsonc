@@ -56,16 +56,32 @@
   },
   "services": [
     {
-      "binding": "SHARD_ASIA",
-      "service": "floodlock-shard-asia"
+      "binding": "CORE_NEURAL",
+      "service": "floodlock-core-neural"
     },
     {
-      "binding": "SHARD_EUROPE",
-      "service": "floodlock-shard-europe"
+      "binding": "SHARD_ASIA_SOUTH",
+      "service": "floodlock-shard-asia-south"
     },
     {
-      "binding": "SHARD_AMERICAS",
-      "service": "floodlock-shard-americas"
+      "binding": "SHARD_ASIA_EAST",
+      "service": "floodlock-shard-asia-east"
+    },
+    {
+      "binding": "SHARD_EUROPE_WEST",
+      "service": "floodlock-shard-europe-west"
+    },
+    {
+      "binding": "SHARD_EUROPE_MED",
+      "service": "floodlock-shard-europe-med"
+    },
+    {
+      "binding": "SHARD_NORTH_AMERICA",
+      "service": "floodlock-shard-north-america"
+    },
+    {
+      "binding": "SHARD_SOUTH_AMERICA",
+      "service": "floodlock-shard-south-america"
     },
     {
       "binding": "SHARD_AFRICA_OCEANIA",

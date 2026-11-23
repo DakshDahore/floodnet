@@ -841,6 +841,37 @@ function makePointFeature(center, properties) {
  */
 export function getLatticeForRegion(region) {
   const norm = String(region).toLowerCase().trim();
+  if (norm.includes("asia-south") || norm.includes("south-asia")) {
+    return PLANETARY_MACRO_LATTICE.filter((m) =>
+      (m.id.startsWith("macro_sa_") && m.continent === "Asia") || m.id === "macro_bg_as_central"
+    );
+  }
+  if (norm.includes("asia-east") || norm.includes("east-asia")) {
+    return PLANETARY_MACRO_LATTICE.filter((m) =>
+      (m.id.startsWith("macro_ea_") || m.id.startsWith("macro_sea_") || m.id === "macro_bg_as_siberia") && m.continent === "Asia"
+    );
+  }
+  if (norm.includes("europe-west") || norm.includes("west-europe")) {
+    return PLANETARY_MACRO_LATTICE.filter((m) =>
+      ["macro_eu_danube_central", "macro_eu_rhine_meuse", "macro_eu_thames_london", "macro_bg_eu_nordic"].includes(m.id)
+    );
+  }
+  if (norm.includes("europe-med") || norm.includes("med-europe")) {
+    return PLANETARY_MACRO_LATTICE.filter((m) =>
+      ["macro_eu_turia_valencia", "macro_eu_po_valley"].includes(m.id)
+    );
+  }
+  if (norm.includes("north-america") || norm.includes("na")) {
+    return PLANETARY_MACRO_LATTICE.filter((m) => m.continent === "North America");
+  }
+  if (norm.includes("south-america") || norm.includes("sa")) {
+    return PLANETARY_MACRO_LATTICE.filter((m) => m.continent === "South America");
+  }
+  if (norm.includes("africa") || norm.includes("oceania")) {
+    return PLANETARY_MACRO_LATTICE.filter((m) => m.continent === "Africa" || m.continent === "Oceania");
+  }
+
+  // Fallback broad matches
   if (norm.includes("asia")) {
     return PLANETARY_MACRO_LATTICE.filter((m) => m.continent === "Asia");
   }
@@ -850,9 +881,7 @@ export function getLatticeForRegion(region) {
   if (norm.includes("america")) {
     return PLANETARY_MACRO_LATTICE.filter((m) => m.continent === "North America" || m.continent === "South America");
   }
-  if (norm.includes("africa") || norm.includes("oceania")) {
-    return PLANETARY_MACRO_LATTICE.filter((m) => m.continent === "Africa" || m.continent === "Oceania");
-  }
+
   return PLANETARY_MACRO_LATTICE;
 }
 
@@ -1189,15 +1218,18 @@ export async function generateShardAMRHeatGrid(region, options = {}) {
 }
 
 /**
- * Aggregates all 4 continental compute worker shards in parallel,
+ * Aggregates all 7 continental compute worker shards in parallel (10-Core Cluster),
  * falling back gracefully to local isolate evaluation if any shard is unreachable.
  */
 export async function aggregateDistributedShards(env = {}) {
   const shards = [
-    { name: "Asia-Pacific", binding: env.SHARD_ASIA, url: "https://floodlock-shard-asia.dakshdahore1995.workers.dev/api/mesh/shard" },
-    { name: "Europe-Mediterranean", binding: env.SHARD_EUROPE, url: "https://floodlock-shard-europe.dakshdahore1995.workers.dev/api/mesh/shard" },
-    { name: "Americas", binding: env.SHARD_AMERICAS, url: "https://floodlock-shard-americas.dakshdahore1995.workers.dev/api/mesh/shard" },
-    { name: "Africa-Oceania", binding: env.SHARD_AFRICA_OCEANIA, url: "https://floodlock-shard-africa-oceania.dakshdahore1995.workers.dev/api/mesh/shard" },
+    { name: "South-Central-Asia", region: "asia-south", binding: env.SHARD_ASIA_SOUTH || env.SHARD_ASIA, url: "https://floodlock-shard-asia-south.dakshdahore1995.workers.dev/api/mesh/shard" },
+    { name: "East-Southeast-Asia", region: "asia-east", binding: env.SHARD_ASIA_EAST || env.SHARD_ASIA, url: "https://floodlock-shard-asia-east.dakshdahore1995.workers.dev/api/mesh/shard" },
+    { name: "Western-Europe", region: "europe-west", binding: env.SHARD_EUROPE_WEST || env.SHARD_EUROPE, url: "https://floodlock-shard-europe-west.dakshdahore1995.workers.dev/api/mesh/shard" },
+    { name: "Mediterranean-Europe", region: "europe-med", binding: env.SHARD_EUROPE_MED || env.SHARD_EUROPE, url: "https://floodlock-shard-europe-med.dakshdahore1995.workers.dev/api/mesh/shard" },
+    { name: "North-America", region: "north-america", binding: env.SHARD_NORTH_AMERICA || env.SHARD_AMERICAS, url: "https://floodlock-shard-north-america.dakshdahore1995.workers.dev/api/mesh/shard" },
+    { name: "South-America", region: "south-america", binding: env.SHARD_SOUTH_AMERICA || env.SHARD_AMERICAS, url: "https://floodlock-shard-south-america.dakshdahore1995.workers.dev/api/mesh/shard" },
+    { name: "Africa-Oceania", region: "africa-oceania", binding: env.SHARD_AFRICA_OCEANIA, url: "https://floodlock-shard-africa-oceania.dakshdahore1995.workers.dev/api/mesh/shard" },
   ];
 
   const tStart = performance.now();
@@ -1245,6 +1277,7 @@ export async function aggregateDistributedShards(env = {}) {
   for (let i = 0; i < shardResults.length; i++) {
     const res = shardResults[i];
     const sName = shards[i].name;
+    const sRegion = shards[i].region;
     if (res.status === "fulfilled" && res.value?.data?.features) {
       activeShards++;
       const val = res.value;
@@ -1264,7 +1297,7 @@ export async function aggregateDistributedShards(env = {}) {
       });
     } else {
       // Local fallback execution for this shard
-      const fallbackData = await generateShardAMRHeatGrid(sName);
+      const fallbackData = await generateShardAMRHeatGrid(sRegion || sName);
       const meta = fallbackData.metadata || {};
       allFeatures.push(...fallbackData.features);
       totalPruned += (meta.pruned_macro_cells || 0);

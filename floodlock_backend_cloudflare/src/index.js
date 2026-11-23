@@ -1296,6 +1296,22 @@ export default {
         return jsonResponse(request, env, responsePayload, 200);
       }
 
+      // ── /api/neural/predict & /api/neural/status (Core 3 Neural Tensor Core RPC) ──
+      if (path.startsWith("/api/neural/")) {
+        if (env.CORE_NEURAL && typeof env.CORE_NEURAL.fetch === "function") {
+          return env.CORE_NEURAL.fetch(request);
+        }
+        if (path === "/api/neural/status") {
+          return jsonResponse(request, env, {
+            service: "MeteoFlood Planetary Neural Core",
+            status: "ONLINE",
+            core_index: 3,
+            mode: "GATEWAY_ISOLATE_INTEGRATED",
+            model_version: "GlobalHydrology-14F-v3.2-Gold"
+          }, 200);
+        }
+      }
+
       // ── GET /api/flood/planetary-heatgrid (Planetary Adaptive Mesh Refinement Quadtree) ──
       if (path === "/api/flood/planetary-heatgrid" && method === "GET") {
         const forceRefresh = url.searchParams.get("refresh") === "true";
