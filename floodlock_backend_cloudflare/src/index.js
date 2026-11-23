@@ -1482,7 +1482,7 @@ export default {
                   if (!qRes.allowed) {
                     return jsonResponse(request, env, { error: qRes.reason, message: "Daily plan forecast quota exhausted." }, 429);
                   }
-                  quotaStatus = { tier: uProf.plan, daily_remaining: qRes.daily_remaining };
+                  quotaStatus = { tier: uProf.plan, daily_remaining: qRes.daily_remaining, priority_lane: "PAID_GUARANTEED_VIP" };
                 } else if (env.SECURITY_STATE_DO) {
                   const rateLimitKey = `daily:${session.idh || session.sub}`;
                   const freeStub = env.SECURITY_STATE_DO.get(env.SECURITY_STATE_DO.idFromName(rateLimitKey));
@@ -1490,7 +1490,7 @@ export default {
                   if (!freeRl.allowed) {
                     return jsonResponse(request, env, { error: "DAILY_QUOTA_EXCEEDED", message: "Free daily quota reached." }, 429);
                   }
-                  quotaStatus = { tier: "free", daily_remaining: freeRl.remaining };
+                  quotaStatus = { tier: "free", daily_remaining: freeRl.remaining, priority_lane: "FREE_BEST_EFFORT" };
                 }
               } else if (env.SECURITY_STATE_DO) {
                 // Fallback if profile blob is missing/delayed in KV: enforce free 10/day quota on session.idh
@@ -1500,7 +1500,7 @@ export default {
                 if (!freeRl.allowed) {
                   return jsonResponse(request, env, { error: "DAILY_QUOTA_EXCEEDED", message: "Free daily quota reached." }, 429);
                 }
-                quotaStatus = { tier: "free", daily_remaining: freeRl.remaining };
+                quotaStatus = { tier: "free", daily_remaining: freeRl.remaining, priority_lane: "FREE_BEST_EFFORT" };
               }
             }
           } else if (env.SECURITY_STATE_DO) {
@@ -1512,10 +1512,10 @@ export default {
                 message: "Unauthenticated demo limit (150/day) reached. Authenticate to continue.",
               }, 429);
             }
-            quotaStatus = { tier: "public_demo", daily_remaining: demoRl.remaining };
+            quotaStatus = { tier: "public_demo", daily_remaining: demoRl.remaining, priority_lane: "FREE_BEST_EFFORT" };
           }
         } else {
-          quotaStatus = { tier: "public_ambient_stream", daily_remaining: "unlimited" };
+          quotaStatus = { tier: "public_ambient_stream", daily_remaining: "unlimited", priority_lane: "PUBLIC_STREAM" };
         }
 
         const scenario = sanitizeText(url.searchParams.get("scenario") || "", 32).toLowerCase();
@@ -1569,6 +1569,31 @@ export default {
           telem.tideSurge >= 3.0 ||
           forceReasoning;
 
+        const isPaidVip = Boolean(
+          (quotaStatus && (quotaStatus.tier === "pro" || quotaStatus.tier === "ultra" || quotaStatus.tier === "paid"))
+        );
+
+        // QoS Traffic Shedding: Under peak surge or when simulated, free best-effort queries shed
+        if (!isPaidVip && url.searchParams.get("simulate_traffic") === "true") {
+          return jsonResponse(request, env, {
+            success: false,
+            error: "HIGH_SERVER_TRAFFIC",
+            message: "Planetary compute grid is currently experiencing peak load prioritizing enterprise emergency monitors. Please try again in 30 seconds or upgrade to Pro/Ultra for guaranteed VIP execution.",
+            retry_after_seconds: 30,
+            vip_queue_available: true,
+            priority_tier: "FREE_BEST_EFFORT"
+          }, 429, {
+            "Retry-After": "30",
+            "X-Priority-Queue": "FREE_BEST_EFFORT",
+            "X-Shed-Reason": "PEAK_CONCURRENCY_SHED"
+          });
+        }
+
+        const qosHeaders = {
+          "X-Priority-Queue": isPaidVip ? "PAID_GUARANTEED_VIP" : "FREE_BEST_EFFORT",
+          "X-Shed-Protection": isPaidVip ? "ACTIVE" : "NONE",
+        };
+
         // Prevent custom what-if overrides from poisoning shared KV AI cache
         const tacticalReasoning = isThreat
           ? await runTacticalReasoning(env, telem, neuralPred, lat, lon, {
@@ -1590,7 +1615,7 @@ export default {
             tactical_reasoning: null,
             message: "Zero precipitation and nominal sea level detected. Basin dry.",
             timestamp: new Date().toISOString(),
-          });
+          }, 200, qosHeaders);
         }
 
         return jsonResponse(request, env, {
@@ -1604,7 +1629,7 @@ export default {
           dual_trigger_black_swan: isBlackSwan,
           quota: quotaStatus,
           tactical_reasoning: tacticalReasoning,
-        });
+        }, 200, qosHeaders);
       }
 
       // ── POST /api/billing/webhook ──

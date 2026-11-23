@@ -865,13 +865,11 @@ export async function generatePlanetaryAMRHeatGrid(options = {}) {
   const targetLattice = options.lattice || PLANETARY_MACRO_LATTICE;
   const liveTelemMap = await fetchLiveBatchMeteorology(targetLattice);
 
-  const features = [];
-  let prunedCount = 0;
-  let subdividedCount = 0;
-  let criticalRedCount = 0;
-  let elevatedWatchCount = 0;
-
-  for (const macro of targetLattice) {
+  // ────────────────────────────────────────────────────────────────────────
+  // DYNAMIC COMPOSITE PRIORITY WEIGHTING & QUEUE SCHEDULING:
+  // Red/high-risk zones are prioritized and computed FIRST in the queue.
+  // ────────────────────────────────────────────────────────────────────────
+  const candidateSectors = targetLattice.map((macro) => {
     const live = liveTelemMap.get(macro.id);
     const r0 = live ? live.r0 : macro.baseline_r0;
     const r48 = live ? live.r48 : macro.baseline_r48;
@@ -881,53 +879,44 @@ export async function generatePlanetaryAMRHeatGrid(options = {}) {
     const soilSat = live ? live.soilSat : macro.baseline_soil_sat;
     const tideSurge = live ? live.tideSurge : (macro.baseline_tide || 0.0);
 
-    // Compound Physical Screening Score:
-    // Weighted by water proximity and historical flood vulnerability
     const rawRisk = (r0 * 2.8 + r48 * 0.35 + cape * 0.012 + tideSurge * 18.0) * (0.55 + 0.45 * macro.water_proximity);
     const riskScore = Math.min(100, Math.max(5, Math.round(rawRisk * (0.8 + 0.2 * macro.historical_vulnerability))));
 
-    // ────────────────────────────────────────────────────────────────────────
-    // FAST O(1) PRUNING MECHANISM:
-    // If rainfall is zero/minimal, antecedent accumulation low, and no storm surge:
-    // Instantly mark as NOMINAL_CLEAR and emit coarse macro-box without recursion.
-    // ────────────────────────────────────────────────────────────────────────
-    if (r0 < 0.2 && r48 < 3.0 && tideSurge < 0.5) {
-      prunedCount++;
-      const poly = makePolygonFeature(macro.bounds, {
-        id: macro.id,
-        name: macro.name,
-        continent: macro.continent,
-        country: macro.country,
-        resolution_level: 0,
-        resolution_km: 350,
-        risk_score: riskScore,
-        threat_level: "NOMINAL",
-        r0_mm_hr: r0,
-        r48_mm: r48,
-        soil_saturation: soilSat,
-        tide_surge_m: tideSurge,
-        water_proximity: macro.water_proximity,
-        vulnerability: macro.historical_vulnerability,
-        status: "PRUNED_NOMINAL_CLEAR",
-        center: macro.center,
-      });
-      features.push(poly);
+    // Composite Priority Weighting Formula:
+    // W = Risk * 2.5 + WaterProx * 30 + Vulnerability * 25 + RainRate * 4.0 + Surge * 20
+    const compositePriorityWeight = Math.round(
+      (riskScore * 2.5) +
+      (macro.water_proximity * 30.0) +
+      (macro.historical_vulnerability * 25.0) +
+      (r0 * 4.0) +
+      (tideSurge * 20.0)
+    );
 
-      // Centroid heatmap point
-      features.push(makePointFeature(macro.center, {
-        weight: riskScore / 100,
-        risk_score: riskScore,
-        threat_level: "NOMINAL",
-        name: macro.name
-      }));
-      continue;
-    }
+    return {
+      macro,
+      live: { r0, r48, cape, dp, wind, soilSat, tideSurge },
+      riskScore,
+      compositePriorityWeight,
+    };
+  });
 
-    // ────────────────────────────────────────────────────────────────────────
-    // SUBDIVISION LEVEL 1 (Meso-Scale ~50-80km):
-    // Active rain bands or coastal surge detected. Subdivide into 4 quadrants.
-    // ────────────────────────────────────────────────────────────────────────
-    subdividedCount += 4;
+  // Sort queue: Highest priority (most RED / flood risk) computed first!
+  candidateSectors.sort((a, b) => b.compositePriorityWeight - a.compositePriorityWeight);
+
+  const redFeatures = [];
+  const amberFeatures = [];
+  const blueFeatures = [];
+
+  let prunedCount = 0;
+  let subdividedCount = 0;
+  let criticalRedCount = 0;
+  let elevatedWatchCount = 0;
+  let blueMesoCount = 0;
+
+  for (const item of candidateSectors) {
+    const { macro, live, riskScore, compositePriorityWeight } = item;
+    const { r0, r48, cape, dp, wind, soilSat, tideSurge } = live;
+
     const [minLon, minLat, maxLon, maxLat] = macro.bounds;
     const midLon = (minLon + maxLon) / 2;
     const midLat = (minLat + maxLat) / 2;
@@ -939,6 +928,66 @@ export async function generatePlanetaryAMRHeatGrid(options = {}) {
       { name: `${macro.name} (SE Quad)`, bounds: [midLon, minLat, maxLon, midLat], center: [(midLon + maxLon) / 2, (midLat + midLat) / 2], grad: 1.2 },
     ];
 
+    // ────────────────────────────────────────────────────────────────────────
+    // BLUE BOXES PROCESSING:
+    // If rainfall is minimal, antecedent accumulation low, and no storm surge:
+    // We subdivide the calm sector into 4 Level 1 meso-quadrants (~50-80km)
+    // and compute infiltration headroom (Ks - R0), soil moisture deficit,
+    // and drought-to-flash susceptibility rather than omitting or skipping!
+    // ────────────────────────────────────────────────────────────────────────
+    if (r0 < 0.2 && r48 < 3.0 && tideSurge < 0.5) {
+      prunedCount++;
+      subdividedCount += 4;
+      blueMesoCount += 4;
+
+      for (let qIdx = 0; qIdx < quadrants.length; qIdx++) {
+        const q = quadrants[qIdx];
+        const qSat = Math.min(1.0, Math.max(0.02, Math.round(soilSat * q.grad * 100) / 100));
+        const ksHeadroom = Math.round(Math.max(0.0, macro.ks_mm_hr - r0) * 10) / 10;
+        const droughtFlashIdx = Math.round((1.0 - qSat) * (macro.slope_deg / 10.0) * 100) / 100;
+        const qRisk = Math.max(5, Math.round(riskScore * q.grad));
+
+        blueFeatures.push(makePolygonFeature(q.bounds, {
+          id: `${macro.id}_q${qIdx}`,
+          name: `${q.name} [Meso Hydrological Sector]`,
+          continent: macro.continent,
+          country: macro.country,
+          resolution_level: 1,
+          resolution_km: 65,
+          risk_score: qRisk,
+          composite_priority_weight: Math.round(compositePriorityWeight * q.grad),
+          priority_rank: 3,
+          threat_level: "NOMINAL",
+          status: "NOMINAL_BLUE_PROCESSED",
+          r0_mm_hr: r0,
+          r48_mm: r48,
+          soil_saturation: qSat,
+          ks_infiltration_capacity_mm_hr: macro.ks_mm_hr,
+          infiltration_headroom_mm_hr: ksHeadroom,
+          drought_to_flash_index: droughtFlashIdx,
+          tide_surge_m: tideSurge,
+          water_proximity: macro.water_proximity,
+          vulnerability: macro.historical_vulnerability,
+          center: q.center,
+          parent_basin: macro.name,
+        }));
+
+        blueFeatures.push(makePointFeature(q.center, {
+          weight: Math.min(0.15, qRisk / 100),
+          risk_score: qRisk,
+          priority_rank: 3,
+          threat_level: "NOMINAL",
+          name: `${q.name} [Meso Baseline]`
+        }));
+      }
+      continue;
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // ACTIVE RAIN / SURGE SECTOR SUBDIVISION (Level 1 Meso-Scale ~50-80km):
+    // ────────────────────────────────────────────────────────────────────────
+    subdividedCount += 4;
+
     for (let qIdx = 0; qIdx < quadrants.length; qIdx++) {
       const q = quadrants[qIdx];
       const qR0 = Math.round(r0 * q.grad * 10) / 10;
@@ -947,10 +996,10 @@ export async function generatePlanetaryAMRHeatGrid(options = {}) {
 
       // ────────────────────────────────────────────────────────────────────────
       // DEEP SUBDIVISION LEVEL 2 & 3 ("THE RED HEAT BOXES" - 10km to 2km):
-      // If quadrant risk is high (Risk >= 48% or Rain >= 12mm/h), subdivide into
+      // If quadrant risk is high (Risk >= 48% or Rain >= 10mm/h), subdivide into
       // localized flash-flood micro-cells and run predict14F neural forward pass.
       // ────────────────────────────────────────────────────────────────────────
-      if (qRisk >= 48 || qR0 >= 12.0) {
+      if (qRisk >= 48 || qR0 >= 10.0) {
         criticalRedCount++;
         const [qMinLon, qMinLat, qMaxLon, qMaxLat] = q.bounds;
         const qMidLon = (qMinLon + qMaxLon) / 2;
@@ -996,8 +1045,8 @@ export async function generatePlanetaryAMRHeatGrid(options = {}) {
           if (threat === "CRITICAL_SURGE") criticalRedCount++;
           else elevatedWatchCount++;
 
-          // Emit High-Resolution Red Heat Bounding Box
-          features.push(makePolygonFeature(sb.bounds, {
+          // Emit High-Resolution Red Heat Bounding Box (Priority Rank 1)
+          redFeatures.push(makePolygonFeature(sb.bounds, {
             id: `${macro.id}_q${qIdx}_sub${sIdx}`,
             name: `${q.name} — ${sb.label}`,
             continent: macro.continent,
@@ -1005,6 +1054,8 @@ export async function generatePlanetaryAMRHeatGrid(options = {}) {
             resolution_level: 2,
             resolution_km: 12,
             risk_score: localRisk,
+            composite_priority_weight: Math.round(compositePriorityWeight * sb.rMult),
+            priority_rank: 1,
             threat_level: threat,
             r0_mm_hr: localR0,
             r48_mm: localR48,
@@ -1019,19 +1070,18 @@ export async function generatePlanetaryAMRHeatGrid(options = {}) {
           }));
 
           // High-weight Heatmap Point
-          features.push(makePointFeature(sb.center, {
+          redFeatures.push(makePointFeature(sb.center, {
             weight: localRisk / 100,
             risk_score: localRisk,
+            priority_rank: 1,
             threat_level: threat,
             name: `${q.name} — ${sb.label}`
           }));
         }
-      } else {
-        // Meso-scale box (Elevated or Watch)
-        const threat = qRisk >= 30 ? "ELEVATED_WATCH" : "NOMINAL";
-        if (threat === "ELEVATED_WATCH") elevatedWatchCount++;
-
-        features.push(makePolygonFeature(q.bounds, {
+      } else if (qRisk >= 25 || qR0 >= 1.5) {
+        // Meso-scale box (Elevated Watch - Priority Rank 2)
+        elevatedWatchCount++;
+        amberFeatures.push(makePolygonFeature(q.bounds, {
           id: `${macro.id}_q${qIdx}`,
           name: q.name,
           continent: macro.continent,
@@ -1039,7 +1089,9 @@ export async function generatePlanetaryAMRHeatGrid(options = {}) {
           resolution_level: 1,
           resolution_km: 65,
           risk_score: qRisk,
-          threat_level: threat,
+          composite_priority_weight: Math.round(compositePriorityWeight * q.grad),
+          priority_rank: 2,
+          threat_level: "ELEVATED_WATCH",
           r0_mm_hr: qR0,
           r48_mm: qR48,
           soil_saturation: soilSat,
@@ -1048,16 +1100,55 @@ export async function generatePlanetaryAMRHeatGrid(options = {}) {
           parent_basin: macro.name,
         }));
 
-        features.push(makePointFeature(q.center, {
+        amberFeatures.push(makePointFeature(q.center, {
           weight: qRisk / 100,
           risk_score: qRisk,
-          threat_level: threat,
+          priority_rank: 2,
+          threat_level: "ELEVATED_WATCH",
+          name: q.name
+        }));
+      } else {
+        // Meso-scale box (Nominal Blue Processed - Priority Rank 3)
+        blueMesoCount++;
+        const ksHeadroom = Math.round(Math.max(0.0, macro.ks_mm_hr - qR0) * 10) / 10;
+        blueFeatures.push(makePolygonFeature(q.bounds, {
+          id: `${macro.id}_q${qIdx}`,
+          name: `${q.name} [Meso Hydrological Sector]`,
+          continent: macro.continent,
+          country: macro.country,
+          resolution_level: 1,
+          resolution_km: 65,
+          risk_score: qRisk,
+          composite_priority_weight: Math.round(compositePriorityWeight * q.grad),
+          priority_rank: 3,
+          threat_level: "NOMINAL",
+          status: "NOMINAL_BLUE_PROCESSED",
+          r0_mm_hr: qR0,
+          r48_mm: qR48,
+          soil_saturation: soilSat,
+          ks_infiltration_capacity_mm_hr: macro.ks_mm_hr,
+          infiltration_headroom_mm_hr: ksHeadroom,
+          tide_surge_m: tideSurge,
+          center: q.center,
+          parent_basin: macro.name,
+        }));
+
+        blueFeatures.push(makePointFeature(q.center, {
+          weight: Math.min(0.2, qRisk / 100),
+          risk_score: qRisk,
+          priority_rank: 3,
+          threat_level: "NOMINAL",
           name: q.name
         }));
       }
     }
   }
 
+  // ────────────────────────────────────────────────────────────────────────
+  // STRICT QUEUE REORDERING:
+  // RED hotboxes placed at indices 0..N, followed by AMBER, followed by BLUE.
+  // ────────────────────────────────────────────────────────────────────────
+  const features = [...redFeatures, ...amberFeatures, ...blueFeatures];
   const durationMs = Math.round((performance.now() - tStart) * 10) / 10;
 
   return {
@@ -1068,12 +1159,14 @@ export async function generatePlanetaryAMRHeatGrid(options = {}) {
       version: "3.2.0-AMR-Gold",
       shard_region: options.shardRegion || "GLOBAL",
       algorithm: "Hierarchical Adaptive Mesh Refinement (Saint-Venant coupled with 14F Neural Inference)",
+      queue_execution_order: "RED_HOTSPOTS_FIRST_THEN_AMBER_THEN_BLUE_MESO",
       planetary_macro_sectors: targetLattice.length,
       pruned_macro_cells: prunedCount,
       subdivided_quadtree_cells: subdividedCount,
       total_active_features: features.length,
       critical_red_clusters: criticalRedCount,
       elevated_watch_clusters: elevatedWatchCount,
+      nominal_blue_processed_clusters: blueMesoCount,
       compute_latency_ms: durationMs,
       cached_at: new Date().toISOString(),
       cache_ttl_seconds: 3600,
@@ -1145,6 +1238,7 @@ export async function aggregateDistributedShards(env = {}) {
   let totalSubdivided = 0;
   let totalRed = 0;
   let totalWatch = 0;
+  let totalBlue = 0;
   let activeShards = 0;
   const shardTelemetry = [];
 
@@ -1160,6 +1254,7 @@ export async function aggregateDistributedShards(env = {}) {
       totalSubdivided += (meta.subdivided_quadtree_cells || 0);
       totalRed += (meta.critical_red_clusters || 0);
       totalWatch += (meta.elevated_watch_clusters || 0);
+      totalBlue += (meta.nominal_blue_processed_clusters || 0);
       shardTelemetry.push({
         shard: sName,
         status: "ONLINE",
@@ -1176,6 +1271,7 @@ export async function aggregateDistributedShards(env = {}) {
       totalSubdivided += (meta.subdivided_quadtree_cells || 0);
       totalRed += (meta.critical_red_clusters || 0);
       totalWatch += (meta.elevated_watch_clusters || 0);
+      totalBlue += (meta.nominal_blue_processed_clusters || 0);
       shardTelemetry.push({
         shard: sName,
         status: "LOCAL_ISOLATE_FALLBACK",
@@ -1186,6 +1282,14 @@ export async function aggregateDistributedShards(env = {}) {
     }
   }
 
+  // Strictly sort aggregated features: Priority Rank 1 (Red) first, Amber second, Blue third
+  allFeatures.sort((a, b) => {
+    const pA = a.properties?.priority_rank ?? (a.properties?.is_red_hotspot ? 1 : (a.properties?.threat_level === "ELEVATED_WATCH" ? 2 : 3));
+    const pB = b.properties?.priority_rank ?? (b.properties?.is_red_hotspot ? 1 : (b.properties?.threat_level === "ELEVATED_WATCH" ? 2 : 3));
+    if (pA !== pB) return pA - pB;
+    return (b.properties?.risk_score ?? 0) - (a.properties?.risk_score ?? 0);
+  });
+
   const durationMs = Math.round((performance.now() - tStart) * 10) / 10;
 
   return {
@@ -1195,6 +1299,7 @@ export async function aggregateDistributedShards(env = {}) {
       architecture: "Parallel Sharded Edge Isolates (Cloudflare Workers V8)",
       gateway_status: "ONLINE",
       version: "3.2.0-AMR-DistributedMesh",
+      queue_execution_order: "RED_HOTSPOTS_FIRST_THEN_AMBER_THEN_BLUE_MESO",
       active_shards_reporting: activeShards,
       total_shards: shards.length,
       shards_telemetry: shardTelemetry,
@@ -1204,6 +1309,7 @@ export async function aggregateDistributedShards(env = {}) {
       total_active_features: allFeatures.length,
       critical_red_clusters: totalRed,
       elevated_watch_clusters: totalWatch,
+      nominal_blue_processed_clusters: totalBlue,
       aggregate_latency_ms: durationMs,
       cached_at: new Date().toISOString(),
       cache_ttl_seconds: 3600,

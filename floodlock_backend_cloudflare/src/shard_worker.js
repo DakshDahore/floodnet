@@ -61,3 +61,4 @@ export default {
     return new Response(JSON.stringify({ error: "NOT_FOUND", path }), { status: 404, headers: corsHeaders });
   }
 };
+
