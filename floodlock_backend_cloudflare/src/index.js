@@ -324,23 +324,32 @@ async function fetchBasinFloodTelemetry(lat, lon, pastDays = 60, forecastDays = 
 async function dispatchUserOtp(env, recipient, otpCode) {
   // 1. Primary Priority: EmailJS via connected Gmail (Zero domain verification, sends to any recipient)
   const emailjsServiceId = env.EMAILJS_SERVICE_ID || "service_2s4fukw";
-  const emailjsPublicKey = env.EMAILJS_PUBLIC_KEY;
-  const emailjsTemplateId = env.EMAILJS_OTP_TEMPLATE_ID || env.EMAILJS_TEMPLATE_ID || "template_otp";
+  const emailjsPublicKey = env.EMAILJS_PUBLIC_KEY || "JyA8ccT87iU8JnkPi";
+  const emailjsTemplateId = env.EMAILJS_OTP_TEMPLATE_ID || env.EMAILJS_TEMPLATE_ID || "template_spefc1e";
 
   if (emailjsServiceId && emailjsPublicKey && emailjsPublicKey !== "user_8yw2mtw") {
     try {
       const emailjsRes = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Origin": "https://metoflood.netlify.app",
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        },
         body: JSON.stringify({
           service_id: emailjsServiceId,
           template_id: emailjsTemplateId,
           user_id: emailjsPublicKey,
           accessToken: env.EMAILJS_PRIVATE_KEY || undefined,
           template_params: {
+            email: recipient,
             to_email: recipient,
             recipient: recipient,
+            passcode: otpCode,
             otp_code: otpCode,
+            code: otpCode,
+            time: "5 minutes",
+            company_name: "MeteoFlood",
             message: `Your MeteoFlood OTP verification code is ${otpCode}. It expires in 5 minutes.`,
           },
         }),
