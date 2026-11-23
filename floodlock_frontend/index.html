@@ -3339,7 +3339,7 @@ print(response.json())</code></pre>
                 failText = `${failText} (${res.data.detail})`;
               }
             }
-            if (status) status.innerHTML = `<span style="color:#ef4444;">Google Sign-In failed: ${failText}</span>`;
+            if (status) status.innerHTML = `<span style="color:#ef4444;">${oauthProvider === 'github' ? 'GitHub' : 'Google'} Sign-In failed: ${failText}</span>`;
             history.replaceState(null, '', window.location.pathname);
           }
         }).catch(err => {
