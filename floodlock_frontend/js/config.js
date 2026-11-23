@@ -35,6 +35,7 @@ const FLOODLOCK_ENDPOINTS = {
   ROOT: "/",
   FORECAST: "/api/forecast",
   LIVE_MUMBAI: "/api/live-mumbai",
+  FLOOD_PLANETARY_HEATGRID: "/api/flood/planetary-heatgrid",
   FLOOD_ACTIVE: "/api/flood/active",
   FLOOD_TELEMETRY: "/api/flood/telemetry",
   FLOOD_RADIUS_CHECK: "/api/flood/radius-check",

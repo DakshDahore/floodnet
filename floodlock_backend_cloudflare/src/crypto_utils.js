@@ -211,7 +211,7 @@ export function sanitizeText(str, maxLen = 256) {
 export function containsMaliciousPayload(str) {
   if (typeof str !== "string") return false;
   const badPatterns = [
-    /<script/i, /javascript:/i, /on\w+\s*=/i, /<iframe/i, /<svg/i, /<img/i,
+    /<script/i, /javascript:/i, /\bon[a-z]+\s*=/i, /<iframe/i, /<svg/i, /<img/i,
     /union\s+(all\s+)?select/i, /select\s+.+\s+from/i, /insert\s+into/i,
     /drop\s+table/i, /or\s+['"]?1['"]?\s*=\s*['"]?1/i, /waitfor\s+delay/i,
     /sleep\s*\(/i, /benchmark\s*\(/i, /--/, /\/\*/, /\.\.(\/|\\)/,

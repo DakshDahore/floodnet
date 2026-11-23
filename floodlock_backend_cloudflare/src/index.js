@@ -20,6 +20,7 @@
  */
 
 import { WEIGHTS_14F } from "./weights_14f.js";
+import { generatePlanetaryAMRHeatGrid, PLANETARY_MACRO_LATTICE } from "./planetary_grid.js";
 import {
   deriveDomainSecret,
   hmacSha256Hex,
@@ -623,6 +624,7 @@ export default {
           edge_mesh: "Cloudflare V8 Isolates + Sharded SQLite Durable Objects",
           endpoints: {
             health: "/health",
+            flood_planetary_heatgrid: "/api/flood/planetary-heatgrid",
             flood_active: "/api/flood/active",
             flood_telemetry: "/api/flood/telemetry?lat=19.21&lon=73.10&past_days=60&forecast_days=30",
             flood_radius_check: "/api/flood/radius-check?lat=19.076&lon=72.877&radius_km=150",
@@ -1294,6 +1296,43 @@ export default {
         return jsonResponse(request, env, responsePayload, 200);
       }
 
+      // ── GET /api/flood/planetary-heatgrid (Planetary Adaptive Mesh Refinement Quadtree) ──
+      if (path === "/api/flood/planetary-heatgrid" && method === "GET") {
+        const forceRefresh = url.searchParams.get("refresh") === "true";
+        let cached = null;
+        if (!forceRefresh && env.FLOODLOCK_KV) {
+          try {
+            const raw = await env.FLOODLOCK_KV.get("flood:planetary_quadtree_heatgrid_v1");
+            if (raw) cached = JSON.parse(raw);
+          } catch {}
+        }
+
+        if (cached && cached.metadata && cached.metadata.cached_at) {
+          const ageMs = Date.now() - new Date(cached.metadata.cached_at).getTime();
+          if (ageMs < 3600000) {
+            cached.metadata.cache_age_seconds = Math.round(ageMs / 1000);
+            cached.metadata.cache_ttl_remaining = Math.max(0, 3600 - Math.round(ageMs / 1000));
+            return jsonResponse(request, env, cached, 200, {
+              "Cache-Control": "public, max-age=300",
+              "X-Cache-Status": "HIT_KV_EDGE",
+            });
+          }
+        }
+
+        const freshGrid = await generatePlanetaryAMRHeatGrid();
+
+        if (env.FLOODLOCK_KV) {
+          try {
+            await env.FLOODLOCK_KV.put("flood:planetary_quadtree_heatgrid_v1", JSON.stringify(freshGrid), { expirationTtl: 3600 });
+          } catch {}
+        }
+
+        return jsonResponse(request, env, freshGrid, 200, {
+          "Cache-Control": "public, max-age=300",
+          "X-Cache-Status": "MISS_RECOMPUTED",
+        });
+      }
+
       // ── GET /api/flood/telemetry?lat=X&lon=Y&past_days=60&forecast_days=30 ──
       if (path === "/api/flood/telemetry" && method === "GET") {
         const lat = parseFloat(url.searchParams.get("lat") ?? "19.21");
@@ -1466,11 +1505,11 @@ export default {
             }
           } else if (env.SECURITY_STATE_DO) {
             const demoStub = env.SECURITY_STATE_DO.get(env.SECURITY_STATE_DO.idFromName(`demo_day:${clientIp}`));
-            const demoRl = await demoStub.checkRateLimit(`demo_day:${clientIp}`, 10, 86400000);
+            const demoRl = await demoStub.checkRateLimit(`demo_day:${clientIp}`, 150, 86400000);
             if (!demoRl.allowed) {
               return jsonResponse(request, env, {
                 error: "DEMO_QUOTA_EXCEEDED",
-                message: "Unauthenticated demo limit (10/day) reached. Authenticate to continue.",
+                message: "Unauthenticated demo limit (150/day) reached. Authenticate to continue.",
               }, 429);
             }
             quotaStatus = { tier: "public_demo", daily_remaining: demoRl.remaining };
@@ -2234,6 +2273,16 @@ ${sanitizeText(message, 2000)}
         error: "INTERNAL_EDGE_ERROR",
         message: "An internal error occurred on the edge gateway.",
       }, 500);
+    }
+  },
+  async scheduled(event, env, ctx) {
+    try {
+      const freshGrid = await generatePlanetaryAMRHeatGrid();
+      if (env.FLOODLOCK_KV) {
+        await env.FLOODLOCK_KV.put("flood:planetary_quadtree_heatgrid_v1", JSON.stringify(freshGrid), { expirationTtl: 3600 });
+      }
+    } catch (err) {
+      console.error("Scheduled AMR Grid sync error:", err);
     }
   },
 };

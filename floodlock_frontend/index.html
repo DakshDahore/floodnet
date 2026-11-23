@@ -850,6 +850,34 @@ print("════════════════════════�
       <!-- Geolocation Flood Perimeter Alert Strip -->
       <div id="userRadiusAlert" style="display: none; margin-bottom: 1.5rem;"></div>
 
+      <!-- Planetary AMR Quadtree & Heat Grid Mode Control Strip -->
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem; background: rgba(18, 13, 9, 0.75); border: 1px solid var(--c-card-border); padding: 0.65rem 1rem; border-radius: 12px;">
+        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+          <span style="font-family: var(--font-mono); font-size: 0.72rem; color: #38bdf8; font-weight: 700; text-transform: uppercase;">
+            🌐 PLANETARY COVERAGE:
+          </span>
+          <button id="btnToggleQuadtree" onclick="toggleLayerVisibility('planetary-quadtree', this)" class="radius-pill active" style="font-size: 0.75rem;">
+            ⬛ AMR Quadtree Grid
+          </button>
+          <button id="btnToggleHeatmap" onclick="toggleLayerVisibility('planetary-heat', this)" class="radius-pill active" style="font-size: 0.75rem;">
+            🔥 Live Rain/Surge Heatmap
+          </button>
+          <button id="btnToggleBasins" onclick="toggleLayerVisibility('active-floods', this)" class="radius-pill active" style="font-size: 0.75rem;">
+            📍 Monitored Basins
+          </button>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 0.75rem; font-family: var(--font-mono); font-size: 0.72rem;">
+          <span id="planetaryMeshBadge" style="color: #10b981; display: flex; align-items: center; gap: 0.35rem;">
+            <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
+            <span id="planetaryMeshStatus">Earth Grid: Initializing...</span>
+          </span>
+          <button onclick="refreshPlanetaryGrid()" class="btn-water" style="font-size: 0.7rem; padding: 0.25rem 0.6rem;" title="Force refresh live planetary weather grid">
+            🔄 Sync Now
+          </button>
+        </div>
+      </div>
+
       <!-- MapLibre Radar Canvas -->
       <div class="radar-deck-container">
         <div id="map"></div>
@@ -2245,12 +2273,234 @@ print(response.json())</code></pre>
         });
 
         mapInstance.on('load', () => {
+          loadPlanetaryAMRHeatGrid();
           loadActivePlanetaryFloods();
           loadBasinTelemetry(19.21, 73.10, "Ulhas-Mithi Coastal Basin (Mumbai)");
         });
       } catch (err) {
         console.error('Map init:', err);
       }
+    }
+
+    async function loadPlanetaryAMRHeatGrid(forceRefresh = false) {
+      const statusEl = document.getElementById('planetaryMeshStatus');
+      if (statusEl) statusEl.textContent = 'Syncing Earth Mesh...';
+      try {
+        const refreshParam = forceRefresh ? '?refresh=true' : '';
+        const url = `${window.FloodConfig.getBaseUrl()}/api/flood/planetary-heatgrid${refreshParam}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (!res.ok || !data.features) {
+          if (statusEl) statusEl.textContent = 'Earth Grid: Edge Offline';
+          return;
+        }
+
+        const polygons = data.features.filter(f => f.geometry && f.geometry.type === 'Polygon');
+        const points = data.features.filter(f => f.geometry && f.geometry.type === 'Point');
+
+        const polyGeoJson = { type: 'FeatureCollection', features: polygons };
+        const pointGeoJson = { type: 'FeatureCollection', features: points };
+
+        // 1. Source & Layers: AMR Quadtree Polygons
+        if (mapInstance.getSource('planetary-quadtree-src')) {
+          mapInstance.getSource('planetary-quadtree-src').setData(polyGeoJson);
+        } else {
+          mapInstance.addSource('planetary-quadtree-src', {
+            type: 'geojson',
+            data: polyGeoJson
+          });
+
+          // Fill Layer for Quadtree Cells
+          mapInstance.addLayer({
+            id: 'planetary-quadtree-fill',
+            type: 'fill',
+            source: 'planetary-quadtree-src',
+            paint: {
+              'fill-color': [
+                'match',
+                ['get', 'threat_level'],
+                'CRITICAL_SURGE', 'rgba(239, 68, 68, 0.28)',
+                'ELEVATED_WATCH', 'rgba(245, 158, 11, 0.16)',
+                'rgba(16, 185, 129, 0.04)'
+              ],
+              'fill-opacity': 0.85
+            }
+          });
+
+          // Stroke Layer for Bounding Box Borders
+          mapInstance.addLayer({
+            id: 'planetary-quadtree-stroke',
+            type: 'line',
+            source: 'planetary-quadtree-src',
+            paint: {
+              'line-color': [
+                'match',
+                ['get', 'threat_level'],
+                'CRITICAL_SURGE', '#ef4444',
+                'ELEVATED_WATCH', '#f59e0b',
+                'rgba(16, 185, 129, 0.35)'
+              ],
+              'line-width': [
+                'match',
+                ['get', 'threat_level'],
+                'CRITICAL_SURGE', 2.0,
+                'ELEVATED_WATCH', 1.2,
+                0.6
+              ],
+              'line-opacity': 0.85
+            }
+          });
+
+          // Click on any Quadtree Box anywhere on Earth
+          mapInstance.on('click', 'planetary-quadtree-fill', async (e) => {
+            const f = e.features[0];
+            if (!f) return;
+            const p = f.properties;
+            const clickCoords = e.lngLat;
+            const center = p.center ? (typeof p.center === 'string' ? JSON.parse(p.center) : p.center) : [clickCoords.lng, clickCoords.lat];
+            const depthTraj = p.depth_trajectory_cm ? (typeof p.depth_trajectory_cm === 'string' ? JSON.parse(p.depth_trajectory_cm) : p.depth_trajectory_cm) : {};
+
+            const popup = new maplibregl.Popup({ offset: 12, closeButton: true })
+              .setLngLat(center)
+              .setHTML(`
+                <div style="font-family:sans-serif;color:#120d09;padding:6px 8px;min-width:230px;">
+                  <div style="font-weight:700;font-size:13px;margin-bottom:2px;">${p.name}</div>
+                  <div style="font-size:10px;color:#666;font-family:monospace;">Level ${p.resolution_level || 0} AMR Grid • ${p.resolution_km || 50}km Tile</div>
+                  <div style="font-size:11px;color:#333;margin-top:3px;">Live Rain: <b>${p.r0_mm_hr || 0} mm/h</b> (48h: ${p.r48_mm || 0} mm)</div>
+                  <div style="font-size:11px;color:${p.threat_level === 'CRITICAL_SURGE' ? '#dc2626' : (p.threat_level === 'ELEVATED_WATCH' ? '#d97706' : '#16a34a')};font-weight:700;margin-top:2px;">
+                    Risk: ${p.risk_score}% • Threat: ${p.threat_level}
+                  </div>
+                  ${depthTraj.h1 ? `<div style="font-size:10px;color:#0284c7;margin-top:2px;">+1h Neural Depth: <b>${depthTraj.h1} cm</b> | Q: <b>${p.runoff_q_m3s || 0} m³/s</b></div>` : ''}
+                  <div id="popupAiContent" style="margin-top:5px;padding-top:5px;border-top:1px solid rgba(0,0,0,0.12);font-size:10px;color:#0284c7;">
+                    ⏳ Running In-Worker Neural Forward Pass & Groq LPU Reasoning...
+                  </div>
+                </div>
+              `)
+              .addTo(mapInstance);
+
+            loadBasinTelemetry(center[1], center[0], p.name);
+            await loadTacticalForecast(center[1], center[0], p.name, p.id, p.threat_level, popup);
+          });
+
+          mapInstance.on('mouseenter', 'planetary-quadtree-fill', () => {
+            mapInstance.getCanvas().style.cursor = 'pointer';
+          });
+          mapInstance.on('mouseleave', 'planetary-quadtree-fill', () => {
+            mapInstance.getCanvas().style.cursor = '';
+          });
+        }
+
+        // 2. Source & Layers: Heatmap Points
+        if (mapInstance.getSource('planetary-heat-src')) {
+          mapInstance.getSource('planetary-heat-src').setData(pointGeoJson);
+        } else {
+          mapInstance.addSource('planetary-heat-src', {
+            type: 'geojson',
+            data: pointGeoJson
+          });
+
+          // WebGL Heatmap Layer
+          mapInstance.addLayer({
+            id: 'planetary-heatmap',
+            type: 'heatmap',
+            source: 'planetary-heat-src',
+            maxzoom: 15,
+            paint: {
+              'heatmap-weight': ['get', 'weight'],
+              'heatmap-intensity': [
+                'interpolate', ['linear'], ['zoom'],
+                0, 0.7,
+                4, 1.4,
+                9, 2.5
+              ],
+              'heatmap-color': [
+                'interpolate', ['linear'], ['heatmap-density'],
+                0.0, 'rgba(0,0,0,0)',
+                0.15, 'rgba(16, 185, 129, 0.35)',
+                0.35, 'rgba(245, 158, 11, 0.55)',
+                0.65, 'rgba(239, 68, 68, 0.85)',
+                1.0, 'rgba(168, 85, 247, 0.95)'
+              ],
+              'heatmap-radius': [
+                'interpolate', ['linear'], ['zoom'],
+                0, 8,
+                3, 22,
+                7, 45,
+                12, 70
+              ],
+              'heatmap-opacity': 0.75
+            }
+          }, 'planetary-quadtree-stroke');
+
+          // Pulsing Hotspot Core Dots on Critical Red Clusters
+          mapInstance.addLayer({
+            id: 'planetary-red-hotspots',
+            type: 'circle',
+            source: 'planetary-heat-src',
+            filter: ['==', ['get', 'threat_level'], 'CRITICAL_SURGE'],
+            paint: {
+              'circle-radius': ['interpolate', ['linear'], ['zoom'], 2, 4, 8, 9],
+              'circle-color': '#ef4444',
+              'circle-opacity': 0.9,
+              'circle-stroke-width': 1.5,
+              'circle-stroke-color': '#ffffff'
+            }
+          });
+
+          mapInstance.on('click', 'planetary-red-hotspots', async (e) => {
+            const f = e.features[0];
+            if (!f) return;
+            const p = f.properties;
+            const coords = f.geometry.coordinates;
+            const popup = new maplibregl.Popup({ offset: 12, closeButton: true })
+              .setLngLat(coords)
+              .setHTML(`
+                <div style="font-family:sans-serif;color:#120d09;padding:6px 8px;min-width:210px;">
+                  <div style="font-weight:700;font-size:13px;margin-bottom:2px;">🚨 ${p.name || 'Critical Hotspot'}</div>
+                  <div style="font-size:11px;color:#dc2626;font-weight:700;">Critical Inundation Risk: ${Math.round((p.weight || 0.85)*100)}%</div>
+                  <div id="popupAiContent" style="margin-top:5px;padding-top:5px;border-top:1px solid rgba(0,0,0,0.12);font-size:10px;color:#0284c7;">
+                    ⏳ Running In-Worker Neural Forward Pass & Groq LPU Reasoning...
+                  </div>
+                </div>
+              `)
+              .addTo(mapInstance);
+
+            loadBasinTelemetry(coords[1], coords[0], p.name || 'Critical Hotspot');
+            await loadTacticalForecast(coords[1], coords[0], p.name || 'Critical Hotspot', 'hotspot', 'CRITICAL_SURGE', popup);
+          });
+        }
+
+        // Update Status Badge
+        const meta = data.metadata || {};
+        if (statusEl) {
+          statusEl.textContent = `Earth Grid: ${meta.total_active_features || data.features.length} cells (${meta.critical_red_clusters || 0} red clusters)`;
+        }
+      } catch (err) {
+        console.error('Planetary AMR Heat Grid load error:', err);
+        if (statusEl) statusEl.textContent = 'Earth Grid: Loaded (Cached)';
+      }
+    }
+
+    function toggleLayerVisibility(layerGroup, btn) {
+      if (!mapInstance) return;
+      const isActive = btn.classList.contains('active');
+      const targetVisibility = isActive ? 'none' : 'visible';
+      btn.classList.toggle('active', !isActive);
+
+      if (layerGroup === 'planetary-quadtree') {
+        if (mapInstance.getLayer('planetary-quadtree-fill')) mapInstance.setLayoutProperty('planetary-quadtree-fill', 'visibility', targetVisibility);
+        if (mapInstance.getLayer('planetary-quadtree-stroke')) mapInstance.setLayoutProperty('planetary-quadtree-stroke', 'visibility', targetVisibility);
+      } else if (layerGroup === 'planetary-heat') {
+        if (mapInstance.getLayer('planetary-heatmap')) mapInstance.setLayoutProperty('planetary-heatmap', 'visibility', targetVisibility);
+        if (mapInstance.getLayer('planetary-red-hotspots')) mapInstance.setLayoutProperty('planetary-red-hotspots', 'visibility', targetVisibility);
+      } else if (layerGroup === 'active-floods') {
+        if (mapInstance.getLayer('active-floods-halo')) mapInstance.setLayoutProperty('active-floods-halo', 'visibility', targetVisibility);
+        if (mapInstance.getLayer('active-floods-core')) mapInstance.setLayoutProperty('active-floods-core', 'visibility', targetVisibility);
+      }
+    }
+
+    function refreshPlanetaryGrid() {
+      loadPlanetaryAMRHeatGrid(true);
     }
 
     async function loadActivePlanetaryFloods() {
