@@ -993,7 +993,14 @@ export default {
             if (!tokenRes.ok) {
               const errTxt = await tokenRes.text();
               console.error("Google token exchange error:", errTxt);
-              return jsonResponse(request, env, { error: "TOKEN_EXCHANGE_FAILED", message: "Google token exchange failed.", detail: errTxt }, 400);
+              let desc = "";
+              try {
+                const parsed = JSON.parse(errTxt);
+                desc = parsed.error_description || parsed.error || errTxt;
+              } catch {
+                desc = errTxt;
+              }
+              return jsonResponse(request, env, { error: "TOKEN_EXCHANGE_FAILED", message: `Google token exchange failed: ${desc}`, detail: errTxt }, 400);
             }
             const tokenData = await tokenRes.json();
             const userRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
@@ -1028,11 +1035,14 @@ export default {
               }),
             });
             if (!tokenRes.ok) {
-              return jsonResponse(request, env, { error: "TOKEN_EXCHANGE_FAILED", message: "GitHub token exchange failed." }, 400);
+              const errTxt = await tokenRes.text();
+              console.error("GitHub token exchange error:", errTxt);
+              return jsonResponse(request, env, { error: "TOKEN_EXCHANGE_FAILED", message: "GitHub token exchange failed.", detail: errTxt }, 400);
             }
             const tokenData = await tokenRes.json();
             if (!tokenData.access_token) {
-              return jsonResponse(request, env, { error: "TOKEN_EXCHANGE_FAILED", message: "No access token from GitHub." }, 400);
+              const errDetail = tokenData.error_description || tokenData.error || JSON.stringify(tokenData);
+              return jsonResponse(request, env, { error: "TOKEN_EXCHANGE_FAILED", message: `No access token from GitHub: ${errDetail}`, detail: tokenData }, 400);
             }
 
             try {

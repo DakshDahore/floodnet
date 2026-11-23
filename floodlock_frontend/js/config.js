@@ -90,6 +90,11 @@ class ConfigManager {
     for (const key of Object.keys(DEFAULT_CONFIG)) {
       const stored = localStorage.getItem(`FLOODLOCK_${key}`);
       if (stored !== null && stored !== "") {
+        // Automatically purge any stale rate-limited worker endpoints from previous sessions
+        if (typeof stored === "string" && stored.includes("dakshdahore1995")) {
+          localStorage.removeItem(`FLOODLOCK_${key}`);
+          continue;
+        }
         this.config[key] = stored;
       }
     }
