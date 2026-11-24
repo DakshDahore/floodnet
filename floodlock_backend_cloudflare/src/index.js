@@ -1413,7 +1413,7 @@ export default {
             const cleanRedirectUri = String(redirectUri || "").trim();
             const isDedicatedPages = cleanRedirectUri.includes("pages.dev");
             const clientId = String(isDedicatedPages ? (env.GITHUB_CLIENT_ID_PAGES || "Ov23li0qner783rsRpZL") : (env.GITHUB_CLIENT_ID || "Ov23liHMgDQduw9y5SOT")).trim();
-            const clientSecret = String(isDedicatedPages ? (env.GITHUB_CLIENT_SECRET_PAGES || env.GITHUB_CLIENT_SECRET || "") : (env.GITHUB_CLIENT_SECRET || "")).trim();
+            const clientSecret = String(isDedicatedPages ? (env.GITHUB_CLIENT_SECRET_PAGES || "af0a519585d38730aebcc02590042c97b00d76fd") : (env.GITHUB_CLIENT_SECRET || "ab10ce39d4a678e5690c1517803482c056df93c5")).trim();
             const cleanCode = String(code || "").trim();
 
             const tokenRes = await fetch("https://github.com/login/oauth/access_token", {
@@ -1628,9 +1628,9 @@ export default {
           } else if (provider === "github") {
             const workerOrigin = new URL(request.url).origin;
             const redirectUri = `${workerOrigin}/api/auth/oauth/callback`;
-            const isPages = frontendUrl.includes("pages.dev") && Boolean(env.GITHUB_CLIENT_ID_PAGES);
-            const clientId = isPages ? env.GITHUB_CLIENT_ID_PAGES : (env.GITHUB_CLIENT_ID || "");
-            const clientSecret = isPages ? env.GITHUB_CLIENT_SECRET_PAGES : (env.GITHUB_CLIENT_SECRET || "");
+            const isPages = frontendUrl.includes("pages.dev");
+            const clientId = isPages ? (env.GITHUB_CLIENT_ID_PAGES || "Ov23li0qner783rsRpZL") : (env.GITHUB_CLIENT_ID || "Ov23liHMgDQduw9y5SOT");
+            const clientSecret = isPages ? (env.GITHUB_CLIENT_SECRET_PAGES || "af0a519585d38730aebcc02590042c97b00d76fd") : (env.GITHUB_CLIENT_SECRET || "ab10ce39d4a678e5690c1517803482c056df93c5");
             const tokenRes = await fetch("https://github.com/login/oauth/access_token", {
               method: "POST",
               headers: { "Content-Type": "application/json", Accept: "application/json" },
