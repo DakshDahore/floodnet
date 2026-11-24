@@ -67,3 +67,4 @@ class ForecastResult:
             model_version=str(data.get("model_version", "70B-Ensemble-v2.4")),
             raw=data
         )
+

@@ -57,3 +57,4 @@ print(f"Physical Floor Triggered: {forecast.safety_floor_triggered}")
 
 ## 🛡️ License
 MIT License. © 2026 Lantern Mechatronics / Daksh Dahore.
+

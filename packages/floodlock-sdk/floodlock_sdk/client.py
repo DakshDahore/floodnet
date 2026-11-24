@@ -92,3 +92,4 @@ class FloodLockClient:
 
 # Alias for brand symmetry
 MeteoFloodClient = FloodLockClient
+

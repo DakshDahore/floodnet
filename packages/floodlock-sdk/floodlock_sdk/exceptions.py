@@ -18,3 +18,4 @@ class AuthenticationError(APIError):
 class RateLimitError(APIError):
     """Raised when daily quota or rate limit is exhausted."""
     pass
+
