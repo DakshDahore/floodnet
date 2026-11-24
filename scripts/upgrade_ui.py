@@ -976,3 +976,4 @@ with open(INDEX_HTML_PATH, 'w', encoding='utf-8') as f:
     f.write(html)
 
 print("Upgrade complete!")
+
