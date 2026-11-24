@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "floodlock-sdk"
+version = "0.1.0"
+description = "Official Python client for MeteoFlood and FloodLock compound flood forecasting"
+readme = "README.md"
+requires-python = ">=3.8"
+authors = [
+  { name = "Daksh Dahore", email = "lantern.mech@gmail.com" },
+]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Operating System :: OS Independent",
+]
+dependencies = [
+  "requests>=2.25.0",
+]
+
+[project.urls]
+Homepage = "https://metoflood.netlify.app"
+Documentation = "https://metoflood.netlify.app"
+Repository = "https://github.com/DakshDahore/floodnet"
