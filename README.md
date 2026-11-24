@@ -1,6 +1,7 @@
 # 🌊 FloodNet / FloodLock — Urban Flood Intelligence & Neural Backflow Engine
 
 [![Live Web Application](https://img.shields.io/badge/Live_App-floodnet.netlify.app-00C7B7?style=for-the-badge&logo=netlify)](https://floodnet.netlify.app)
+[![Documentation Portal](https://img.shields.io/badge/Docs-floodlock--docs.pages.dev-B45309?style=for-the-badge&logo=cloudflarepages)](https://floodlock-docs.pages.dev)
 [![Cloudflare Edge Backend](https://img.shields.io/badge/Edge_Backend-Cloudflare_Workers-F38020?style=for-the-badge&logo=cloudflare)](https://floodlock-backend.dakshdahore1995.workers.dev)
 [![Target Precinct](https://img.shields.io/badge/Target_Precinct-Mumbai_F--South_Ward-3B82F6?style=for-the-badge)](https://floodnet.netlify.app)
 
@@ -10,6 +11,7 @@
 
 ## ⚡ Live Deployments
 
+- **Official Documentation Portal:** [https://floodlock-docs.pages.dev](https://floodlock-docs.pages.dev)
 - **Web Dashboard:** [https://floodnet.netlify.app](https://floodnet.netlify.app)
 - **Primary Edge (Core 1):** [https://floodlock-backend.dakshdahore1995.workers.dev](https://floodlock-backend.dakshdahore1995.workers.dev)
 - **Standby Edge (Core 2):** [https://floodlock-backend-standby.dakshdahore1995.workers.dev](https://floodlock-backend-standby.dakshdahore1995.workers.dev)
