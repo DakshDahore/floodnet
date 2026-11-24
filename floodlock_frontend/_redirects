@@ -1,3 +1,4 @@
+/google0595da6a3a0e69c6.html /google0595da6a3a0e69c6.html 200
 # API Proxy for legacy environments
 /api/*         /.netlify/functions/api/:splat  200
 
