@@ -304,3 +304,4 @@ with open(INDEX_PATH, 'w', encoding='utf-8') as f:
     f.write(html)
 
 print("Apple Glass & Color Gridding upgrade complete!")
+

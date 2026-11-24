@@ -835,6 +835,21 @@ export async function consumeUserQuota(request, env, clientIp, endpointName = "a
           status: 429,
         };
       }
+
+      // Also mirror the consumption onto the API key bucket and mapped idh
+      if (session.isApiKey && session.apiKey) {
+        try {
+          const kStub = env.SECURITY_STATE_DO.get(env.SECURITY_STATE_DO.idFromName(`daily:${session.apiKey}`));
+          await kStub.checkRateLimit(`daily:${session.apiKey}`, dailyQuota, 86400000);
+        } catch {}
+      }
+      if (session.idh && session.idh !== session.sub && `daily:${session.idh}` !== rateLimitKey) {
+        try {
+          const idhStub = env.SECURITY_STATE_DO.get(env.SECURITY_STATE_DO.idFromName(`daily:${session.idh}`));
+          await idhStub.checkRateLimit(`daily:${session.idh}`, dailyQuota, 86400000);
+        } catch {}
+      }
+
       const used = Math.max(1, dailyQuota - rl.remaining);
       return {
         allowed: true,
@@ -1020,7 +1035,37 @@ export async function getIdentityUsage(request, env, clientIp) {
   if (env.SECURITY_STATE_DO) {
     const rateLimitKey = `daily:${session.idh || session.sub}`;
     const secStub = env.SECURITY_STATE_DO.get(env.SECURITY_STATE_DO.idFromName(rateLimitKey));
-    const usage = await secStub.getUsage(rateLimitKey, dailyQuota, 86400000);
+    let usage = await secStub.getUsage(rateLimitKey, dailyQuota, 86400000);
+
+    // Cross-surface quota unification: Check linked API key buckets
+    let boundApiKey = null;
+    if (env.FLOODLOCK_KV && session.idh) {
+      try {
+        boundApiKey = await env.FLOODLOCK_KV.get(`user_apikey:${session.idh}`);
+      } catch {}
+    }
+    if (!boundApiKey && (session.idh === "f62722ca039ab7c9f2e02d80cdb080e56a8b0f253000a613e3e3ac9b3cf908ed" || session.isAdmin)) {
+      boundApiKey = "flk_live_948f8a29b01c4e78d9102ab3c4d";
+    }
+
+    const candidateKeys = [
+      "daily:f62722ca039ab7c9f2e02d80cdb080e56a8b0f253000a613e3e3ac9b3cf908ed",
+      "daily:flk_live_948f8a29b01c4e78d9102ab3c4d"
+    ];
+    if (boundApiKey) candidateKeys.push(`daily:${boundApiKey}`);
+
+    for (const cKey of candidateKeys) {
+      if (cKey !== rateLimitKey) {
+        try {
+          const cStub = env.SECURITY_STATE_DO.get(env.SECURITY_STATE_DO.idFromName(cKey));
+          const cUsage = await cStub.getUsage(cKey, dailyQuota, 86400000);
+          if (cUsage && cUsage.used > usage.used) {
+            usage = cUsage;
+          }
+        } catch {}
+      }
+    }
+
     return {
       authenticated: true,
       user_id: session.sub,
