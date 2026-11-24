@@ -1927,34 +1927,23 @@ print("════════════════════════�
         
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
           <div class="code-box">
-            <span style="color:#64748b;"># Python Official Package</span><br>
-            <code>pip install floodlock-sdk</code>
-            <button class="copy-btn" onclick="copyText('pip install floodlock-sdk')">Copy</button>
+            <span style="color:#64748b;"># Python Standard HTTP Library</span><br>
+            <code>pip install requests</code>
+            <button class="copy-btn" onclick="copyText('pip install requests', this)">Copy</button>
           </div>
           <div class="code-box">
-            <span style="color:#64748b;"># Node.js / JavaScript Client</span><br>
-            <code>npm install @meteoflood/client</code>
-            <button class="copy-btn" onclick="copyText('npm install @meteoflood/client')">Copy</button>
+            <span style="color:#64748b;"># Node.js Fetch (Native / Zero-Dependency)</span><br>
+            <code>npm install node-fetch</code>
+            <button class="copy-btn" onclick="copyText('npm install node-fetch', this)">Copy</button>
           </div>
         </div>
 
-        <!-- Python with Library -->
-        <h4 style="font-size: 1rem; color: #a5f3fc; margin-top: 1.5rem;">1. Python (With Official Library)</h4>
-        <div class="code-box">
-          <pre><code>from meteoflood import MeteoFloodClient
-
-client = MeteoFloodClient(api_key="YOUR_API_KEY")
-forecast = client.get_forecast(lat=19.076, lon=72.877, radius_km=150)
-print(f"Risk: {forecast.risk_score}/100 | Discharge: {forecast.discharge_m3s} m³/s")</code></pre>
-          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-        </div>
-
-        <!-- Python without Library (REST) -->
-        <h4 style="font-size: 1rem; color: #a5f3fc; margin-top: 1.5rem;">2. Python (Without Library / Standard REST)</h4>
+        <!-- Python Standard REST -->
+        <h4 style="font-size: 1rem; color: #a5f3fc; margin-top: 1.5rem;">1. Python (Standard Zero-Dependency REST)</h4>
         <div class="code-box">
           <pre><code>import requests
 
-url = "https://floodlock-backend.dakshdahore1995.workers.dev/api/flood/radius-check"
+url = "https://floodlock-backend.dahoremugdha.workers.dev/api/flood/radius-check"
 params = {"lat": 19.076, "lon": 72.877, "radius_km": 150}
 headers = {"Authorization": "Bearer YOUR_API_KEY"}
 
@@ -1963,10 +1952,22 @@ print(response.json())</code></pre>
           <button class="copy-btn" onclick="copyCode(this)">Copy</button>
         </div>
 
+        <!-- JavaScript / Node.js -->
+        <h4 style="font-size: 1rem; color: #a5f3fc; margin-top: 1.5rem;">2. JavaScript / Node.js (Edge Native)</h4>
+        <div class="code-box">
+          <pre><code>const url = "https://floodlock-backend.dahoremugdha.workers.dev/api/flood/radius-check?lat=19.076&lon=72.877&radius_km=150";
+const res = await fetch(url, {
+  headers: { "Authorization": "Bearer YOUR_API_KEY" }
+});
+const data = await res.json();
+console.log(data);</code></pre>
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        </div>
+
         <!-- cURL Format -->
         <h4 style="font-size: 1rem; color: #a5f3fc; margin-top: 1.5rem;">3. cURL CLI</h4>
         <div class="code-box">
-          <pre><code>curl -s "https://floodlock-backend.dakshdahore1995.workers.dev/api/flood/radius-check?lat=19.076&lon=72.877&radius_km=150" \
+          <pre><code>curl -s "https://floodlock-backend.dahoremugdha.workers.dev/api/flood/radius-check?lat=19.076&lon=72.877&radius_km=150" \
      -H "Authorization: Bearer YOUR_API_KEY"</code></pre>
           <button class="copy-btn" onclick="copyCode(this)">Copy</button>
         </div>
