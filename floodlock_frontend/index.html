@@ -3594,7 +3594,7 @@ console.log(data);</code></pre>
                 ['get', 'threat_level'],
                 'CRITICAL_SURGE', 'rgba(239, 68, 68, 0.28)',
                 'ELEVATED_WATCH', 'rgba(245, 158, 11, 0.16)',
-                'rgba(16, 185, 129, 0.04)'
+                'rgba(56, 189, 248, 0.02)'
               ],
               'fill-opacity': 0.85
             }
@@ -3611,14 +3611,14 @@ console.log(data);</code></pre>
                 ['get', 'threat_level'],
                 'CRITICAL_SURGE', '#ef4444',
                 'ELEVATED_WATCH', '#f59e0b',
-                'rgba(16, 185, 129, 0.35)'
+                'rgba(56, 189, 248, 0.18)'
               ],
               'line-width': [
                 'match',
                 ['get', 'threat_level'],
-                'CRITICAL_SURGE', 2.0,
-                'ELEVATED_WATCH', 1.2,
-                0.6
+                'CRITICAL_SURGE', 1.8,
+                'ELEVATED_WATCH', 1.0,
+                0.5
               ],
               'line-opacity': 0.85
             }
@@ -3684,12 +3684,13 @@ console.log(data);</code></pre>
             data: pointGeoJson
           });
 
-          // WebGL Heatmap Layer
+          // WebGL Heatmap Layer (renders active rain/surge thermal anomalies, suppressed for calm nominal tiles)
           mapInstance.addLayer({
             id: 'planetary-heatmap',
             type: 'heatmap',
             source: 'planetary-heat-src',
             maxzoom: 15,
+            filter: ['!=', ['get', 'threat_level'], 'NOMINAL'],
             paint: {
               'heatmap-weight': ['get', 'weight'],
               'heatmap-intensity': [
@@ -3701,9 +3702,9 @@ console.log(data);</code></pre>
               'heatmap-color': [
                 'interpolate', ['linear'], ['heatmap-density'],
                 0.0, 'rgba(0,0,0,0)',
-                0.15, 'rgba(16, 185, 129, 0.35)',
-                0.35, 'rgba(245, 158, 11, 0.55)',
-                0.65, 'rgba(239, 68, 68, 0.85)',
+                0.20, 'rgba(16, 185, 129, 0.35)',
+                0.45, 'rgba(245, 158, 11, 0.65)',
+                0.70, 'rgba(239, 68, 68, 0.85)',
                 1.0, 'rgba(168, 85, 247, 0.95)'
               ],
               'heatmap-radius': [
@@ -3717,12 +3718,12 @@ console.log(data);</code></pre>
             }
           }, 'planetary-quadtree-stroke');
 
-          // Pulsing Hotspot Core Dots on Critical Red Clusters
+          // Pulsing Hotspot Core Dots on Critical Red Clusters (Strict Physical Surge Only)
           mapInstance.addLayer({
             id: 'planetary-red-hotspots',
             type: 'circle',
             source: 'planetary-heat-src',
-            filter: ['==', ['get', 'threat_level'], 'CRITICAL_SURGE'],
+            filter: ['all', ['==', ['get', 'threat_level'], 'CRITICAL_SURGE'], ['>=', ['get', 'risk_score'], 65]],
             paint: {
               'circle-radius': ['interpolate', ['linear'], ['zoom'], 2, 4, 8, 9],
               'circle-color': '#ef4444',

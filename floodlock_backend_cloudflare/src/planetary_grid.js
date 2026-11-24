@@ -85,27 +85,61 @@ export const PLANETARY_MACRO_LATTICE = [
     slope_deg: 0.8,
     ks_mm_hr: 14.0,
     impervious: 0.45,
-    baseline_r0: 12.0,
-    baseline_r48: 85.0,
-    baseline_soil_sat: 0.82,
-    baseline_tide: 0.4
+    baseline_r0: 0.0,
+    baseline_r48: 0.0,
+    baseline_soil_sat: 0.35,
+    baseline_tide: 0.0
   },
   {
     id: "macro_sa_konkan_mumbai",
-    name: "Ulhas-Mithi & Konkan Coastal Catchment (Mumbai)",
+    name: "Ulhas-Mithi & Konkan Coastal Catchment (Mumbai / MMR)",
     continent: "Asia",
     country: "India",
-    bounds: [72.5, 18.0, 74.5, 20.5],
-    center: [73.1, 19.2],
+    bounds: [72.7, 18.8, 73.3, 19.5],
+    center: [72.95, 19.1],
     water_proximity: 0.95,
     historical_vulnerability: 0.92,
     slope_deg: 2.2,
     ks_mm_hr: 18.0,
-    impervious: 0.72,
-    baseline_r0: 8.5,
-    baseline_r48: 65.0,
-    baseline_soil_sat: 0.78,
-    baseline_tide: 2.4
+    impervious: 0.75,
+    baseline_r0: 0.0,
+    baseline_r48: 0.0,
+    baseline_soil_sat: 0.35,
+    baseline_tide: 0.0
+  },
+  {
+    id: "macro_sa_deccan_pune",
+    name: "Upper Bhima-Mula-Mutha Basin (Pune / Pimpri-Chinchwad)",
+    continent: "Asia",
+    country: "India",
+    bounds: [73.6, 18.3, 74.3, 19.0],
+    center: [73.85, 18.52],
+    water_proximity: 0.45,
+    historical_vulnerability: 0.65,
+    slope_deg: 3.5,
+    ks_mm_hr: 28.0,
+    impervious: 0.68,
+    baseline_r0: 0.0,
+    baseline_r48: 0.0,
+    baseline_soil_sat: 0.35,
+    baseline_tide: 0.0
+  },
+  {
+    id: "macro_sa_upper_godavari_nashik",
+    name: "Upper Godavari Basin & Trimbak (Nashik)",
+    continent: "Asia",
+    country: "India",
+    bounds: [73.4, 19.6, 74.3, 20.3],
+    center: [73.78, 19.99],
+    water_proximity: 0.40,
+    historical_vulnerability: 0.60,
+    slope_deg: 2.8,
+    ks_mm_hr: 26.0,
+    impervious: 0.50,
+    baseline_r0: 0.0,
+    baseline_r48: 0.0,
+    baseline_soil_sat: 0.35,
+    baseline_tide: 0.0
   },
   {
     id: "macro_sa_indus_delta",
@@ -119,10 +153,10 @@ export const PLANETARY_MACRO_LATTICE = [
     slope_deg: 0.6,
     ks_mm_hr: 12.0,
     impervious: 0.35,
-    baseline_r0: 2.0,
-    baseline_r48: 15.0,
-    baseline_soil_sat: 0.45,
-    baseline_tide: 0.8
+    baseline_r0: 0.0,
+    baseline_r48: 0.0,
+    baseline_soil_sat: 0.35,
+    baseline_tide: 0.0
   },
   {
     id: "macro_sa_godavari_krishna",
@@ -136,10 +170,10 @@ export const PLANETARY_MACRO_LATTICE = [
     slope_deg: 1.2,
     ks_mm_hr: 20.0,
     impervious: 0.40,
-    baseline_r0: 4.0,
-    baseline_r48: 30.0,
-    baseline_soil_sat: 0.60,
-    baseline_tide: 1.1
+    baseline_r0: 0.0,
+    baseline_r48: 0.0,
+    baseline_soil_sat: 0.35,
+    baseline_tide: 0.0
   },
 
   // ── EAST ASIA & SOUTHEAST ASIA ──
@@ -155,10 +189,10 @@ export const PLANETARY_MACRO_LATTICE = [
     slope_deg: 1.0,
     ks_mm_hr: 16.0,
     impervious: 0.55,
-    baseline_r0: 14.0,
-    baseline_r48: 95.0,
-    baseline_soil_sat: 0.86,
-    baseline_tide: 0.5
+    baseline_r0: 0.0,
+    baseline_r48: 0.0,
+    baseline_soil_sat: 0.35,
+    baseline_tide: 0.0
   },
   {
     id: "macro_ea_pearl_river",
@@ -172,10 +206,10 @@ export const PLANETARY_MACRO_LATTICE = [
     slope_deg: 1.5,
     ks_mm_hr: 22.0,
     impervious: 0.78,
-    baseline_r0: 16.0,
-    baseline_r48: 110.0,
-    baseline_soil_sat: 0.84,
-    baseline_tide: 2.8
+    baseline_r0: 0.0,
+    baseline_r48: 0.0,
+    baseline_soil_sat: 0.35,
+    baseline_tide: 0.0
   },
   {
     id: "macro_ea_tone_tokyo",
@@ -189,10 +223,10 @@ export const PLANETARY_MACRO_LATTICE = [
     slope_deg: 2.0,
     ks_mm_hr: 25.0,
     impervious: 0.80,
-    baseline_r0: 6.0,
-    baseline_r48: 45.0,
-    baseline_soil_sat: 0.65,
-    baseline_tide: 1.5
+    baseline_r0: 0.0,
+    baseline_r48: 0.0,
+    baseline_soil_sat: 0.35,
+    baseline_tide: 0.0
   },
   {
     id: "macro_sea_mekong_delta",
@@ -206,10 +240,10 @@ export const PLANETARY_MACRO_LATTICE = [
     slope_deg: 0.4,
     ks_mm_hr: 10.0,
     impervious: 0.38,
-    baseline_r0: 18.0,
-    baseline_r48: 120.0,
-    baseline_soil_sat: 0.90,
-    baseline_tide: 1.9
+    baseline_r0: 0.0,
+    baseline_r48: 0.0,
+    baseline_soil_sat: 0.35,
+    baseline_tide: 0.0
   },
   {
     id: "macro_sea_chao_phraya",
@@ -223,10 +257,10 @@ export const PLANETARY_MACRO_LATTICE = [
     slope_deg: 0.5,
     ks_mm_hr: 12.0,
     impervious: 0.65,
-    baseline_r0: 10.0,
-    baseline_r48: 75.0,
-    baseline_soil_sat: 0.80,
-    baseline_tide: 1.6
+    baseline_r0: 0.0,
+    baseline_r48: 0.0,
+    baseline_soil_sat: 0.35,
+    baseline_tide: 0.0
   },
   {
     id: "macro_sea_ciliwung_jakarta",
@@ -240,10 +274,10 @@ export const PLANETARY_MACRO_LATTICE = [
     slope_deg: 1.8,
     ks_mm_hr: 18.0,
     impervious: 0.82,
-    baseline_r0: 22.0,
-    baseline_r48: 140.0,
-    baseline_soil_sat: 0.92,
-    baseline_tide: 2.1
+    baseline_r0: 0.0,
+    baseline_r48: 0.0,
+    baseline_soil_sat: 0.35,
+    baseline_tide: 0.0
   },
 
   // ── EUROPE & MEDITERRANEAN ──
@@ -259,9 +293,9 @@ export const PLANETARY_MACRO_LATTICE = [
     slope_deg: 1.5,
     ks_mm_hr: 24.0,
     impervious: 0.42,
-    baseline_r0: 5.0,
-    baseline_r48: 35.0,
-    baseline_soil_sat: 0.70,
+    baseline_r0: 0.0,
+    baseline_r48: 0.0,
+    baseline_soil_sat: 0.35,
     baseline_tide: 0.0
   },
   {
@@ -276,10 +310,10 @@ export const PLANETARY_MACRO_LATTICE = [
     slope_deg: 1.2,
     ks_mm_hr: 28.0,
     impervious: 0.58,
-    baseline_r0: 7.0,
-    baseline_r48: 48.0,
-    baseline_soil_sat: 0.75,
-    baseline_tide: 1.2
+    baseline_r0: 0.0,
+    baseline_r48: 0.0,
+    baseline_soil_sat: 0.35,
+    baseline_tide: 0.0
   },
   {
     id: "macro_eu_thames_london",
@@ -293,10 +327,10 @@ export const PLANETARY_MACRO_LATTICE = [
     slope_deg: 1.1,
     ks_mm_hr: 22.0,
     impervious: 0.68,
-    baseline_r0: 4.5,
-    baseline_r48: 30.0,
-    baseline_soil_sat: 0.72,
-    baseline_tide: 2.2
+    baseline_r0: 0.0,
+    baseline_r48: 0.0,
+    baseline_soil_sat: 0.35,
+    baseline_tide: 0.0
   },
   {
     id: "macro_eu_turia_valencia",
@@ -310,10 +344,10 @@ export const PLANETARY_MACRO_LATTICE = [
     slope_deg: 3.2,
     ks_mm_hr: 15.0,
     impervious: 0.62,
-    baseline_r0: 9.0,
-    baseline_r48: 70.0,
-    baseline_soil_sat: 0.68,
-    baseline_tide: 0.6
+    baseline_r0: 0.0,
+    baseline_r48: 0.0,
+    baseline_soil_sat: 0.35,
+    baseline_tide: 0.0
   },
   {
     id: "macro_eu_po_valley",
@@ -327,10 +361,10 @@ export const PLANETARY_MACRO_LATTICE = [
     slope_deg: 1.4,
     ks_mm_hr: 20.0,
     impervious: 0.52,
-    baseline_r0: 6.5,
-    baseline_r48: 42.0,
-    baseline_soil_sat: 0.74,
-    baseline_tide: 1.0
+    baseline_r0: 0.0,
+    baseline_r48: 0.0,
+    baseline_soil_sat: 0.35,
+    baseline_tide: 0.0
   },
 
   // ── NORTH AMERICA ──
@@ -346,10 +380,10 @@ export const PLANETARY_MACRO_LATTICE = [
     slope_deg: 0.3,
     ks_mm_hr: 12.0,
     impervious: 0.48,
-    baseline_r0: 11.0,
-    baseline_r48: 80.0,
-    baseline_soil_sat: 0.85,
-    baseline_tide: 1.8
+    baseline_r0: 0.0,
+    baseline_r48: 0.0,
+    baseline_soil_sat: 0.35,
+    baseline_tide: 0.0
   },
   {
     id: "macro_na_ohio_confluence",
@@ -363,9 +397,9 @@ export const PLANETARY_MACRO_LATTICE = [
     slope_deg: 1.8,
     ks_mm_hr: 25.0,
     impervious: 0.38,
-    baseline_r0: 3.5,
-    baseline_r48: 25.0,
-    baseline_soil_sat: 0.65,
+    baseline_r0: 0.0,
+    baseline_r48: 0.0,
+    baseline_soil_sat: 0.35,
     baseline_tide: 0.0
   },
   {
@@ -380,10 +414,10 @@ export const PLANETARY_MACRO_LATTICE = [
     slope_deg: 1.2,
     ks_mm_hr: 22.0,
     impervious: 0.60,
-    baseline_r0: 5.0,
-    baseline_r48: 38.0,
-    baseline_soil_sat: 0.70,
-    baseline_tide: 1.4
+    baseline_r0: 0.0,
+    baseline_r48: 0.0,
+    baseline_soil_sat: 0.35,
+    baseline_tide: 0.0
   },
   {
     id: "macro_na_florida_peninsula",
@@ -397,10 +431,10 @@ export const PLANETARY_MACRO_LATTICE = [
     slope_deg: 0.2,
     ks_mm_hr: 30.0,
     impervious: 0.54,
-    baseline_r0: 15.0,
-    baseline_r48: 90.0,
-    baseline_soil_sat: 0.88,
-    baseline_tide: 2.2
+    baseline_r0: 0.0,
+    baseline_r48: 0.0,
+    baseline_soil_sat: 0.35,
+    baseline_tide: 0.0
   },
   {
     id: "macro_na_california_sacramento",
@@ -414,10 +448,10 @@ export const PLANETARY_MACRO_LATTICE = [
     slope_deg: 1.6,
     ks_mm_hr: 20.0,
     impervious: 0.45,
-    baseline_r0: 2.5,
-    baseline_r48: 18.0,
-    baseline_soil_sat: 0.55,
-    baseline_tide: 1.1
+    baseline_r0: 0.0,
+    baseline_r48: 0.0,
+    baseline_soil_sat: 0.35,
+    baseline_tide: 0.0
   },
 
   // ── SOUTH AMERICA ──
@@ -433,9 +467,9 @@ export const PLANETARY_MACRO_LATTICE = [
     slope_deg: 0.4,
     ks_mm_hr: 15.0,
     impervious: 0.25,
-    baseline_r0: 14.0,
-    baseline_r48: 95.0,
-    baseline_soil_sat: 0.88,
+    baseline_r0: 0.0,
+    baseline_r48: 0.0,
+    baseline_soil_sat: 0.35,
     baseline_tide: 0.0
   },
   {
@@ -450,10 +484,10 @@ export const PLANETARY_MACRO_LATTICE = [
     slope_deg: 0.3,
     ks_mm_hr: 18.0,
     impervious: 0.42,
-    baseline_r0: 16.0,
-    baseline_r48: 110.0,
-    baseline_soil_sat: 0.90,
-    baseline_tide: 3.5
+    baseline_r0: 0.0,
+    baseline_r48: 0.0,
+    baseline_soil_sat: 0.35,
+    baseline_tide: 0.0
   },
   {
     id: "macro_sa_parana_plata",
@@ -467,10 +501,10 @@ export const PLANETARY_MACRO_LATTICE = [
     slope_deg: 0.8,
     ks_mm_hr: 20.0,
     impervious: 0.56,
-    baseline_r0: 6.0,
-    baseline_r48: 45.0,
-    baseline_soil_sat: 0.72,
-    baseline_tide: 1.4
+    baseline_r0: 0.0,
+    baseline_r48: 0.0,
+    baseline_soil_sat: 0.35,
+    baseline_tide: 0.0
   },
   {
     id: "macro_sa_pantanal_wetlands",
@@ -484,9 +518,9 @@ export const PLANETARY_MACRO_LATTICE = [
     slope_deg: 0.2,
     ks_mm_hr: 10.0,
     impervious: 0.15,
-    baseline_r0: 8.0,
-    baseline_r48: 60.0,
-    baseline_soil_sat: 0.85,
+    baseline_r0: 0.0,
+    baseline_r48: 0.0,
+    baseline_soil_sat: 0.35,
     baseline_tide: 0.0
   },
 
@@ -503,10 +537,10 @@ export const PLANETARY_MACRO_LATTICE = [
     slope_deg: 0.6,
     ks_mm_hr: 16.0,
     impervious: 0.65,
-    baseline_r0: 1.0,
-    baseline_r48: 8.0,
-    baseline_soil_sat: 0.40,
-    baseline_tide: 0.5
+    baseline_r0: 0.0,
+    baseline_r48: 0.0,
+    baseline_soil_sat: 0.35,
+    baseline_tide: 0.0
   },
   {
     id: "macro_af_niger_delta",
@@ -520,10 +554,10 @@ export const PLANETARY_MACRO_LATTICE = [
     slope_deg: 0.5,
     ks_mm_hr: 14.0,
     impervious: 0.50,
-    baseline_r0: 17.0,
-    baseline_r48: 125.0,
-    baseline_soil_sat: 0.92,
-    baseline_tide: 1.8
+    baseline_r0: 0.0,
+    baseline_r48: 0.0,
+    baseline_soil_sat: 0.35,
+    baseline_tide: 0.0
   },
   {
     id: "macro_af_congo_basin",
@@ -537,9 +571,9 @@ export const PLANETARY_MACRO_LATTICE = [
     slope_deg: 0.8,
     ks_mm_hr: 18.0,
     impervious: 0.32,
-    baseline_r0: 12.0,
-    baseline_r48: 80.0,
-    baseline_soil_sat: 0.82,
+    baseline_r0: 0.0,
+    baseline_r48: 0.0,
+    baseline_soil_sat: 0.35,
     baseline_tide: 0.0
   },
   {
@@ -554,10 +588,10 @@ export const PLANETARY_MACRO_LATTICE = [
     slope_deg: 0.7,
     ks_mm_hr: 16.0,
     impervious: 0.28,
-    baseline_r0: 8.0,
-    baseline_r48: 55.0,
-    baseline_soil_sat: 0.78,
-    baseline_tide: 1.7
+    baseline_r0: 0.0,
+    baseline_r48: 0.0,
+    baseline_soil_sat: 0.35,
+    baseline_tide: 0.0
   },
 
   // ── OCEANIA & AUSTRALIA ──
@@ -573,10 +607,10 @@ export const PLANETARY_MACRO_LATTICE = [
     slope_deg: 2.1,
     ks_mm_hr: 22.0,
     impervious: 0.55,
-    baseline_r0: 5.5,
-    baseline_r48: 40.0,
-    baseline_soil_sat: 0.68,
-    baseline_tide: 1.6
+    baseline_r0: 0.0,
+    baseline_r48: 0.0,
+    baseline_soil_sat: 0.35,
+    baseline_tide: 0.0
   },
   {
     id: "macro_oc_murray_darling",
@@ -590,9 +624,9 @@ export const PLANETARY_MACRO_LATTICE = [
     slope_deg: 0.5,
     ks_mm_hr: 20.0,
     impervious: 0.22,
-    baseline_r0: 1.5,
-    baseline_r48: 12.0,
-    baseline_soil_sat: 0.48,
+    baseline_r0: 0.0,
+    baseline_r48: 0.0,
+    baseline_soil_sat: 0.35,
     baseline_tide: 0.0
   },
   {
@@ -607,10 +641,10 @@ export const PLANETARY_MACRO_LATTICE = [
     slope_deg: 2.8,
     ks_mm_hr: 24.0,
     impervious: 0.65,
-    baseline_r0: 4.0,
-    baseline_r48: 30.0,
-    baseline_soil_sat: 0.62,
-    baseline_tide: 1.4
+    baseline_r0: 0.0,
+    baseline_r48: 0.0,
+    baseline_soil_sat: 0.35,
+    baseline_tide: 0.0
   },
 
   // ── PLANETARY CONTINENTAL BACKGROUND COVERAGE (GLOBAL SCREENING TILES) ──
@@ -628,9 +662,9 @@ export const PLANETARY_MACRO_LATTICE = [
     ks_mm_hr: 30.0,
     impervious: 0.20,
     baseline_r0: 0.0,
-    baseline_r48: 1.0,
-    baseline_soil_sat: 0.40,
-    baseline_tide: 0.5
+    baseline_r48: 0.0,
+    baseline_soil_sat: 0.35,
+    baseline_tide: 0.0
   },
   {
     id: "macro_bg_na_great_plains",
@@ -645,7 +679,7 @@ export const PLANETARY_MACRO_LATTICE = [
     ks_mm_hr: 28.0,
     impervious: 0.15,
     baseline_r0: 0.0,
-    baseline_r48: 0.5,
+    baseline_r48: 0.0,
     baseline_soil_sat: 0.35,
     baseline_tide: 0.0
   },
@@ -662,8 +696,8 @@ export const PLANETARY_MACRO_LATTICE = [
     ks_mm_hr: 35.0,
     impervious: 0.12,
     baseline_r0: 0.0,
-    baseline_r48: 0.2,
-    baseline_soil_sat: 0.25,
+    baseline_r48: 0.0,
+    baseline_soil_sat: 0.35,
     baseline_tide: 0.0
   },
   {
@@ -679,9 +713,9 @@ export const PLANETARY_MACRO_LATTICE = [
     ks_mm_hr: 25.0,
     impervious: 0.22,
     baseline_r0: 0.0,
-    baseline_r48: 1.5,
-    baseline_soil_sat: 0.50,
-    baseline_tide: 0.3
+    baseline_r48: 0.0,
+    baseline_soil_sat: 0.35,
+    baseline_tide: 0.0
   },
   {
     id: "macro_bg_af_sahara",
@@ -697,7 +731,7 @@ export const PLANETARY_MACRO_LATTICE = [
     impervious: 0.05,
     baseline_r0: 0.0,
     baseline_r48: 0.0,
-    baseline_soil_sat: 0.10,
+    baseline_soil_sat: 0.35,
     baseline_tide: 0.0
   },
   {
@@ -713,8 +747,8 @@ export const PLANETARY_MACRO_LATTICE = [
     ks_mm_hr: 20.0,
     impervious: 0.08,
     baseline_r0: 0.0,
-    baseline_r48: 0.8,
-    baseline_soil_sat: 0.45,
+    baseline_r48: 0.0,
+    baseline_soil_sat: 0.35,
     baseline_tide: 0.0
   },
   {
@@ -730,8 +764,8 @@ export const PLANETARY_MACRO_LATTICE = [
     ks_mm_hr: 30.0,
     impervious: 0.10,
     baseline_r0: 0.0,
-    baseline_r48: 0.4,
-    baseline_soil_sat: 0.28,
+    baseline_r48: 0.0,
+    baseline_soil_sat: 0.35,
     baseline_tide: 0.0
   },
   {
@@ -748,7 +782,7 @@ export const PLANETARY_MACRO_LATTICE = [
     impervious: 0.05,
     baseline_r0: 0.0,
     baseline_r48: 0.0,
-    baseline_soil_sat: 0.12,
+    baseline_soil_sat: 0.35,
     baseline_tide: 0.0
   }
 ];
@@ -783,14 +817,21 @@ export async function fetchLiveBatchMeteorology(macroLattice) {
         const soilArr = Array.isArray(hourly.soil_moisture_0_to_100cm) ? hourly.soil_moisture_0_to_100cm : [];
         const soilSat = soilArr.length ? Number(soilArr[soilArr.length - 1] ?? 0.45) : 0.45;
 
+        const dp = Math.round((Number(cur.surface_pressure ?? 1013.25) - 1013.25) * 10) / 10;
+        const wind = Math.max(0.0, Number(cur.wind_speed_10m ?? 12.0));
+        // Meteorological storm surge: only positive during deep barometric depressions with gale-force winds
+        const stormSurgeAnomaly = (dp < -8.0 && wind > 40.0)
+          ? Math.min(4.0, Math.round(((Math.abs(dp) / 15.0) * 0.5 + (wind / 60.0) * 0.5) * 10) / 10)
+          : 0.0;
+
         results.set(macroLattice[idx].id, {
           r0: Math.max(0.0, Number(cur.precipitation ?? cur.rain ?? 0.0)),
           r48: Math.round(r48 * 10) / 10,
-          cape: Math.max(0.0, Number(cur.cape ?? 200.0)),
-          dp: Math.round((Number(cur.surface_pressure ?? 1013.25) - 1013.25) * 10) / 10,
-          wind: Math.max(0.0, Number(cur.wind_speed_10m ?? 12.0)),
+          cape: Math.max(0.0, Number(cur.cape ?? 100.0)),
+          dp,
+          wind,
           soilSat: Math.min(1.0, Math.max(0.0, soilSat)),
-          tideSurge: macroLattice[idx].baseline_tide || 0.0,
+          tideSurge: stormSurgeAnomaly,
         });
       });
     }
@@ -900,25 +941,30 @@ export async function generatePlanetaryAMRHeatGrid(options = {}) {
   // ────────────────────────────────────────────────────────────────────────
   const candidateSectors = targetLattice.map((macro) => {
     const live = liveTelemMap.get(macro.id);
-    const r0 = live ? live.r0 : macro.baseline_r0;
-    const r48 = live ? live.r48 : macro.baseline_r48;
-    const cape = live ? live.cape : 400.0;
+    const r0 = live ? live.r0 : (macro.baseline_r0 || 0.0);
+    const r48 = live ? live.r48 : (macro.baseline_r48 || 0.0);
+    const cape = live ? live.cape : 100.0;
     const dp = live ? live.dp : 0.0;
-    const wind = live ? live.wind : 15.0;
-    const soilSat = live ? live.soilSat : macro.baseline_soil_sat;
+    const wind = live ? live.wind : 10.0;
+    const soilSat = live ? live.soilSat : (macro.baseline_soil_sat || 0.35);
     const tideSurge = live ? live.tideSurge : (macro.baseline_tide || 0.0);
 
-    const rawRisk = (r0 * 2.8 + r48 * 0.35 + cape * 0.012 + tideSurge * 18.0) * (0.55 + 0.45 * macro.water_proximity);
-    const riskScore = Math.min(100, Math.max(5, Math.round(rawRisk * (0.8 + 0.2 * macro.historical_vulnerability))));
+    // Physically calibrated risk forcing:
+    // Rain rate is primary driver; soil moisture compounds runoff; storm surge drives coastal backflow.
+    const rainForcing = (r0 * 3.0) + (r48 * 0.20);
+    const soilMultiplier = soilSat > 0.70 ? (1.0 + (soilSat - 0.70) * 1.5) : 0.75;
+    const surgeForcing = (tideSurge > 0.4) ? (tideSurge * 20.0) : 0.0;
 
-    // Composite Priority Weighting Formula:
-    // W = Risk * 2.5 + WaterProx * 30 + Vulnerability * 25 + RainRate * 4.0 + Surge * 20
+    const rawRisk = (rainForcing * soilMultiplier + surgeForcing) * (0.35 + 0.65 * macro.water_proximity);
+    const riskScore = Math.min(100, Math.max(2, Math.round(rawRisk * (0.5 + 0.5 * macro.historical_vulnerability))));
+
+    // Composite Priority Weighting Formula
     const compositePriorityWeight = Math.round(
       (riskScore * 2.5) +
-      (macro.water_proximity * 30.0) +
-      (macro.historical_vulnerability * 25.0) +
-      (r0 * 4.0) +
-      (tideSurge * 20.0)
+      (macro.water_proximity * 15.0) +
+      (macro.historical_vulnerability * 10.0) +
+      (r0 * 5.0) +
+      (tideSurge * 25.0)
     );
 
     return {
@@ -951,20 +997,17 @@ export async function generatePlanetaryAMRHeatGrid(options = {}) {
     const midLat = (minLat + maxLat) / 2;
 
     const quadrants = [
-      { name: `${macro.name} (NW Quad)`, bounds: [minLon, midLat, midLon, maxLat], center: [(minLon + midLon) / 2, (midLat + maxLat) / 2], grad: 0.9 },
-      { name: `${macro.name} (NE Quad)`, bounds: [midLon, midLat, maxLon, maxLat], center: [(midLon + maxLon) / 2, (midLat + maxLat) / 2], grad: 1.1 },
-      { name: `${macro.name} (SW Quad)`, bounds: [minLon, minLat, midLon, midLat], center: [(minLon + midLon) / 2, (minLat + midLat) / 2], grad: 1.0 },
-      { name: `${macro.name} (SE Quad)`, bounds: [midLon, minLat, maxLon, midLat], center: [(midLon + maxLon) / 2, (midLat + midLat) / 2], grad: 1.2 },
+      { name: `${macro.name} (NW Quad)`, bounds: [minLon, midLat, midLon, maxLat], center: [(minLon + midLon) / 2, (midLat + maxLat) / 2], grad: 0.95 },
+      { name: `${macro.name} (NE Quad)`, bounds: [midLon, midLat, maxLon, maxLat], center: [(midLon + maxLon) / 2, (midLat + maxLat) / 2], grad: 1.05 },
+      { name: `${macro.name} (SW Quad)`, bounds: [minLon, minLat, midLon, midLat], center: [(minLon + midLon) / 2, (minLat + midLat) / 2], grad: 0.98 },
+      { name: `${macro.name} (SE Quad)`, bounds: [midLon, minLat, maxLon, midLat], center: [(midLon + maxLon) / 2, (minLat + midLat) / 2], grad: 1.02 },
     ];
 
     // ────────────────────────────────────────────────────────────────────────
-    // BLUE BOXES PROCESSING:
-    // If rainfall is minimal, antecedent accumulation low, and no storm surge:
-    // We subdivide the calm sector into 4 Level 1 meso-quadrants (~50-80km)
-    // and compute infiltration headroom (Ks - R0), soil moisture deficit,
-    // and drought-to-flash susceptibility rather than omitting or skipping!
+    // CALM / NOMINAL CONDITIONS (BLUE MESO TILES):
+    // Minimal rainfall, dry/moderate catchment, no active storm surge.
     // ────────────────────────────────────────────────────────────────────────
-    if (r0 < 0.2 && r48 < 3.0 && tideSurge < 0.5) {
+    if (r0 < 2.5 && r48 < 20.0 && tideSurge < 0.4) {
       prunedCount++;
       subdividedCount += 4;
       blueMesoCount += 4;
@@ -974,7 +1017,7 @@ export async function generatePlanetaryAMRHeatGrid(options = {}) {
         const qSat = Math.min(1.0, Math.max(0.02, Math.round(soilSat * q.grad * 100) / 100));
         const ksHeadroom = Math.round(Math.max(0.0, macro.ks_mm_hr - r0) * 10) / 10;
         const droughtFlashIdx = Math.round((1.0 - qSat) * (macro.slope_deg / 10.0) * 100) / 100;
-        const qRisk = Math.max(5, Math.round(riskScore * q.grad));
+        const qRisk = Math.min(25, Math.max(2, Math.round(riskScore * q.grad)));
 
         blueFeatures.push(makePolygonFeature(q.bounds, {
           id: `${macro.id}_q${qIdx}`,
@@ -982,7 +1025,7 @@ export async function generatePlanetaryAMRHeatGrid(options = {}) {
           continent: macro.continent,
           country: macro.country,
           resolution_level: 1,
-          resolution_km: 65,
+          resolution_km: 45,
           risk_score: qRisk,
           composite_priority_weight: Math.round(compositePriorityWeight * q.grad),
           priority_rank: 3,
@@ -1001,8 +1044,9 @@ export async function generatePlanetaryAMRHeatGrid(options = {}) {
           parent_basin: macro.name,
         }));
 
+        // Nominal points have weight 0.0 so they never trigger false heatmap halos
         blueFeatures.push(makePointFeature(q.center, {
-          weight: Math.min(0.15, qRisk / 100),
+          weight: 0.0,
           risk_score: qRisk,
           priority_rank: 3,
           threat_level: "NOMINAL",
@@ -1013,7 +1057,8 @@ export async function generatePlanetaryAMRHeatGrid(options = {}) {
     }
 
     // ────────────────────────────────────────────────────────────────────────
-    // ACTIVE RAIN / SURGE SECTOR SUBDIVISION (Level 1 Meso-Scale ~50-80km):
+    // ACTIVE PRECIPITATION OR SURGE CONDITIONS:
+    // Subdivide into meso-cells and evaluate physical hazard triggers.
     // ────────────────────────────────────────────────────────────────────────
     subdividedCount += 4;
 
@@ -1024,20 +1069,18 @@ export async function generatePlanetaryAMRHeatGrid(options = {}) {
       const qRisk = Math.min(100, Math.max(5, Math.round(riskScore * q.grad)));
 
       // ────────────────────────────────────────────────────────────────────────
-      // DEEP SUBDIVISION LEVEL 2 & 3 ("THE RED HEAT BOXES" - 10km to 2km):
-      // If quadrant risk is high (Risk >= 48% or Rain >= 10mm/h), subdivide into
-      // localized flash-flood micro-cells and run predict14F neural forward pass.
+      // DEEP MICRO-SUBDIVISION (Level 2 AMR - 10km to 2km):
+      // Only triggered if genuine heavy rain (R0 >= 15 mm/h or Risk >= 60%)
       // ────────────────────────────────────────────────────────────────────────
-      if (qRisk >= 48 || qR0 >= 10.0) {
-        criticalRedCount++;
+      if (qR0 >= 15.0 || (qRisk >= 60 && qR0 >= 5.0)) {
         const [qMinLon, qMinLat, qMaxLon, qMaxLat] = q.bounds;
         const qMidLon = (qMinLon + qMaxLon) / 2;
         const qMidLat = (qMinLat + qMaxLat) / 2;
 
         const subBoxes = [
-          { label: "Core Drainage Axis", bounds: [qMinLon, qMinLat, qMidLon, qMidLat], center: [(qMinLon + qMidLon) / 2, (qMinLat + qMidLat) / 2], rMult: 1.25 },
-          { label: "Riparian Inundation Zone", bounds: [qMidLon, qMinLat, qMaxLon, qMidLat], center: [(qMidLon + qMaxLon) / 2, (qMinLat + qMidLat) / 2], rMult: 1.15 },
-          { label: "Lowland Runoff Confluence", bounds: [qMinLon, qMidLat, qMidLon, qMaxLat], center: [(qMinLon + qMidLon) / 2, (qMidLat + qMaxLat) / 2], rMult: 1.30 },
+          { label: "Core Drainage Axis", bounds: [qMinLon, qMinLat, qMidLon, qMidLat], center: [(qMinLon + qMidLon) / 2, (qMinLat + qMidLat) / 2], rMult: 1.15 },
+          { label: "Riparian Inundation Zone", bounds: [qMidLon, qMinLat, qMaxLon, qMidLat], center: [(qMidLon + qMaxLon) / 2, (qMinLat + qMidLat) / 2], rMult: 1.10 },
+          { label: "Lowland Runoff Confluence", bounds: [qMinLon, qMidLat, qMidLon, qMaxLat], center: [(qMinLon + qMidLon) / 2, (qMidLat + qMaxLat) / 2], rMult: 1.20 },
           { label: "Urban Backflow Perimeter", bounds: [qMidLon, qMidLat, qMaxLon, qMaxLat], center: [(qMidLon + qMaxLon) / 2, (qMidLat + qMaxLat) / 2], rMult: 1.05 },
         ];
 
@@ -1056,8 +1099,8 @@ export async function generatePlanetaryAMRHeatGrid(options = {}) {
             Math.min(1.0, (cape * sb.rMult) / 4500.0),
             Math.min(1.0, Math.max(0.0, (dp + 15.0) / 20.0)),
             Math.min(1.0, wind / 180.0),
-            0.65, // SPI30
-            0.60, // SPI90
+            0.50, // SPI30
+            0.50, // SPI90
             Math.min(1.0, soilSat * sb.rMult),
             Math.min(1.0, macro.ks_mm_hr / 50.0),
             macro.water_proximity,
@@ -1067,47 +1110,119 @@ export async function generatePlanetaryAMRHeatGrid(options = {}) {
           ];
 
           const neuralPred = predict14F(feats);
-          const threat = (neuralPred.depth_trajectory_cm.h1 > 8.0 || neuralPred.flash_flood_probability > 0.45 || localRisk >= 65)
+
+          // Physical hazard verification:
+          const isExtreme = (localR0 >= 25.0) ||
+            (localR48 >= 100.0 && soilSat >= 0.80) ||
+            (tideSurge >= 1.2 && localR0 >= 10.0) ||
+            (neuralPred.depth_trajectory_cm.h1 >= 15.0 && localR0 >= 15.0) ||
+            (localRisk >= 75 && localR0 >= 15.0);
+
+          const isElevated = (localR0 >= 10.0) ||
+            (localR48 >= 50.0 && soilSat >= 0.65) ||
+            (tideSurge >= 0.8) ||
+            (neuralPred.depth_trajectory_cm.h1 >= 5.0 && localR0 >= 5.0) ||
+            (localRisk >= 50 && localR0 >= 5.0);
+
+          const threat = isExtreme
             ? "CRITICAL_SURGE"
-            : "ELEVATED_WATCH";
+            : (isElevated ? "ELEVATED_WATCH" : "NOMINAL");
 
-          if (threat === "CRITICAL_SURGE") criticalRedCount++;
-          else elevatedWatchCount++;
+          if (threat === "CRITICAL_SURGE") {
+            criticalRedCount++;
+            redFeatures.push(makePolygonFeature(sb.bounds, {
+              id: `${macro.id}_q${qIdx}_sub${sIdx}`,
+              name: `${q.name} — ${sb.label}`,
+              continent: macro.continent,
+              country: macro.country,
+              resolution_level: 2,
+              resolution_km: 12,
+              risk_score: localRisk,
+              composite_priority_weight: Math.round(compositePriorityWeight * sb.rMult),
+              priority_rank: 1,
+              threat_level: threat,
+              r0_mm_hr: localR0,
+              r48_mm: localR48,
+              soil_saturation: Math.min(1.0, Math.round(soilSat * sb.rMult * 100) / 100),
+              tide_surge_m: tideSurge,
+              depth_trajectory_cm: neuralPred.depth_trajectory_cm,
+              runoff_q_m3s: neuralPred.runoff_q_m3s,
+              flash_flood_probability: neuralPred.flash_flood_probability,
+              is_red_hotspot: true,
+              center: sb.center,
+              parent_basin: macro.name,
+            }));
 
-          // Emit High-Resolution Red Heat Bounding Box (Priority Rank 1)
-          redFeatures.push(makePolygonFeature(sb.bounds, {
-            id: `${macro.id}_q${qIdx}_sub${sIdx}`,
-            name: `${q.name} — ${sb.label}`,
-            continent: macro.continent,
-            country: macro.country,
-            resolution_level: 2,
-            resolution_km: 12,
-            risk_score: localRisk,
-            composite_priority_weight: Math.round(compositePriorityWeight * sb.rMult),
-            priority_rank: 1,
-            threat_level: threat,
-            r0_mm_hr: localR0,
-            r48_mm: localR48,
-            soil_saturation: Math.min(1.0, Math.round(soilSat * sb.rMult * 100) / 100),
-            tide_surge_m: tideSurge,
-            depth_trajectory_cm: neuralPred.depth_trajectory_cm,
-            runoff_q_m3s: neuralPred.runoff_q_m3s,
-            flash_flood_probability: neuralPred.flash_flood_probability,
-            is_red_hotspot: threat === "CRITICAL_SURGE",
-            center: sb.center,
-            parent_basin: macro.name,
-          }));
+            redFeatures.push(makePointFeature(sb.center, {
+              weight: localRisk / 100,
+              risk_score: localRisk,
+              priority_rank: 1,
+              threat_level: threat,
+              name: `${q.name} — ${sb.label}`
+            }));
+          } else if (threat === "ELEVATED_WATCH") {
+            elevatedWatchCount++;
+            amberFeatures.push(makePolygonFeature(sb.bounds, {
+              id: `${macro.id}_q${qIdx}_sub${sIdx}`,
+              name: `${q.name} — ${sb.label}`,
+              continent: macro.continent,
+              country: macro.country,
+              resolution_level: 2,
+              resolution_km: 12,
+              risk_score: localRisk,
+              composite_priority_weight: Math.round(compositePriorityWeight * sb.rMult),
+              priority_rank: 2,
+              threat_level: threat,
+              r0_mm_hr: localR0,
+              r48_mm: localR48,
+              soil_saturation: Math.min(1.0, Math.round(soilSat * sb.rMult * 100) / 100),
+              tide_surge_m: tideSurge,
+              depth_trajectory_cm: neuralPred.depth_trajectory_cm,
+              runoff_q_m3s: neuralPred.runoff_q_m3s,
+              flash_flood_probability: neuralPred.flash_flood_probability,
+              center: sb.center,
+              parent_basin: macro.name,
+            }));
 
-          // High-weight Heatmap Point
-          redFeatures.push(makePointFeature(sb.center, {
-            weight: localRisk / 100,
-            risk_score: localRisk,
-            priority_rank: 1,
-            threat_level: threat,
-            name: `${q.name} — ${sb.label}`
-          }));
+            amberFeatures.push(makePointFeature(sb.center, {
+              weight: localRisk / 200,
+              risk_score: localRisk,
+              priority_rank: 2,
+              threat_level: threat,
+              name: `${q.name} — ${sb.label}`
+            }));
+          } else {
+            blueMesoCount++;
+            blueFeatures.push(makePolygonFeature(sb.bounds, {
+              id: `${macro.id}_q${qIdx}_sub${sIdx}`,
+              name: `${q.name} — ${sb.label}`,
+              continent: macro.continent,
+              country: macro.country,
+              resolution_level: 2,
+              resolution_km: 12,
+              risk_score: localRisk,
+              composite_priority_weight: Math.round(compositePriorityWeight * sb.rMult),
+              priority_rank: 3,
+              threat_level: "NOMINAL",
+              status: "NOMINAL_BLUE_PROCESSED",
+              r0_mm_hr: localR0,
+              r48_mm: localR48,
+              soil_saturation: Math.min(1.0, Math.round(soilSat * sb.rMult * 100) / 100),
+              tide_surge_m: tideSurge,
+              center: sb.center,
+              parent_basin: macro.name,
+            }));
+
+            blueFeatures.push(makePointFeature(sb.center, {
+              weight: 0.0,
+              risk_score: localRisk,
+              priority_rank: 3,
+              threat_level: "NOMINAL",
+              name: `${q.name} — ${sb.label}`
+            }));
+          }
         }
-      } else if (qRisk >= 25 || qR0 >= 1.5) {
+      } else if (qR0 >= 5.0 || (qRisk >= 35 && qR0 >= 2.0)) {
         // Meso-scale box (Elevated Watch - Priority Rank 2)
         elevatedWatchCount++;
         amberFeatures.push(makePolygonFeature(q.bounds, {
@@ -1116,7 +1231,7 @@ export async function generatePlanetaryAMRHeatGrid(options = {}) {
           continent: macro.continent,
           country: macro.country,
           resolution_level: 1,
-          resolution_km: 65,
+          resolution_km: 45,
           risk_score: qRisk,
           composite_priority_weight: Math.round(compositePriorityWeight * q.grad),
           priority_rank: 2,
@@ -1130,7 +1245,7 @@ export async function generatePlanetaryAMRHeatGrid(options = {}) {
         }));
 
         amberFeatures.push(makePointFeature(q.center, {
-          weight: qRisk / 100,
+          weight: qRisk / 200,
           risk_score: qRisk,
           priority_rank: 2,
           threat_level: "ELEVATED_WATCH",
@@ -1146,7 +1261,7 @@ export async function generatePlanetaryAMRHeatGrid(options = {}) {
           continent: macro.continent,
           country: macro.country,
           resolution_level: 1,
-          resolution_km: 65,
+          resolution_km: 45,
           risk_score: qRisk,
           composite_priority_weight: Math.round(compositePriorityWeight * q.grad),
           priority_rank: 3,
@@ -1163,7 +1278,7 @@ export async function generatePlanetaryAMRHeatGrid(options = {}) {
         }));
 
         blueFeatures.push(makePointFeature(q.center, {
-          weight: Math.min(0.2, qRisk / 100),
+          weight: 0.0,
           risk_score: qRisk,
           priority_rank: 3,
           threat_level: "NOMINAL",
@@ -1204,10 +1319,6 @@ export async function generatePlanetaryAMRHeatGrid(options = {}) {
     features
   };
 }
-
-/**
- * Generates the AMR Heat Grid for an individual continental compute shard
- */
 export async function generateShardAMRHeatGrid(region, options = {}) {
   const shardLattice = getLatticeForRegion(region);
   return generatePlanetaryAMRHeatGrid({

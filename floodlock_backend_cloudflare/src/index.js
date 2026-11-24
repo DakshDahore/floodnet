@@ -2040,7 +2040,7 @@ export default {
         let cached = null;
         if (!forceRefresh && env.FLOODLOCK_KV) {
           try {
-            const raw = await env.FLOODLOCK_KV.get("flood:planetary_quadtree_heatgrid_v1");
+            const raw = await env.FLOODLOCK_KV.get("flood:planetary_quadtree_heatgrid_v3");
             if (raw) cached = JSON.parse(raw);
           } catch {}
         }
@@ -2061,7 +2061,7 @@ export default {
 
         if (env.FLOODLOCK_KV) {
           try {
-            await env.FLOODLOCK_KV.put("flood:planetary_quadtree_heatgrid_v1", JSON.stringify(freshGrid), { expirationTtl: 3600 });
+            await env.FLOODLOCK_KV.put("flood:planetary_quadtree_heatgrid_v3", JSON.stringify(freshGrid), { expirationTtl: 3600 });
           } catch {}
         }
 
@@ -3126,7 +3126,7 @@ ${sanitizeText(message, 2000)}
     try {
       const freshGrid = await aggregateDistributedShards(env);
       if (env.FLOODLOCK_KV) {
-        await env.FLOODLOCK_KV.put("flood:planetary_quadtree_heatgrid_v1", JSON.stringify(freshGrid), { expirationTtl: 3600 });
+        await env.FLOODLOCK_KV.put("flood:planetary_quadtree_heatgrid_v3", JSON.stringify(freshGrid), { expirationTtl: 3600 });
       }
     } catch (err) {
       console.error("Scheduled distributed mesh sync error:", err);
