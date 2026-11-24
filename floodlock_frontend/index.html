@@ -1952,7 +1952,11 @@ result = client.check_radius(lat=19.076, lon=72.877, radius_km=150)
 print(f"Danger Level: {result.danger_level}")
 print(f"In Danger Zone: {result.in_danger_zone}")
 print(f"Alert: {result.alert_title}")
-print(f"Message: {result.alert_message}")</code></pre>
+print(f"Message: {result.alert_message}")
+
+# 3. Check remaining daily quota
+usage = client.get_usage()
+print(f"Daily Quota: {usage['queries_used']} / {usage['daily_quota']} used")</code></pre>
           <button class="copy-btn" onclick="copyCode(this)">Copy</button>
         </div>
 
@@ -3021,6 +3025,8 @@ console.log(data);</code></pre>
 
       if (viewId === 'dashboard') {
         setTimeout(initMap, 200);
+      } else if (viewId === 'account') {
+        refreshAccountUsage();
       }
     }
 
@@ -3263,11 +3269,49 @@ console.log(data);</code></pre>
         }
       }
       
+      const dailyQuota = user.daily_quota || (user.is_admin ? 500 : 10);
+      updateQuotaUi(0, dailyQuota, dailyQuota);
+      refreshAccountUsage();
+    }
+
+    function updateQuotaUi(used, limit, remaining) {
       const quotaText = document.getElementById('accountQuotaText');
       const quotaBar = document.getElementById('accountQuotaBar');
-      const dailyQuota = user.daily_quota || (user.is_admin ? 500 : 10);
-      if (quotaText) quotaText.textContent = `0 / ${dailyQuota} Queries Used Today`;
-      if (quotaBar) quotaBar.style.width = '0%';
+      const u = Math.max(0, parseInt(used) || 0);
+      const lim = Math.max(1, parseInt(limit) || 10);
+      const rem = remaining !== undefined ? Math.max(0, parseInt(remaining)) : Math.max(0, lim - u);
+      const pct = Math.min(100, Math.round((u / lim) * 100));
+
+      if (quotaText) {
+        quotaText.innerHTML = `<strong>${u} / ${lim}</strong> Queries Used Today <span style="opacity:0.75; font-size:0.75rem;">(${rem} remaining)</span>`;
+      }
+      if (quotaBar) {
+        quotaBar.style.width = `${pct}%`;
+        if (pct >= 90) {
+          quotaBar.style.background = 'linear-gradient(90deg, #ef4444, #f97316)';
+        } else if (pct >= 70) {
+          quotaBar.style.background = 'linear-gradient(90deg, #f59e0b, #eab308)';
+        } else {
+          quotaBar.style.background = 'linear-gradient(90deg, #38bdf8, var(--c-cognac))';
+        }
+      }
+    }
+
+    async function refreshAccountUsage() {
+      const token = window.FloodConfig ? window.FloodConfig.getSessionToken() : null;
+      if (!token) return;
+
+      try {
+        const res = await window.FloodConfig.fetchApi('USER_USAGE', { timeoutMs: 8000 });
+        if (res.ok && res.data) {
+          const u = res.data.queries_used !== undefined ? res.data.queries_used : 0;
+          const lim = res.data.daily_quota || 10;
+          const rem = res.data.daily_remaining !== undefined ? res.data.daily_remaining : Math.max(0, lim - u);
+          updateQuotaUi(u, lim, rem);
+        }
+      } catch (e) {
+        console.warn('Could not refresh quota meter:', e);
+      }
     }
 
     async function deleteUserAccount() {
@@ -3841,9 +3885,15 @@ console.log(data);</code></pre>
       for (const base of CLICK_CLUSTER) {
         try {
           const url = `${base}/api/forecast?lat=${lat}&lon=${lon}${scenarioParam}&reasoning=true`;
-          const res = await fetch(url, { signal: AbortSignal.timeout(12000) });
+          const sessionToken = window.FloodConfig ? window.FloodConfig.getSessionToken() : null;
+          const headers = { 'Accept': 'application/json' };
+          if (sessionToken) headers['Authorization'] = `Bearer ${sessionToken}`;
+          const res = await fetch(url, { headers, signal: AbortSignal.timeout(12000) });
           if (res.ok) {
             data = await res.json();
+            if (data && data.quota) {
+              updateQuotaUi(data.quota.daily_used, data.quota.daily_quota, data.quota.daily_remaining);
+            }
             break;
           }
         } catch (e) {
@@ -4145,6 +4195,9 @@ console.log(data);</code></pre>
 
         if (res.ok && res.data) {
           const d = res.data;
+          if (d.quota) {
+            updateQuotaUi(d.quota.daily_used, d.quota.daily_quota, d.quota.daily_remaining);
+          }
           if (alertBox) {
             alertBox.style.display = 'block';
             if (d.alert_level === 'CRITICAL_PERIMETER_DANGER') {

@@ -37,6 +37,10 @@ class RadiusCheckResult:
             raw=data
         )
 
+    @property
+    def quota(self) -> Dict[str, Any]:
+        return self.raw.get("quota", {})
+
 @dataclass
 class ForecastResult:
     coordinates: Coordinates
@@ -67,4 +71,8 @@ class ForecastResult:
             model_version=str(data.get("model_version", "70B-Ensemble-v2.4")),
             raw=data
         )
+
+    @property
+    def quota(self) -> Dict[str, Any]:
+        return self.raw.get("quota", {})
 

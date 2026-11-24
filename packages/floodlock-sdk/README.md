@@ -51,6 +51,10 @@ forecast = client.get_forecast(lat=19.076, lon=72.877)
 print(f"Risk Score: {forecast.risk_score}/100")
 print(f"Threat Level: {forecast.threat_level}")
 print(f"Physical Floor Triggered: {forecast.safety_floor_triggered}")
+
+# Inspect live quota consumption
+usage = client.get_usage()
+print(f"Queries Used Today: {usage['queries_used']} / {usage['daily_quota']} (Remaining: {usage['daily_remaining']})")
 ```
 
 ---

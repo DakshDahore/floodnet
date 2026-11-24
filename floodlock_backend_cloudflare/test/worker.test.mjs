@@ -26,6 +26,8 @@ import worker, {
   verifyTurnstileToken,
   fetchLiveTelemetry as fetchLiveTelemetryGateway,
   dispatchFounderAlert,
+  consumeUserQuota,
+  getIdentityUsage,
 } from "../src/index.js";
 import {
   fetchLiveTelemetry as fetchLiveTelemetryClick,
@@ -698,4 +700,92 @@ test("13. Critical Telemetry Fix: Real fetchLiveTelemetry antecedent slicing & s
   } finally {
     globalThis.fetch = origFetch;
   }
+});
+
+test("14. SecurityStateDO getUsage reads live counts without incrementing", async () => {
+  const sec = createTestSecurityDO();
+  const bucketKey = "daily:test_user_usage_99";
+  
+  // Initially 0 used
+  const u0 = await sec.getUsage(bucketKey, 10, 86400000);
+  assert.equal(u0.used, 0);
+  assert.equal(u0.remaining, 10);
+
+  // Consume 3 events
+  await sec.checkRateLimit(bucketKey, 10, 86400000);
+  await sec.checkRateLimit(bucketKey, 10, 86400000);
+  await sec.checkRateLimit(bucketKey, 10, 86400000);
+
+  // getUsage should report 3 used, 7 remaining
+  const u3 = await sec.getUsage(bucketKey, 10, 86400000);
+  assert.equal(u3.used, 3);
+  assert.equal(u3.remaining, 7);
+
+  // Subsequent getUsage calls do NOT increment
+  const u3_again = await sec.getUsage(bucketKey, 10, 86400000);
+  assert.equal(u3_again.used, 3);
+  assert.equal(u3_again.remaining, 7);
+});
+
+test("15. consumeUserQuota & getIdentityUsage accurately meter API keys and session tokens", async () => {
+  const sec = createTestSecurityDO();
+  const mockEnv = {
+    MASTER_SECRET: MASTER,
+    SECURITY_STATE_DO: {
+      get: () => sec,
+      idFromName: () => "id",
+    },
+  };
+
+  const testApiKey = "flk_live_test_api_key_1234567890abcdef";
+  const req = new Request("http://localhost/api/forecast", {
+    headers: { "Authorization": `Bearer ${testApiKey}` },
+  });
+
+  // Check 1: 1st consume
+  const q1 = await consumeUserQuota(req, mockEnv, "127.0.0.1", "forecast");
+  assert.equal(q1.allowed, true);
+  assert.equal(q1.quotaStatus.daily_used, 1);
+  assert.equal(q1.quotaStatus.daily_remaining, 999);
+
+  // Check 2: 2nd consume
+  const q2 = await consumeUserQuota(req, mockEnv, "127.0.0.1", "radius-check");
+  assert.equal(q2.allowed, true);
+  assert.equal(q2.quotaStatus.daily_used, 2);
+  assert.equal(q2.quotaStatus.daily_remaining, 998);
+
+  // Check 3: getIdentityUsage reports exactly 2 used, 998 remaining
+  const usage = await getIdentityUsage(req, mockEnv, "127.0.0.1");
+  assert.equal(usage.authenticated, true);
+  assert.equal(usage.queries_used, 2);
+  assert.equal(usage.daily_remaining, 998);
+  assert.equal(usage.daily_quota, 1000);
+});
+
+test("16. worker.fetch handles /api/user/usage and /api/flood/forecast alias", async () => {
+  const sec = createTestSecurityDO();
+  const mockEnv = {
+    MASTER_SECRET: MASTER,
+    ENVIRONMENT: "development",
+    SECURITY_STATE_DO: {
+      get: () => sec,
+      idFromName: () => "id",
+    },
+  };
+
+  // 1. /api/user/usage for unauthenticated IP
+  const reqUsage = new Request("http://localhost/api/user/usage");
+  const resUsage = await worker.fetch(reqUsage, mockEnv);
+  assert.equal(resUsage.status, 200);
+  const dataUsage = await resUsage.json();
+  assert.equal(dataUsage.success, true);
+  assert.equal(typeof dataUsage.queries_used, "number");
+
+  // 2. /api/flood/forecast alias executes correctly
+  const reqForecast = new Request("http://localhost/api/flood/forecast?lat=19.07&lon=72.87");
+  const resForecast = await worker.fetch(reqForecast, mockEnv);
+  assert.equal(resForecast.status, 200);
+  const dataForecast = await resForecast.json();
+  assert.ok(dataForecast.threat_level);
+  assert.ok(dataForecast.quota);
 });

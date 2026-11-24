@@ -143,6 +143,27 @@ export class SecurityStateDO extends BaseDO {
     return { allowed: true, remaining: Math.max(0, limit - (currentCount + 1)), resetAt: now + windowMs };
   }
 
+  /**
+   * Reads current usage without recording an additional event.
+   */
+  async getUsage(bucketKey, limit = 10, windowMs = 86400000) {
+    const now = Date.now();
+    const cutoff = now - windowMs;
+    this.sql.exec("DELETE FROM rate_limit_events WHERE bucket_key = ? AND ts <= ?", bucketKey, cutoff);
+
+    const agg = this.sql
+      .exec("SELECT COUNT(*) AS cnt, MIN(ts) AS oldest_ts FROM rate_limit_events WHERE bucket_key = ?", bucketKey)
+      .toArray()[0];
+
+    const currentCount = Number(agg?.cnt || 0);
+    return {
+      used: currentCount,
+      remaining: Math.max(0, limit - currentCount),
+      limit: limit,
+      resetAt: Number(agg?.oldest_ts || now) + windowMs
+    };
+  }
+
   async issueOtp(identityHash, otpHash, ttlMs = 300000, cooldownMs = 30000, clientIp = "global") {
     const now = Date.now();
     const normalizedIp = normalizeClientIp(clientIp);
@@ -426,6 +447,27 @@ export class BillingStateDO extends BaseDO {
       daily_used: nextDailyUsed,
       daily_remaining: Math.max(0, order.daily_quota - nextDailyUsed),
       total_quota_consumed: nextTotalConsumed,
+    };
+  }
+
+  /**
+   * Retrieves current order status and live daily quota usage without incrementing.
+   */
+  async getOrder(orderId) {
+    const order = this.sql
+      .exec("SELECT * FROM orders_v3 WHERE order_id = ?", orderId)
+      .toArray()[0];
+    if (!order) return null;
+    const today = utcDayKey();
+    const currentDailyUsed = order.daily_window_day === today ? Number(order.daily_used) : 0;
+    return {
+      order_id: order.order_id,
+      plan: order.plan,
+      daily_quota: Number(order.daily_quota),
+      daily_used: currentDailyUsed,
+      daily_remaining: Math.max(0, Number(order.daily_quota) - currentDailyUsed),
+      total_quota_consumed: Number(order.total_quota_consumed),
+      status: order.status,
     };
   }
 

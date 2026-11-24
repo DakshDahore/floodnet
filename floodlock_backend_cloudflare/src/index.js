@@ -101,8 +101,8 @@ function buildCorsHeaders(request, env) {
 
   return {
     "Access-Control-Allow-Origin": allowOrigin,
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS, DELETE",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-API-Key",
     "Access-Control-Max-Age": "86400",
     "Vary": "Origin",
     "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
@@ -712,6 +712,265 @@ export async function verifyTurnstileToken(turnstileToken, secretKey, clientIp, 
   }
 }
 
+export async function consumeUserQuota(request, env, clientIp, endpointName = "api") {
+  const authHeader = request.headers.get("Authorization") || "";
+  const apiKeyHeader = request.headers.get("X-API-Key") || "";
+  const rawToken = authHeader.replace(/^Bearer\s+/i, "").trim() || apiKeyHeader.trim();
+  const isApiKey = rawToken.startsWith("flk_live_") || rawToken.startsWith("flk_test_") || rawToken.startsWith("flk_");
+
+  if (rawToken && env.MASTER_SECRET) {
+    let session = await verifySessionToken(env.MASTER_SECRET, authHeader);
+    if (!session && isApiKey) {
+      const idKey = await deriveDomainSecret(env.MASTER_SECRET, "identity-hash");
+      const keyHash = await hmacSha256Hex(idKey, `apikey:${rawToken}`);
+      session = {
+        sub: `API_${rawToken.slice(0, 16)}`,
+        idh: `key_${keyHash.slice(0, 24)}`,
+        plan: "developer_vip",
+        daily_quota: 1000,
+        isApiKey: true,
+        isAdmin: true,
+      };
+    } else if (!session) {
+      return {
+        allowed: false,
+        error: "UNAUTHORIZED",
+        message: "Invalid Bearer session token or API key.",
+        status: 401,
+      };
+    }
+
+    let dailyQuota = session.isApiKey ? 1000 : 10;
+    let activeOrderId = null;
+    let userPlan = session.plan || (session.isApiKey ? "developer_vip" : "free");
+
+    if (!session.isApiKey && env.FLOODLOCK_KV && env.PII_ENCRYPTION_KEY) {
+      try {
+        const uBlob = await env.FLOODLOCK_KV.get(`user_enc:${session.idh}`);
+        if (uBlob) {
+          const uProf = await decryptPiiAtRest(env.PII_ENCRYPTION_KEY, uBlob, session.idh);
+          if (uProf) {
+            dailyQuota = uProf.daily_quota || (uProf.is_admin ? 500 : 10);
+            activeOrderId = uProf.active_order_id;
+            userPlan = uProf.plan || "free";
+          }
+        }
+      } catch {}
+    }
+
+    // 1. Paid BillingStateDO order
+    if (activeOrderId && env.BILLING_STATE_DO) {
+      try {
+        const bStub = env.BILLING_STATE_DO.get(env.BILLING_STATE_DO.idFromName(`bill:${session.sub}`));
+        const qRes = await bStub.consumeQuota(activeOrderId, 1);
+        if (!qRes.allowed) {
+          return {
+            allowed: false,
+            error: qRes.reason || "DAILY_QUOTA_EXHAUSTED",
+            message: "Daily plan forecast quota exhausted. Quota resets at 00:00 UTC.",
+            status: 429,
+          };
+        }
+        return {
+          allowed: true,
+          quotaStatus: {
+            tier: userPlan,
+            daily_used: qRes.daily_used,
+            daily_quota: dailyQuota,
+            daily_remaining: qRes.daily_remaining,
+            priority_lane: "PAID_GUARANTEED_VIP",
+          },
+        };
+      } catch (e) {
+        console.warn("Billing DO consume failure, falling back to security DO:", e);
+      }
+    }
+
+    // 2. Free / Contributor / Developer API Key in SecurityStateDO
+    if (env.SECURITY_STATE_DO) {
+      const rateLimitKey = `daily:${session.idh || session.sub}`;
+      const secStub = env.SECURITY_STATE_DO.get(env.SECURITY_STATE_DO.idFromName(rateLimitKey));
+      const rl = await secStub.checkRateLimit(rateLimitKey, dailyQuota, 86400000);
+      if (!rl.allowed) {
+        return {
+          allowed: false,
+          error: "DAILY_QUOTA_EXCEEDED",
+          message: `Daily quota of ${dailyQuota} queries reached. Resets at 00:00 UTC.`,
+          status: 429,
+        };
+      }
+      const used = Math.max(1, dailyQuota - rl.remaining);
+      return {
+        allowed: true,
+        quotaStatus: {
+          tier: userPlan,
+          daily_used: used,
+          daily_quota: dailyQuota,
+          daily_remaining: rl.remaining,
+          priority_lane: session.isApiKey ? "DEVELOPER_VIP" : "FREE_BEST_EFFORT",
+        },
+      };
+    }
+
+    return {
+      allowed: true,
+      quotaStatus: {
+        tier: userPlan,
+        daily_used: 1,
+        daily_quota: dailyQuota,
+        daily_remaining: Math.max(0, dailyQuota - 1),
+        priority_lane: "FREE_BEST_EFFORT",
+      },
+    };
+  }
+
+  // 3. Unauthenticated public demo limit
+  if (env.SECURITY_STATE_DO) {
+    const demoKey = `demo_day:${clientIp}`;
+    const demoStub = env.SECURITY_STATE_DO.get(env.SECURITY_STATE_DO.idFromName(demoKey));
+    const demoRl = await demoStub.checkRateLimit(demoKey, 150, 86400000);
+    if (!demoRl.allowed) {
+      return {
+        allowed: false,
+        error: "DEMO_QUOTA_EXCEEDED",
+        message: "Unauthenticated demo limit (150/day) reached. Authenticate to continue.",
+        status: 429,
+      };
+    }
+    const demoUsed = Math.max(1, 150 - demoRl.remaining);
+    return {
+      allowed: true,
+      quotaStatus: {
+        tier: "public_demo",
+        daily_used: demoUsed,
+        daily_quota: 150,
+        daily_remaining: demoRl.remaining,
+        priority_lane: "FREE_BEST_EFFORT",
+      },
+    };
+  }
+
+  return {
+    allowed: true,
+    quotaStatus: {
+      tier: "public_ambient_stream",
+      daily_used: 0,
+      daily_quota: 150,
+      daily_remaining: 150,
+      priority_lane: "PUBLIC_STREAM",
+    },
+  };
+}
+
+export async function getIdentityUsage(request, env, clientIp) {
+  const authHeader = request.headers.get("Authorization") || "";
+  const apiKeyHeader = request.headers.get("X-API-Key") || "";
+  const rawToken = authHeader.replace(/^Bearer\s+/i, "").trim() || apiKeyHeader.trim();
+  const isApiKey = rawToken.startsWith("flk_live_") || rawToken.startsWith("flk_test_") || rawToken.startsWith("flk_");
+
+  if (!rawToken || !env.MASTER_SECRET) {
+    if (env.SECURITY_STATE_DO) {
+      const demoKey = `demo_day:${clientIp}`;
+      const demoStub = env.SECURITY_STATE_DO.get(env.SECURITY_STATE_DO.idFromName(demoKey));
+      const usage = await demoStub.getUsage(demoKey, 150, 86400000);
+      return {
+        authenticated: false,
+        tier: "public_demo",
+        queries_used: usage.used,
+        daily_quota: usage.limit,
+        daily_remaining: usage.remaining,
+        reset_utc: "00:00 UTC",
+      };
+    }
+    return {
+      authenticated: false,
+      tier: "public_demo",
+      queries_used: 0,
+      daily_quota: 150,
+      daily_remaining: 150,
+      reset_utc: "00:00 UTC",
+    };
+  }
+
+  let session = await verifySessionToken(env.MASTER_SECRET, authHeader);
+  if (!session && isApiKey) {
+    const idKey = await deriveDomainSecret(env.MASTER_SECRET, "identity-hash");
+    const keyHash = await hmacSha256Hex(idKey, `apikey:${rawToken}`);
+    session = {
+      sub: `API_${rawToken.slice(0, 16)}`,
+      idh: `key_${keyHash.slice(0, 24)}`,
+      plan: "developer_vip",
+      daily_quota: 1000,
+      isApiKey: true,
+      isAdmin: true,
+    };
+  } else if (!session) {
+    return { error: "UNAUTHORIZED", message: "Invalid session token or API key." };
+  }
+
+  let dailyQuota = session.isApiKey ? 1000 : 10;
+  let activeOrderId = null;
+  let userPlan = session.plan || (session.isApiKey ? "developer_vip" : "free");
+
+  if (!session.isApiKey && env.FLOODLOCK_KV && env.PII_ENCRYPTION_KEY) {
+    try {
+      const uBlob = await env.FLOODLOCK_KV.get(`user_enc:${session.idh}`);
+      if (uBlob) {
+        const uProf = await decryptPiiAtRest(env.PII_ENCRYPTION_KEY, uBlob, session.idh);
+        if (uProf) {
+          dailyQuota = uProf.daily_quota || (uProf.is_admin ? 500 : 10);
+          activeOrderId = uProf.active_order_id;
+          userPlan = uProf.plan || "free";
+        }
+      }
+    } catch {}
+  }
+
+  if (activeOrderId && env.BILLING_STATE_DO) {
+    try {
+      const bStub = env.BILLING_STATE_DO.get(env.BILLING_STATE_DO.idFromName(`bill:${session.sub}`));
+      const order = await bStub.getOrder(activeOrderId);
+      if (order) {
+        return {
+          authenticated: true,
+          user_id: session.sub,
+          plan: userPlan,
+          queries_used: order.daily_used,
+          daily_quota: order.daily_quota,
+          daily_remaining: order.daily_remaining,
+          total_quota_consumed: order.total_quota_consumed,
+          reset_utc: "00:00 UTC",
+        };
+      }
+    } catch {}
+  }
+
+  if (env.SECURITY_STATE_DO) {
+    const rateLimitKey = `daily:${session.idh || session.sub}`;
+    const secStub = env.SECURITY_STATE_DO.get(env.SECURITY_STATE_DO.idFromName(rateLimitKey));
+    const usage = await secStub.getUsage(rateLimitKey, dailyQuota, 86400000);
+    return {
+      authenticated: true,
+      user_id: session.sub,
+      plan: userPlan,
+      queries_used: usage.used,
+      daily_quota: usage.limit,
+      daily_remaining: usage.remaining,
+      reset_utc: "00:00 UTC",
+    };
+  }
+
+  return {
+    authenticated: true,
+    user_id: session.sub,
+    plan: userPlan,
+    queries_used: 0,
+    daily_quota: dailyQuota,
+    daily_remaining: dailyQuota,
+    reset_utc: "00:00 UTC",
+  };
+}
+
 export default {
   async fetch(request, env) {
     try {
@@ -757,6 +1016,7 @@ export default {
             flood_active: "/api/flood/active",
             flood_telemetry: "/api/flood/telemetry?lat=19.21&lon=73.10&past_days=60&forecast_days=30",
             flood_radius_check: "/api/flood/radius-check?lat=19.076&lon=72.877&radius_km=150",
+            flood_forecast: "/api/flood/forecast?lat=18.998&lon=72.842",
             forecast: "/api/forecast?lat=18.998&lon=72.842",
             send_otp: "POST /api/auth/send-otp",
             verify_otp: "POST /api/auth/verify-otp",
@@ -764,6 +1024,7 @@ export default {
             oauth_github: "GET /api/auth/oauth/github",
             oauth_callback: "GET /api/auth/oauth/callback",
             user_profile: "GET /api/user/profile",
+            user_usage: "GET /api/user/usage",
             billing_webhook: "POST /api/billing/webhook",
             billing_refund: "POST /api/billing/refund",
             inquiry: "POST /api/inquiry",
@@ -1365,6 +1626,18 @@ export default {
         }
       }
 
+      // ── GET /api/user/usage ──
+      if (path === "/api/user/usage" && method === "GET") {
+        const usage = await getIdentityUsage(request, env, clientIp);
+        if (usage.error) {
+          return jsonResponse(request, env, usage, 401);
+        }
+        return jsonResponse(request, env, {
+          success: true,
+          ...usage,
+        }, 200);
+      }
+
       // ── GET /api/user/profile ──
       if (path === "/api/user/profile" && method === "GET") {
         try { requireSecrets(env, ["MASTER_SECRET", "PII_ENCRYPTION_KEY"]); } catch {
@@ -1376,17 +1649,30 @@ export default {
         const rawToken = authHeader.replace(/^Bearer\s+/i, "").trim() || apiKeyHeader.trim();
         let session = null;
         if (!session && (rawToken.startsWith("flk_live_") || rawToken.startsWith("flk_test_") || rawToken.startsWith("flk_"))) {
+          const usage = await getIdentityUsage(request, env, clientIp);
           return jsonResponse(request, env, {
             authenticated: true,
             profile: {
               user_id: `USR_${rawToken.slice(0, 16)}`,
               identity_masked: "developer***@meteoflood.live",
               identity: "developer@meteoflood.live",
-              plan: "developer_pro",
-              daily_quota: 10000,
+              plan: "developer_vip",
+              daily_quota: 1000,
               is_admin: true,
               api_key: rawToken,
               created_at: new Date().toISOString(),
+              usage: {
+                queries_used: usage.queries_used || 0,
+                daily_quota: usage.daily_quota || 1000,
+                daily_remaining: usage.daily_remaining !== undefined ? usage.daily_remaining : 1000,
+                reset_utc: "00:00 UTC",
+              },
+            },
+            usage: {
+              queries_used: usage.queries_used || 0,
+              daily_quota: usage.daily_quota || 1000,
+              daily_remaining: usage.daily_remaining !== undefined ? usage.daily_remaining : 1000,
+              reset_utc: "00:00 UTC",
             },
             data_protection: "AES-256-GCM Encrypted at Rest (Mandatory Identity AAD)",
           });
@@ -1405,6 +1691,7 @@ export default {
         if (!profile) return jsonResponse(request, env, { error: "PROFILE_NOT_FOUND" }, 404);
 
         const isAdmin = getAdminEmailsSet(env).has(profile.identity_raw);
+        const usage = await getIdentityUsage(request, env, clientIp);
         return jsonResponse(request, env, {
           authenticated: true,
           profile: {
@@ -1415,6 +1702,18 @@ export default {
             daily_quota: profile.daily_quota,
             is_admin: isAdmin,
             created_at: profile.created_at,
+            usage: {
+              queries_used: usage.queries_used || 0,
+              daily_quota: usage.daily_quota || profile.daily_quota || 10,
+              daily_remaining: usage.daily_remaining !== undefined ? usage.daily_remaining : (profile.daily_quota || 10),
+              reset_utc: "00:00 UTC",
+            },
+          },
+          usage: {
+            queries_used: usage.queries_used || 0,
+            daily_quota: usage.daily_quota || profile.daily_quota || 10,
+            daily_remaining: usage.daily_remaining !== undefined ? usage.daily_remaining : (profile.daily_quota || 10),
+            reset_utc: "00:00 UTC",
           },
           data_protection: "AES-256-GCM Encrypted at Rest (Mandatory Identity AAD)",
         });
@@ -1638,6 +1937,11 @@ export default {
           return jsonResponse(request, env, { error: "INVALID_COORDINATES", message: "Valid lat/lon required." }, 400);
         }
 
+        const quotaCheck = await consumeUserQuota(request, env, clientIp, "radius-check");
+        if (!quotaCheck.allowed) {
+          return jsonResponse(request, env, { error: quotaCheck.error, message: quotaCheck.message }, quotaCheck.status);
+        }
+
         // 1. Fetch live local meteorology at user location
         const localTelem = await fetchLiveTelemetry(lat, lon);
 
@@ -1726,12 +2030,13 @@ export default {
             atmospheric_cape_j_kg: localTelem.cape,
             wind_speed_km_h: localTelem.wind,
           },
+          quota: quotaCheck.quotaStatus,
           timestamp: new Date().toISOString(),
         }, 200);
       }
 
-      // ── GET /api/forecast?lat=X&lon=Y (with /api/live-mumbai backward-compatible alias) ──
-      if ((path === "/api/forecast" || path === "/api/live-mumbai") && method === "GET") {
+      // ── GET /api/forecast?lat=X&lon=Y (with /api/flood/forecast and /api/live-mumbai aliases) ──
+      if ((path === "/api/forecast" || path === "/api/flood/forecast" || path === "/api/live-mumbai") && method === "GET") {
         const t0 = performance.now();
         const lat = parseFloat(url.searchParams.get("lat") ?? "18.998");
         const lon = parseFloat(url.searchParams.get("lon") ?? "72.842");
@@ -1739,66 +2044,13 @@ export default {
           return jsonResponse(request, env, { error: "INVALID_COORDINATES", message: "Valid lat/lon required." }, 400);
         }
 
-        const authHeader = request.headers.get("Authorization");
         let quotaStatus = null;
-
-        // Quota deduction strictly applies to /api/forecast (custom queries), preserving /api/live-mumbai as an ambient stream
-        if (path === "/api/forecast") {
-          const authHeader = request.headers.get("Authorization") || "";
-          const apiKeyHeader = request.headers.get("X-API-Key") || "";
-          const rawToken = authHeader.replace(/^Bearer\s+/i, "").trim() || apiKeyHeader.trim();
-          const isApiKey = rawToken.startsWith("flk_live_") || rawToken.startsWith("flk_test_") || rawToken.startsWith("flk_");
-
-          if (rawToken && env.MASTER_SECRET) {
-            let session = await verifySessionToken(env.MASTER_SECRET, authHeader);
-            if (!session && isApiKey) {
-              session = { sub: `API_${rawToken.slice(0, 16)}`, idh: `key_${rawToken.slice(0, 16)}`, plan: "developer_pro", isAdmin: true };
-              quotaStatus = { tier: "developer_vip", daily_remaining: 10000, priority_lane: "PAID_GUARANTEED_VIP" };
-            } else if (!session) {
-              return jsonResponse(request, env, { error: "UNAUTHORIZED", message: "Invalid Bearer token or API key." }, 401);
-            }
-            if (!isApiKey && env.FLOODLOCK_KV && env.PII_ENCRYPTION_KEY) {
-              const uBlob = await env.FLOODLOCK_KV.get(`user_enc:${session.idh}`);
-              if (uBlob) {
-                const uProf = await decryptPiiAtRest(env.PII_ENCRYPTION_KEY, uBlob, session.idh);
-                if (uProf.active_order_id && env.BILLING_STATE_DO) {
-                  const bStub = env.BILLING_STATE_DO.get(env.BILLING_STATE_DO.idFromName(`bill:${session.sub}`));
-                  const qRes = await bStub.consumeQuota(uProf.active_order_id, 1);
-                  if (!qRes.allowed) {
-                    return jsonResponse(request, env, { error: qRes.reason, message: "Daily plan forecast quota exhausted." }, 429);
-                  }
-                  quotaStatus = { tier: uProf.plan, daily_remaining: qRes.daily_remaining, priority_lane: "PAID_GUARANTEED_VIP" };
-                } else if (env.SECURITY_STATE_DO) {
-                  const rateLimitKey = `daily:${session.idh || session.sub}`;
-                  const freeStub = env.SECURITY_STATE_DO.get(env.SECURITY_STATE_DO.idFromName(rateLimitKey));
-                  const freeRl = await freeStub.checkRateLimit(rateLimitKey, uProf.daily_quota || 10, 86400000);
-                  if (!freeRl.allowed) {
-                    return jsonResponse(request, env, { error: "DAILY_QUOTA_EXCEEDED", message: "Free daily quota reached." }, 429);
-                  }
-                  quotaStatus = { tier: "free", daily_remaining: freeRl.remaining, priority_lane: "FREE_BEST_EFFORT" };
-                }
-              } else if (env.SECURITY_STATE_DO) {
-                // Fallback if profile blob is missing/delayed in KV: enforce free 10/day quota on session.idh
-                const rateLimitKey = `daily:${session.idh || session.sub}`;
-                const freeStub = env.SECURITY_STATE_DO.get(env.SECURITY_STATE_DO.idFromName(rateLimitKey));
-                const freeRl = await freeStub.checkRateLimit(rateLimitKey, 10, 86400000);
-                if (!freeRl.allowed) {
-                  return jsonResponse(request, env, { error: "DAILY_QUOTA_EXCEEDED", message: "Free daily quota reached." }, 429);
-                }
-                quotaStatus = { tier: "free", daily_remaining: freeRl.remaining, priority_lane: "FREE_BEST_EFFORT" };
-              }
-            }
-          } else if (env.SECURITY_STATE_DO) {
-            const demoStub = env.SECURITY_STATE_DO.get(env.SECURITY_STATE_DO.idFromName(`demo_day:${clientIp}`));
-            const demoRl = await demoStub.checkRateLimit(`demo_day:${clientIp}`, 150, 86400000);
-            if (!demoRl.allowed) {
-              return jsonResponse(request, env, {
-                error: "DEMO_QUOTA_EXCEEDED",
-                message: "Unauthenticated demo limit (150/day) reached. Authenticate to continue.",
-              }, 429);
-            }
-            quotaStatus = { tier: "public_demo", daily_remaining: demoRl.remaining, priority_lane: "FREE_BEST_EFFORT" };
+        if (path === "/api/forecast" || path === "/api/flood/forecast") {
+          const quotaCheck = await consumeUserQuota(request, env, clientIp, "forecast");
+          if (!quotaCheck.allowed) {
+            return jsonResponse(request, env, { error: quotaCheck.error, message: quotaCheck.message }, quotaCheck.status);
           }
+          quotaStatus = quotaCheck.quotaStatus;
         } else {
           quotaStatus = { tier: "public_ambient_stream", daily_remaining: "unlimited", priority_lane: "PUBLIC_STREAM" };
         }

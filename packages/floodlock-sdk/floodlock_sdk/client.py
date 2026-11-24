@@ -90,6 +90,10 @@ class FloodLockClient:
         """Check connectivity to edge mirrors."""
         return self._request("GET", "/api/status")
 
+    def get_usage(self) -> Dict[str, Any]:
+        """Retrieve live daily quota consumption and remaining queries for this API key or session."""
+        return self._request("GET", "/api/user/usage")
+
 # Alias for brand symmetry
 MeteoFloodClient = FloodLockClient
 

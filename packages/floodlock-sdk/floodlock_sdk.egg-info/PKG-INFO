@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: floodlock-sdk
-Version: 0.1.0
+Version: 0.1.1
 Summary: Official Python client for MeteoFlood and FloodLock compound flood forecasting
 Author-email: Daksh Dahore <lantern.mech@gmail.com>
 Project-URL: Homepage, https://metoflood.netlify.app
@@ -65,9 +65,14 @@ forecast = client.get_forecast(lat=19.076, lon=72.877)
 print(f"Risk Score: {forecast.risk_score}/100")
 print(f"Threat Level: {forecast.threat_level}")
 print(f"Physical Floor Triggered: {forecast.safety_floor_triggered}")
+
+# Inspect live quota consumption
+usage = client.get_usage()
+print(f"Queries Used Today: {usage['queries_used']} / {usage['daily_quota']} (Remaining: {usage['daily_remaining']})")
 ```
 
 ---
 
 ## 🛡️ License
 MIT License. © 2026 Lantern Mechatronics / Daksh Dahore.
+
