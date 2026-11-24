@@ -91,3 +91,4 @@ if old_endpoints in cfg_js:
     print("Updated js/config.js with dakshdahore1995 as primary at index 0.")
 
 print("All configuration files synchronized.")
+
