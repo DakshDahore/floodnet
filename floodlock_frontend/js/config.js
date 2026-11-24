@@ -63,6 +63,7 @@ const FLOODLOCK_ENDPOINTS = {
   AUTH_OAUTH_EXCHANGE: "/api/auth/oauth/exchange",
   USER_PROFILE: "/api/user/profile",
   USER_USAGE: "/api/user/usage",
+  USER_API_KEY: "/api/user/api-key",
   FLOOD_FORECAST: "/api/flood/forecast",
   BILLING_WEBHOOK: "/api/billing/webhook",
   BILLING_REFUND: "/api/billing/refund",

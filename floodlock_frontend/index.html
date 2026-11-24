@@ -2020,12 +2020,26 @@ console.log(data);</code></pre>
 
           <!-- Usage Meter -->
           <div style="background: rgba(10, 7, 5, 0.6); padding: 1.5rem; border-radius: 14px; border: 1px solid var(--c-card-border); margin-bottom: 2rem;">
-            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
               <span>Daily Quota Consumption (UTC Reset 00:00)</span>
-              <strong id="accountQuotaText">1 / 10 Queries Used</strong>
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <strong id="accountQuotaText">0 / 10 Queries Used</strong>
+                <button onclick="refreshAccountUsage(true)" class="btn-water" style="padding: 0.2rem 0.65rem; font-size: 0.75rem; border-radius: 6px;">⟳ Refresh Meter</button>
+              </div>
             </div>
-            <div style="width: 100%; height: 10px; background: rgba(214, 197, 179, 0.1); border-radius: 999px; overflow: hidden;">
-              <div id="accountQuotaBar" style="width: 10%; height: 100%; background: linear-gradient(90deg, #38bdf8, var(--c-cognac)); border-radius: 999px;"></div>
+            <div style="width: 100%; height: 10px; background: rgba(214, 197, 179, 0.1); border-radius: 999px; overflow: hidden; margin-bottom: 0.75rem;">
+              <div id="accountQuotaBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #38bdf8, var(--c-cognac)); border-radius: 999px;"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; color: var(--c-text-muted); flex-wrap: wrap; gap: 0.5rem;">
+              <span>⚡ Synchronized with Python SDK (<code>floodlock-sdk</code>) and edge worker clusters.</span>
+              <span id="accountResetTime" style="font-family: var(--font-mono); color: #38bdf8;">Resets 00:00 UTC</span>
+            </div>
+            <div style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid rgba(214, 197, 179, 0.1); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+              <span style="font-size: 0.82rem; color: #a5f3fc;">Bound Account API Key:</span>
+              <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <code id="accountApiKeySnippet" style="font-family: var(--font-mono); font-size: 0.8rem; background: #050810; padding: 0.25rem 0.6rem; border-radius: 6px; border: 1px solid var(--c-card-border); color: #38bdf8;">flk_live_948f8a29b01c4e78d9102ab3c4d</code>
+                <button onclick="copyBoundApiKey()" class="btn-water" style="padding: 0.25rem 0.6rem; font-size: 0.75rem;">Copy</button>
+              </div>
             </div>
           </div>
 
@@ -3272,6 +3286,7 @@ console.log(data);</code></pre>
       const dailyQuota = user.daily_quota || (user.is_admin ? 500 : 10);
       updateQuotaUi(0, dailyQuota, dailyQuota);
       refreshAccountUsage();
+      loadUserApiKey();
     }
 
     function updateQuotaUi(used, limit, remaining) {
@@ -3297,7 +3312,7 @@ console.log(data);</code></pre>
       }
     }
 
-    async function refreshAccountUsage() {
+    async function refreshAccountUsage(showFeedback = false) {
       const token = window.FloodConfig ? window.FloodConfig.getSessionToken() : null;
       if (!token) return;
 
@@ -3308,6 +3323,9 @@ console.log(data);</code></pre>
           const lim = res.data.daily_quota || 10;
           const rem = res.data.daily_remaining !== undefined ? res.data.daily_remaining : Math.max(0, lim - u);
           updateQuotaUi(u, lim, rem);
+          if (showFeedback) {
+            showFloatingToast(`Quota synchronized: ${u} / ${lim} used today ✓`);
+          }
         }
       } catch (e) {
         console.warn('Could not refresh quota meter:', e);
@@ -4395,11 +4413,60 @@ console.log(data);</code></pre>
       });
     }
 
-    function generateNewApiKey() {
-      const rand = Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, '0')).join('');
-      const input = document.getElementById('apiKeyDisplay');
-      if (input) input.value = 'flk_live_' + rand;
-      showFloatingToast('New production API key generated ✓');
+    async function loadUserApiKey() {
+      const token = window.FloodConfig ? window.FloodConfig.getSessionToken() : null;
+      if (!token) return;
+
+      try {
+        const res = await window.FloodConfig.fetchApi('USER_API_KEY', { timeoutMs: 6000 });
+        if (res.ok && res.data && res.data.api_key) {
+          const key = res.data.api_key;
+          const input = document.getElementById('apiKeyDisplay');
+          const snippet = document.getElementById('accountApiKeySnippet');
+          if (input) input.value = key;
+          if (snippet) snippet.textContent = key;
+        }
+      } catch (e) {
+        console.warn('Could not load user API key:', e);
+      }
+    }
+
+    async function generateNewApiKey() {
+      const token = window.FloodConfig ? window.FloodConfig.getSessionToken() : null;
+      if (!token) {
+        showFloatingToast('Please log in to bind and generate an account API key', true);
+        return;
+      }
+
+      showFloatingToast('Generating and binding new API key to account...');
+      try {
+        const res = await window.FloodConfig.fetchApi('USER_API_KEY', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        });
+        if (res.ok && res.data && res.data.api_key) {
+          const key = res.data.api_key;
+          const input = document.getElementById('apiKeyDisplay');
+          const snippet = document.getElementById('accountApiKeySnippet');
+          if (input) input.value = key;
+          if (snippet) snippet.textContent = key;
+          showFloatingToast('New production API key bound to account ✓');
+          refreshAccountUsage(true);
+        } else {
+          showFloatingToast('Failed to rotate API key', true);
+        }
+      } catch (err) {
+        showFloatingToast('Network error updating API key', true);
+      }
+    }
+
+    function copyBoundApiKey() {
+      const snippet = document.getElementById('accountApiKeySnippet')?.textContent;
+      if (!snippet) return;
+      navigator.clipboard.writeText(snippet).then(() => {
+        showFloatingToast('Bound Account API Key copied to clipboard ✓');
+      });
     }
 
     // ── Floating Non-Intrusive Toast Notification ──

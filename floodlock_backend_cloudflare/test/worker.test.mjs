@@ -789,3 +789,81 @@ test("16. worker.fetch handles /api/user/usage and /api/flood/forecast alias", a
   assert.ok(dataForecast.threat_level);
   assert.ok(dataForecast.quota);
 });
+
+test("17. API key bound to user account synchronizes quota consumption across SDK and web dashboard", async () => {
+  const sec = createTestSecurityDO();
+  const kvMap = new Map();
+  const mockKV = {
+    get: async (k) => kvMap.get(k) || null,
+    put: async (k, v) => kvMap.set(k, v),
+    delete: async (k) => kvMap.delete(k),
+  };
+
+  const userIdHash = "user_hash_unified_quota_test";
+  const userApiKey = "flk_live_custom_user_key_778899aabbcc";
+  kvMap.set(`apikey:${userApiKey}`, userIdHash);
+  kvMap.set(`user_apikey:${userIdHash}`, userApiKey);
+
+  const mockEnv = {
+    MASTER_SECRET: MASTER,
+    ENVIRONMENT: "development",
+    FLOODLOCK_KV: mockKV,
+    SECURITY_STATE_DO: {
+      get: () => sec,
+      idFromName: () => "id",
+    },
+  };
+
+  // 1. Python SDK calls API using userApiKey
+  const reqSdk = new Request("http://localhost/api/forecast?lat=19.07&lon=72.87", {
+    headers: { "Authorization": `Bearer ${userApiKey}` },
+  });
+  const qRes = await consumeUserQuota(reqSdk, mockEnv, "192.168.1.50", "forecast");
+  assert.equal(qRes.allowed, true);
+  assert.equal(qRes.quotaStatus.daily_used, 1);
+  assert.equal(qRes.quotaStatus.daily_remaining, 9);
+  assert.equal(qRes.quotaStatus.daily_quota, 10);
+
+  // 2. Python SDK makes second call
+  const qRes2 = await consumeUserQuota(reqSdk, mockEnv, "192.168.1.50", "forecast");
+  assert.equal(qRes2.quotaStatus.daily_used, 2);
+  assert.equal(qRes2.quotaStatus.daily_remaining, 8);
+
+  // 3. Browser session for the user requests GET /api/user/usage
+  const userSessionJwt = await issueSessionToken(MASTER, { userId: "USR_123456", identityHash: userIdHash, plan: "free", ttlSec: 3600 });
+  const reqBrowser = new Request("http://localhost/api/user/usage", {
+    headers: { "Authorization": `Bearer ${userSessionJwt}` },
+  });
+  const usageBrowser = await getIdentityUsage(reqBrowser, mockEnv, "203.0.113.10");
+  assert.equal(usageBrowser.authenticated, true);
+  assert.equal(usageBrowser.queries_used, 2, "Web account usage MUST reflect the 2 SDK queries");
+  assert.equal(usageBrowser.daily_remaining, 8);
+  assert.equal(usageBrowser.daily_quota, 10);
+
+  // 4. Test GET /api/user/api-key returns the bound key
+  const reqKey = new Request("http://localhost/api/user/api-key", {
+    headers: { "Authorization": `Bearer ${userSessionJwt}` },
+  });
+  const resKey = await worker.fetch(reqKey, mockEnv);
+  assert.equal(resKey.status, 200);
+  const keyData = await resKey.json();
+  assert.equal(keyData.success, true);
+  assert.equal(keyData.api_key, userApiKey);
+
+  // 5. Test POST /api/user/api-key rotates key and updates mapping
+  const reqRotate = new Request("http://localhost/api/user/api-key", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${userSessionJwt}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ api_key: "flk_live_rotated_key_998877" })
+  });
+  const resRotate = await worker.fetch(reqRotate, mockEnv);
+  assert.equal(resRotate.status, 200);
+  const rotData = await resRotate.json();
+  assert.equal(rotData.api_key, "flk_live_rotated_key_998877");
+  assert.equal(kvMap.get(`user_apikey:${userIdHash}`), "flk_live_rotated_key_998877");
+  assert.equal(kvMap.get("apikey:flk_live_rotated_key_998877"), userIdHash);
+  assert.equal(kvMap.has(`apikey:${userApiKey}`), false, "Old key mapping must be cleaned up");
+});
