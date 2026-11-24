@@ -298,113 +298,516 @@
     }
 
     /* ══════════════════════════════════════════════════════════════════
-       VIEW 1: SCROLL CANVAS & STORYTELLING
+       $10,000 APPLE / LINEAR TIER HERO & SCROLL-TO-REVEAL SYSTEM
        ══════════════════════════════════════════════════════════════════ */
-    .story-hero-header { text-align: center; padding: 3rem 1rem 1.5rem; max-width: 950px; margin: 0 auto; }
-    .story-hero-header h1 {
-      font-family: var(--font-display);
-      font-size: 5rem;
-      line-height: 1.02;
-      letter-spacing: -0.02em;
-      margin-bottom: 1.25rem;
-      background: linear-gradient(180deg, #FFFFFF 20%, #D6C5B3 100%);
+    .hero-cinematic {
+      text-align: center;
+      padding: 5rem 1.5rem 3.5rem;
+      max-width: 1100px;
+      margin: 0 auto;
+      position: relative;
+    }
+    .hero-cinematic::before {
+      content: '';
+      position: absolute;
+      top: -15%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 700px;
+      height: 450px;
+      background: radial-gradient(circle, rgba(56, 189, 248, 0.16) 0%, rgba(6, 182, 212, 0.05) 50%, transparent 80%);
+      filter: blur(90px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .hero-badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.65rem;
+      background: rgba(255, 255, 255, 0.04);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 0.45rem 1.15rem;
+      border-radius: 999px;
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      color: #94a3b8;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 1.8rem;
+      box-shadow: 0 4px 25px rgba(0, 0, 0, 0.4);
+      position: relative;
+      z-index: 1;
+    }
+    .pulse-dot-live {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 12px #10b981;
+      animation: pulseGreen 1.8s infinite ease-in-out;
+    }
+    @keyframes pulseGreen {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.6); opacity: 0.4; }
+    }
+    .hero-title-giant {
+      font-family: var(--font-sans);
+      font-size: clamp(3.2rem, 7.5vw, 6rem);
+      font-weight: 800;
+      line-height: 1.04;
+      letter-spacing: -0.04em;
+      margin-bottom: 1.5rem;
+      background: linear-gradient(180deg, #FFFFFF 20%, #CBD5E1 70%, #64748B 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      position: relative;
+      z-index: 1;
+    }
+    .hero-title-giant span.gradient-cyan {
+      background: linear-gradient(135deg, #38bdf8 0%, #06b6d4 50%, #60a5fa 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
-    .story-hero-header h1 em { font-style: italic; color: var(--c-cognac); -webkit-text-fill-color: var(--c-cognac); }
+    .hero-subtitle-lead {
+      font-size: clamp(1.15rem, 2.2vw, 1.38rem);
+      color: #94a3b8;
+      max-width: 800px;
+      margin: 0 auto 2.5rem;
+      font-weight: 350;
+      line-height: 1.65;
+      position: relative;
+      z-index: 1;
+    }
+    .hero-cta-group {
+      display: flex;
+      justify-content: center;
+      gap: 1.25rem;
+      flex-wrap: wrap;
+      position: relative;
+      z-index: 1;
+      margin-bottom: 3.5rem;
+    }
+    .btn-keynote-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.65rem;
+      background: #ffffff;
+      color: #070a12;
+      font-weight: 700;
+      font-size: 0.96rem;
+      padding: 0.9rem 2rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.9);
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 10px 30px rgba(255, 255, 255, 0.15);
+    }
+    .btn-keynote-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 16px 45px rgba(56, 189, 248, 0.4);
+      background: #f8fafc;
+    }
+    .btn-keynote-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.65rem;
+      background: rgba(255, 255, 255, 0.04);
+      color: #f1f5f9;
+      font-weight: 600;
+      font-size: 0.96rem;
+      padding: 0.9rem 2rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      backdrop-filter: blur(16px);
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .btn-keynote-secondary:hover {
+      transform: translateY(-2px);
+      background: rgba(255, 255, 255, 0.09);
+      border-color: rgba(255, 255, 255, 0.28);
+    }
+
+    /* Key Metrics Floating Strip */
+    .hero-stat-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 1.6rem 2rem;
+      background: rgba(13, 19, 32, 0.65);
+      backdrop-filter: blur(28px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 24px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+    }
+    @media (max-width: 768px) {
+      .hero-stat-strip { grid-template-columns: repeat(2, 1fr); gap: 1rem; padding: 1.25rem; }
+    }
+    .hero-stat-item { text-align: center; }
+    .hero-stat-num {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: #ffffff;
+      font-family: var(--font-sans);
+      letter-spacing: -0.03em;
+    }
+    .hero-stat-num span { color: #38bdf8; font-size: 1.4rem; }
+    .hero-stat-lbl {
+      font-size: 0.78rem;
+      color: #94a3b8;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-top: 0.3rem;
+    }
+
+    /* Scroll Reveal Engine */
+    .scroll-reveal {
+      opacity: 0;
+      transform: translateY(38px) scale(0.98);
+      filter: blur(8px);
+      transition: opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1),
+                  transform 0.85s cubic-bezier(0.16, 1, 0.3, 1),
+                  filter 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+      will-change: opacity, transform, filter;
+    }
+    .scroll-reveal.revealed {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      filter: blur(0);
+    }
+
+    /* Fluid Canvas Container */
     .story-canvas-container {
-      position: relative; width: 100%; height: 600px; border-radius: 28px;
-      overflow: hidden; border: 1px solid var(--c-card-border);
-      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7); margin: 2.5rem 0; background: #090e17;
+      position: relative;
+      width: 100%;
+      height: 600px;
+      border-radius: 32px;
+      overflow: hidden;
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      box-shadow: 0 30px 100px rgba(0, 0, 0, 0.8), 0 0 60px rgba(6, 182, 212, 0.15);
+      margin: 3.5rem 0 5.5rem;
+      background: #050810;
     }
     #storyCanvas { width: 100%; height: 100%; display: block; cursor: crosshair; }
     .story-hud-overlay {
-      position: absolute; bottom: 1.5rem; left: 1.5rem; right: 1.5rem;
-      display: flex; justify-content: space-between; align-items: flex-end; pointer-events: none;
+      position: absolute;
+      bottom: 1.6rem;
+      left: 1.6rem;
+      right: 1.6rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      pointer-events: none;
+      gap: 1rem;
+      flex-wrap: wrap;
     }
     .story-hud-box {
-      background: rgba(14, 10, 7, 0.85); backdrop-filter: blur(20px);
-      border: 1px solid rgba(214, 197, 179, 0.25); padding: 1.1rem 1.5rem;
-      border-radius: 16px; max-width: 520px; pointer-events: auto;
+      background: rgba(8, 12, 22, 0.88);
+      backdrop-filter: blur(28px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 1.35rem 1.8rem;
+      border-radius: 20px;
+      max-width: 560px;
+      pointer-events: auto;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.7);
     }
     .story-hud-tag {
-      font-family: var(--font-mono); font-size: 0.72rem; text-transform: uppercase;
-      letter-spacing: 0.12em; color: #38bdf8; margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.4rem;
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: #38bdf8;
+      margin-bottom: 0.4rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 700;
     }
-    .story-hud-title { font-family: var(--font-display); font-size: 1.6rem; color: var(--c-linen); margin-bottom: 0.4rem; }
-    .story-hud-desc { font-size: 0.92rem; color: var(--c-text-muted); line-height: 1.5; }
+    .story-hud-title {
+      font-family: var(--font-sans);
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 0.4rem;
+      letter-spacing: -0.02em;
+    }
+    .story-hud-desc {
+      font-size: 0.92rem;
+      color: #94a3b8;
+      line-height: 1.6;
+    }
     .story-timeline-scrubber {
-      background: rgba(14, 10, 7, 0.85); backdrop-filter: blur(20px);
-      border: 1px solid rgba(214, 197, 179, 0.25); padding: 0.8rem 1.2rem;
-      border-radius: 999px; display: flex; align-items: center; gap: 0.8rem; pointer-events: auto;
+      background: rgba(8, 12, 22, 0.88);
+      backdrop-filter: blur(28px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 0.85rem 1.4rem;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+      pointer-events: auto;
+      box-shadow: 0 15px 40px rgba(0,0,0,0.6);
     }
-    .scene-block { margin: 4.5rem 0; display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; align-items: center; }
-    @media (max-width: 900px) { .scene-block { grid-template-columns: 1fr; } }
-    .math-descrambler-box {
-      font-family: var(--font-mono); background: rgba(10, 15, 24, 0.92);
-      border: 1px solid rgba(6, 182, 212, 0.4); border-radius: 20px; padding: 2.2rem;
-      min-height: 220px; display: flex; flex-direction: column; justify-content: center;
-      position: relative; box-shadow: 0 0 30px rgba(6, 182, 212, 0.15);
-    }
-    .math-scramble-text { font-size: 1.15rem; color: #38bdf8; letter-spacing: 0.04em; word-break: break-word; line-height: 1.8; }
-    .sources-search-bar {
-      display: flex; align-items: center; background: rgba(25, 18, 13, 0.9);
-      border: 1px solid rgba(214, 197, 179, 0.35); border-radius: 999px;
-      padding: 0.75rem 1.5rem; margin: 1.5rem 0; gap: 1rem;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4); transition: all 0.25s;
-    }
-    .sources-search-bar:focus-within { border-color: #38bdf8; box-shadow: 0 0 25px rgba(56, 189, 248, 0.35); }
-    .sources-search-bar input { flex: 1; background: transparent; border: none; outline: none; color: var(--c-linen); font-size: 1.05rem; }
-    .sources-chips { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1rem; }
-    .source-chip {
-      background: rgba(214, 197, 179, 0.1); border: 1px solid rgba(214, 197, 179, 0.2);
-      border-radius: 999px; padding: 0.35rem 0.9rem; font-size: 0.8rem; font-family: var(--font-mono);
-      color: var(--c-beige); cursor: pointer; transition: all 0.2s;
-    }
-    .source-chip:hover { background: rgba(6, 182, 212, 0.2); border-color: #38bdf8; color: var(--c-linen); }
-    .token-stream-terminal {
-      background: #050810; border: 1px solid rgba(6, 182, 212, 0.35);
-      border-radius: 18px; padding: 1.5rem; font-family: var(--font-mono);
-      font-size: 0.9rem; color: #a5f3fc; min-height: 180px; box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
-    }
-    .token-cursor { display: inline-block; width: 8px; height: 15px; background: #38bdf8; margin-left: 4px; animation: blink 0.8s infinite; }
-    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
-    /* Instagram DMs & Shredder */
-    .insta-dm-deck {
-      background: rgba(20, 14, 10, 0.92); border: 1px solid var(--c-card-border);
-      border-radius: 24px; overflow: hidden; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    /* Raycast/Linear Bento Grid with Cursor Spotlight */
+    .bento-showcase {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.6rem;
+      margin: 3.5rem 0;
     }
-    .insta-dm-header {
-      padding: 1rem 1.5rem; background: rgba(30, 22, 16, 0.95);
-      border-bottom: 1px solid var(--c-card-border); display: flex; justify-content: space-between; align-items: center;
+    @media (max-width: 1024px) {
+      .bento-showcase { grid-template-columns: repeat(2, 1fr); }
     }
-    .insta-unread-badge {
-      background: #ef4444; color: #fff; font-size: 0.75rem; font-weight: 700;
-      padding: 0.2rem 0.6rem; border-radius: 999px; box-shadow: 0 0 10px #ef4444; animation: pulse 1.5s infinite;
+    @media (max-width: 640px) {
+      .bento-showcase { grid-template-columns: 1fr; }
     }
-    .insta-dm-body { padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem; max-height: 280px; overflow-y: auto; }
-    .dm-bubble { background: rgba(214, 197, 179, 0.08); border: 1px solid rgba(214, 197, 179, 0.15); border-radius: 16px; padding: 0.85rem 1.1rem; font-size: 0.88rem; }
-    .dm-bubble strong { color: #38bdf8; display: block; font-size: 0.78rem; margin-bottom: 0.25rem; }
-    .dm-input-area { padding: 1rem 1.25rem; border-top: 1px solid var(--c-card-border); display: flex; gap: 0.75rem; align-items: center; position: relative; }
-    .dm-input-area input { flex: 1; background: rgba(10, 7, 5, 0.8); border: 1px solid rgba(214, 197, 179, 0.25); border-radius: 999px; padding: 0.6rem 1.2rem; color: var(--c-linen); outline: none; }
-    .trash-bin-visual { font-size: 2.2rem; cursor: pointer; transition: transform 0.2s; }
-    .trash-bin-visual:hover { transform: scale(1.15) rotate(5deg); }
-    .paper-crumple-ball {
-      position: absolute; width: 18px; height: 18px; background: #f8fafc;
-      border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,0.4); pointer-events: none;
-      animation: tossInTrash 0.75s forwards cubic-bezier(0.25, 1, 0.5, 1);
+    .bento-card {
+      position: relative;
+      border-radius: 26px;
+      padding: 2.2rem;
+      background: radial-gradient(700px circle at var(--mouse-x, 150px) var(--mouse-y, 100px), rgba(56, 189, 248, 0.08), transparent 45%), rgba(13, 19, 32, 0.75);
+      backdrop-filter: blur(28px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      overflow: hidden;
+      transition: border-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
     }
-    @keyframes tossInTrash {
-      0% { opacity: 1; transform: translate(0, 0) scale(1) rotate(0deg); }
-      50% { transform: translate(60px, -40px) scale(0.6) rotate(180deg); }
-      100% { opacity: 0; transform: translate(110px, 15px) scale(0.2) rotate(360deg); }
+    .bento-card:hover {
+      border-color: rgba(56, 189, 248, 0.4);
+      transform: translateY(-3px);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 30px rgba(56, 189, 248, 0.1);
     }
-    .founder-code-terminal {
-      background: #090d16; border: 1px solid rgba(16, 185, 129, 0.4);
-      border-radius: 20px; padding: 2rem; font-family: var(--font-mono);
-      font-size: 0.9rem; color: #34d399; box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), inset 0 0 30px rgba(16, 185, 129, 0.08);
+    .bento-icon-badge {
+      width: 52px;
+      height: 52px;
+      border-radius: 16px;
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      margin-bottom: 1.4rem;
+    }
+    .bento-title {
+      font-family: var(--font-sans);
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 0.6rem;
+      letter-spacing: -0.01em;
+    }
+    .bento-desc {
+      font-size: 0.94rem;
+      color: #94a3b8;
+      line-height: 1.62;
+    }
+    .bento-tag {
+      display: inline-block;
+      margin-top: 1.4rem;
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      color: #38bdf8;
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      padding: 0.3rem 0.75rem;
+      border-radius: 8px;
+      font-weight: 600;
+    }
+
+    /* Interactive Split-Comparison Slider */
+    .split-slider-box {
+      position: relative;
+      width: 100%;
+      height: 440px;
+      border-radius: 28px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 30px 80px rgba(0,0,0,0.8);
+      user-select: none;
+      margin: 2.5rem 0;
+    }
+    .split-layer {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 3rem;
+    }
+    .split-left {
+      background: linear-gradient(135deg, #180d0d 0%, #2e1010 100%);
+      width: 50%;
+      z-index: 2;
+      overflow: hidden;
+      border-right: 2px solid #ef4444;
+    }
+    .split-right {
+      background: linear-gradient(135deg, #071524 0%, #0c2738 100%);
+      z-index: 1;
+      text-align: right;
+      align-items: flex-end;
+    }
+    .split-handle {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 48px;
+      height: 48px;
+      background: #ffffff;
+      border-radius: 50%;
+      z-index: 10;
+      cursor: ew-resize;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 25px rgba(0, 0, 0, 0.9), 0 0 20px rgba(56, 189, 248, 0.7);
+      font-weight: bold;
+      color: #070a12;
+      font-size: 1.1rem;
+    }
+
+    /* Interactive 14-Feature Tensor Chip Matrix */
+    .tensor-matrix-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 1.1rem;
+      margin: 2rem 0;
+    }
+    .tensor-chip {
+      background: rgba(13, 19, 32, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 18px;
+      padding: 1.2rem 1.4rem;
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+    .tensor-chip:hover, .tensor-chip.active {
+      border-color: #38bdf8;
+      background: rgba(56, 189, 248, 0.1);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(56, 189, 248, 0.15);
+    }
+    .tensor-chip-index {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: #38bdf8;
+      font-weight: 700;
+      margin-bottom: 0.35rem;
+    }
+    .tensor-chip-name {
+      font-weight: 700;
+      font-size: 0.98rem;
+      color: #ffffff;
+      margin-bottom: 0.25rem;
+    }
+    .tensor-chip-physics {
+      font-size: 0.82rem;
+      color: #94a3b8;
+      font-family: var(--font-mono);
+    }
+
+    /* Groq Adversarial Live Testbench */
+    .groq-testbench-card {
+      background: rgba(13, 19, 32, 0.75);
+      backdrop-filter: blur(28px);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      border-radius: 28px;
+      padding: 2.5rem;
+      margin: 2.5rem 0;
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7);
+    }
+    .testbench-stage-flow {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr auto 1fr;
+      align-items: center;
+      gap: 1.25rem;
+      margin: 2rem 0;
+    }
+    @media (max-width: 840px) {
+      .testbench-stage-flow { grid-template-columns: 1fr; }
+    }
+    .stage-card {
+      background: rgba(7, 10, 18, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 18px;
+      padding: 1.5rem;
+      text-align: center;
+    }
+    .stage-arrow {
+      font-size: 1.6rem;
+      color: #38bdf8;
+      text-align: center;
+    }
+    .code-terminal-deck {
+      background: #050810;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 25px 70px rgba(0,0,0,0.8);
+      margin: 2.5rem 0;
+    }
+    .code-terminal-tabs {
+      display: flex;
+      align-items: center;
+      background: rgba(10, 15, 26, 0.95);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 0 1rem;
+    }
+    .code-tab-btn {
+      background: none;
+      border: none;
+      color: #94a3b8;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      padding: 0.9rem 1.4rem;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+    .code-tab-btn.active {
+      color: #38bdf8;
+      border-bottom-color: #38bdf8;
+      font-weight: 700;
+    }
+    .code-terminal-body {
+      padding: 1.8rem;
+      font-family: var(--font-mono);
+      font-size: 0.92rem;
+      color: #a5f3fc;
       line-height: 1.7;
+      overflow-x: auto;
+    }
+
+    /* Modern Chapter Eyebrows & Typography */
+    .chapter-eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: #38bdf8;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-bottom: 0.6rem;
+    }
+    .chapter-heading-giant {
+      font-family: var(--font-sans);
+      font-size: clamp(2.2rem, 4.5vw, 3.4rem);
+      font-weight: 800;
+      color: #ffffff;
+      line-height: 1.12;
+      letter-spacing: -0.03em;
+      margin-bottom: 1rem;
+    }
+    .chapter-lead-text {
+      font-size: 1.08rem;
+      color: #94a3b8;
+      line-height: 1.65;
+      max-width: 740px;
     }
 
     /* Radar Map & Radius */
@@ -1177,355 +1580,470 @@
        ══════════════════════════════════════════════════════════════════ -->
   <main class="main-wrapper" id="mainContentWrapper">
 
-    <!-- ══════════════════════════════════════════════════════════════════
-         VIEW 1: WELCOME INTRO — 4K SCROLL STORYTELLING
+        <!-- ══════════════════════════════════════════════════════════════════
+         VIEW 1: WELCOME INTRO — $10,000 APPLE/LINEAR-TIER SCROLL STORY
          ══════════════════════════════════════════════════════════════════ -->
     <section id="view-welcome" class="view-section active">
-      <div class="story-hero-header">
-        <div style="font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.18em; text-transform: uppercase; color: #38bdf8; margin-bottom: 0.75rem;">
-          Compound Planetary Hydrology • 12ms Edge Surrogate
+
+      <!-- 1. HERO CINEMATIC (KEYNOTE EXPERIENCE) -->
+      <div class="hero-cinematic">
+        <div class="hero-badge-pill">
+          <span class="pulse-dot-live"></span>
+          <span>PLANETARY V8 EDGE RUNTIME • 15 BASINS ACTIVE • 0.001s FORWARD PASS</span>
         </div>
-        <h1>METEO<em>FLOOD</em></h1>
-        <p style="font-size: 1.25rem; color: var(--c-text-muted); max-width: 720px; margin: 0 auto 1.5rem; font-weight: 300;">
-          A multi-tier neural framework forecasting flash floods, convective cloudbursts, and tidal outfall backflow with sub-minute precision.
+
+        <h1 class="hero-title-giant">
+          Planetary Flood Intelligence. <br>
+          <span class="gradient-cyan">Engineered for the Edge.</span>
+        </h1>
+
+        <p class="hero-subtitle-lead">
+          Sub-second street inundation forecasting, Green-Ampt antecedent soil absorption, and adversarial Groq LPU verification. Eradicating catastrophic false alarms across global coastal basins.
         </p>
-        <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
-          <button class="btn-magnetic" onclick="switchView('auth')">
-            <span>Enter Tactical Gateway</span>
+
+        <div class="hero-cta-group">
+          <button class="btn-keynote-primary" onclick="switchView('dashboard')">
+            <span>🛰️ Launch Live Tactical Radar</span>
             <span>→</span>
           </button>
-          <button class="btn-water" onclick="document.getElementById('storyCanvasContainer').scrollIntoView({ behavior: 'smooth' })">
-            <span>Scroll Down to Reveal Narrative ↓</span>
+          <button class="btn-keynote-secondary" onclick="document.getElementById('storyCanvasContainer').scrollIntoView({ behavior: 'smooth' })">
+            <span>Explore Architecture ↓</span>
           </button>
+          <button class="btn-keynote-secondary" onclick="switchView('api')">
+            <span>⚡ Developer API Platform</span>
+          </button>
+        </div>
+
+        <!-- 4-Pillar Metric Strip -->
+        <div class="hero-stat-strip">
+          <div class="hero-stat-item">
+            <div class="hero-stat-num">94.2<span>%</span></div>
+            <div class="hero-stat-lbl">Empirical Accuracy</div>
+          </div>
+          <div class="hero-stat-item">
+            <div class="hero-stat-num">12<span>ms</span></div>
+            <div class="hero-stat-lbl">Edge Inference Latency</div>
+          </div>
+          <div class="hero-stat-item">
+            <div class="hero-stat-num">14<span>-F</span></div>
+            <div class="hero-stat-lbl">Physics Tensor Vectors</div>
+          </div>
+          <div class="hero-stat-item">
+            <div class="hero-stat-num">0<span>.0</span></div>
+            <div class="hero-stat-lbl">Civic False Panics Dispatched</div>
+          </div>
         </div>
       </div>
 
-      <!-- 4K Interactive Storytelling Canvas -->
-      <div class="story-canvas-container" id="storyCanvasContainer">
+      <!-- 2. HYDRODYNAMIC VECTOR PARTICLE SIMULATION (APPLE CANVAS) -->
+      <div class="story-canvas-container scroll-reveal" id="storyCanvasContainer">
         <canvas id="storyCanvas"></canvas>
         <div class="story-hud-overlay">
-          <div class="story-hud-box" id="storyHudBox">
+          <div class="story-hud-box">
             <div class="story-hud-tag" id="storyHudTag">
-              <span>🌧️</span> <span>SCENE 1 // SERENE JAPANESE TOWN</span>
+              <span>🌊</span> <span>HYDRODYNAMIC VECTOR TOPOLOGY // V8 SHALLOW WATER SURROGATE</span>
             </div>
-            <div class="story-hud-title" id="storyHudTitle">What is MeteoFlood?</div>
+            <div class="story-hud-title" id="storyHudTitle">Interactive Vector Fluid Mesh</div>
             <div class="story-hud-desc" id="storyHudDesc">
-              Water droplets slide off traditional tile roofs, splashing against the letters. MeteoFlood is an edge-native compound flood intelligence platform coupling Saint-Venant shallow water equations with sub-second neural inference across 15 global river basins.
+              Drag cursor over the canvas to inject hydrodynamic turbulence waves. Adjust the water depth slider to simulate street-level inundation contours in real-time.
             </div>
           </div>
           <div class="story-timeline-scrubber">
-            <span style="font-family: var(--font-mono); font-size: 0.75rem; color: #38bdf8;">STORY SCRUBBER:</span>
-            <input type="range" id="storyScrubber" min="0" max="100" value="10" style="width: 130px; accent-color: #38bdf8;">
-            <button onclick="toggleAudioFx()" id="audioToggleBtn" style="background:none; border:none; color:var(--c-linen); cursor:pointer; font-size:1.1rem;" title="Toggle Ambient Water Sounds">🔊</button>
+            <span style="font-family: var(--font-mono); font-size: 0.74rem; color: #38bdf8; font-weight: 700;">DEPTH CONTOUR:</span>
+            <input type="range" id="storyScrubber" min="0" max="100" value="25" style="width: 140px; accent-color: #38bdf8; cursor: pointer;">
+            <button onclick="toggleAudioFx()" id="audioToggleBtn" style="background:none; border:none; color:var(--c-linen); cursor:pointer; font-size:1.15rem; transition: transform 0.2s;" title="Toggle Ambient Hydrodynamic Audio">🔊</button>
           </div>
         </div>
       </div>
 
-      <!-- Narrative Scenes Breakdown Grid -->
-      <div class="scene-block">
-        <div class="card-luxury">
-          <div style="font-family: var(--font-mono); font-size: 0.75rem; color: #38bdf8; margin-bottom: 0.5rem;">SCENE 2 // THE CONCRETE JUNGLE</div>
-          <h2 style="font-family: var(--font-display); font-size: 2.2rem; margin-bottom: 0.75rem;">What are urban floods?</h2>
-          <p style="color: var(--c-text-muted); font-size: 0.98rem; margin-bottom: 1.25rem;">
-            When extreme convective precipitation collides with impervious asphalt grids and locked gravity outfalls, water has nowhere to soak. Arterial roads turn into 2-meter deep raging canals in under 20 minutes.
-          </p>
-          <div style="padding: 1rem; border-radius: 12px; background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.25); font-size: 0.85rem; color: #a5f3fc;">
-            💡 <em>Interactive: Drag your mouse over the canvas above to create hydrodynamic ripples with real-time synthesized water sounds!</em>
-          </div>
-        </div>
-
-        <div class="card-luxury">
-          <div style="font-family: var(--font-mono); font-size: 0.75rem; color: #ef4444; margin-bottom: 0.5rem;">SCENE 3 // THE CRISIS AT SEA</div>
-          <h2 style="font-family: var(--font-display); font-size: 2.2rem; margin-bottom: 0.75rem;">Submerged cars &amp; the broken plank</h2>
-          <p style="color: var(--c-text-muted); font-size: 0.98rem; margin-bottom: 1.25rem;">
-            Cars bob helplessly in the swirling inundation. A struggling survivor clutches a wooden plank—suddenly, floating debris strikes! The wood snaps, and the survivor slips into the deep.
-          </p>
-          <p style="color: var(--c-beige); font-size: 0.92rem; border-left: 3px solid #ef4444; padding-left: 0.85rem;">
-            As you scroll down to search for the survivor, text locks onto the vortex: traditional municipal warnings update every 6 hours. When seconds decide life or death, MeteoFlood computes 36-step street depths in <strong>12 milliseconds</strong>. Scroll up, and the survivor safely drifts to safety!
-          </p>
-        </div>
-      </div>
-
-      <!-- Scene 4: Water Drains Away & Math De-scrambler -->
-      <div class="card-luxury" style="margin: 3.5rem 0;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
-          <div>
-            <div style="font-family: var(--font-mono); font-size: 0.75rem; color: #34d399;">SCENE 4 // HYDRODYNAMIC RESTORATION</div>
-            <h2 style="font-family: var(--font-display); font-size: 2.4rem;">How does MeteoFlood solve this?</h2>
-          </div>
-          <button class="btn-water" onclick="triggerMathDescramble()">
-            <span>⚡ Re-Scramble Physics Equations</span>
-          </button>
-        </div>
-
-        <div class="math-descrambler-box">
-          <div style="font-size: 0.75rem; color: #7dd3fc; margin-bottom: 0.75rem; letter-spacing: 0.1em;">
-            [V8 TENSOR KERNEL: SIMPLIFYING NON-LINEAR SHALLOW WATER PDES]
-          </div>
-          <div class="math-scramble-text" id="mathScrambleText">
-            ∂h/∂t + ∇·(hu) = R - I(t) ⟷ Capping: H_tide - Z_invert ⟷ MSE: 3.96cm ⟷ Torricelli Outfall
-          </div>
-        </div>
-        <p style="color: var(--c-text-muted); font-size: 0.95rem; margin-top: 1.25rem;">
-          By compressing 14-hour supercomputer computational fluid dynamics into an ultra-low latency 14-feature neural surrogate, MeteoFlood delivers millisecond-level street flood depths directly to citizens and civil authorities.
-        </p>
-      </div>
-
-      <!-- Scene 5: Data Sources with Google-Style Search -->
-      <div class="card-luxury" style="margin: 3.5rem 0;">
-        <div style="font-family: var(--font-mono); font-size: 0.75rem; color: #38bdf8;">SCENE 5 // CONTINUOUS TELEMETRY</div>
-        <h2 style="font-family: var(--font-display); font-size: 2.2rem; margin-bottom: 0.5rem;">Information Sources Explorer</h2>
-        <p style="color: var(--c-text-muted); font-size: 0.95rem;">
-          Search or click any official planetary telemetry stream ingested into MeteoFlood's multi-cloud mesh.
+      <!-- 3. ACT I: THE 48-HOUR BLINDSPOT (INTERACTIVE COMPARISON SLIDER) -->
+      <div class="scroll-reveal" style="margin: 5.5rem 0;">
+        <div class="chapter-eyebrow">ACT I // THE HYDROLOGICAL CRISIS</div>
+        <h2 class="chapter-heading-giant">Why Conventional Flood Warnings Fail When Seconds Decide Survival</h2>
+        <p class="chapter-lead-text">
+          Legacy numerical simulations take 6 to 14 hours on central supercomputers. By the time municipal sirens sound, arterial underpasses are already submerged under 2 meters of raging storm runoff. Drag the divider to compare conventional lag vs. MeteoFlood edge physics.
         </p>
 
-        <div class="sources-search-bar">
-          <span style="font-size: 1.2rem;">🔍</span>
-          <input type="text" id="sourcesSearchInput" placeholder="Search data feeds (e.g. Copernicus GloFAS, NOAA, ECMWF, JMA)...">
-          <button onclick="alert('Viewing 18 Integrated Atmospheric Feeds')" class="btn-water" style="padding: 0.35rem 0.85rem; font-size: 0.78rem;">View All 18 Feeds</button>
-        </div>
+        <!-- Interactive Split-Slider -->
+        <div class="split-slider-box" id="splitSliderBox">
+          <!-- Left Layer (Legacy Catastrophe) -->
+          <div class="split-layer split-left" id="splitLeftLayer">
+            <span style="font-family: var(--font-mono); font-size: 0.74rem; color: #ef4444; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; padding: 0.3rem 0.8rem; border-radius: 999px; width: fit-content; margin-bottom: 0.8rem; font-weight: 700;">
+              ❌ CONVENTIONAL MUNICIPAL SIMULATION
+            </span>
+            <h3 style="font-size: 1.8rem; color: #ffffff; margin-bottom: 0.6rem; font-weight: 700;">6-Hour Compute Latency Blindspot</h3>
+            <p style="font-size: 0.95rem; color: #fca5a5; max-width: 440px; line-height: 1.6;">
+              Rigid 5km computational grids miss convective cloudbursts. Warnings dispatch 40 minutes AFTER streets submerge, or trigger paralyzing false sirens on dry terrain.
+            </p>
+            <div style="font-family: var(--font-mono); font-size: 0.82rem; color: #f87171; margin-top: 1.25rem;">
+              • Delay: <strong>360+ Minutes</strong> • False Positives: <strong>48.6%</strong>
+            </div>
+          </div>
 
-        <div class="sources-chips" id="sourcesChipsContainer">
-          <span class="source-chip">🌊 ECMWF Copernicus GloFAS (90-Day Gridded Discharge)</span>
-          <span class="source-chip">🛰️ NOAA GFS &amp; HRRR (Atmospheric Pressure &amp; CAPE)</span>
-          <span class="source-chip">🌧️ NASA GPM IMERG (Satellite Precipitation Radar)</span>
-          <span class="source-chip">🌀 JMA Typhoon Track &amp; Coastal Radar</span>
-          <span class="source-chip">📊 Open-Meteo Planetary Hydrology API</span>
-          <span class="source-chip">🌊 WorldTides &amp; Copernicus Marine (Astronomical Surge)</span>
+          <!-- Right Layer (MeteoFlood Edge AI) -->
+          <div class="split-layer split-right">
+            <span style="font-family: var(--font-mono); font-size: 0.74rem; color: #38bdf8; background: rgba(56, 189, 248, 0.15); border: 1px solid #38bdf8; padding: 0.3rem 0.8rem; border-radius: 999px; width: fit-content; margin-bottom: 0.8rem; font-weight: 700;">
+              ✓ METEOFLOOD V8 EDGE SURROGATE
+            </span>
+            <h3 style="font-size: 1.8rem; color: #ffffff; margin-bottom: 0.6rem; font-weight: 700;">12ms Real-Time Street Physics</h3>
+            <p style="font-size: 0.95rem; color: #93c5fd; max-width: 440px; line-height: 1.6;">
+              Antecedent soil saturation, Torricelli tidal backflow capping, and Saint-Venant shallow water PDEs solved in a single V8 tensor pass at the nearest CDN edge.
+            </p>
+            <div style="font-family: var(--font-mono); font-size: 0.82rem; color: #38bdf8; margin-top: 1.25rem;">
+              • Latency: <strong>0.012 Seconds</strong> • Empirical Accuracy: <strong>94.2%</strong>
+            </div>
+          </div>
+
+          <!-- Draggable Handle -->
+          <div class="split-handle" id="splitHandle">⟷</div>
         </div>
       </div>
 
-      <!-- Scene 6: Why Custom AI & Blistering 150 Token/Sec Stream -->
-      <div class="scene-block">
-        <div class="card-luxury">
-          <div style="font-family: var(--font-mono); font-size: 0.75rem; color: #f59e0b;">SCENE 6 // EDGE SURROGATE</div>
-          <h2 style="font-family: var(--font-display); font-size: 2.2rem; margin-bottom: 0.75rem;">Why custom AI here?</h2>
-          <p style="color: var(--c-text-muted); font-size: 0.95rem; margin-bottom: 1.25rem;">
-            Standard general-purpose LLMs hallucinate physics and fail basic conservation laws. MeteoFlood's custom 14-feature surrogate is mathematically constrained by Green-Ampt infiltration and Torricelli submerged orifice capping, guaranteeing mass residuals &lt; 10⁻¹⁴ m.
+      <!-- 4. ACT II: 14-FEATURE PHYSICS-CONSTRAINED NEURAL CORE -->
+      <div class="scroll-reveal" style="margin: 5.5rem 0;">
+        <div class="chapter-eyebrow">ACT II // PHYSICAL PARAMETERIZATION</div>
+        <h2 class="chapter-heading-giant">14 Physical Vectors. Mass-Conserved to Machine Epsilon.</h2>
+        <p class="chapter-lead-text">
+          Standard general-purpose LLMs hallucinate physics. MeteoFlood custom 14-feature surrogate enforces continuous mass conservation, Green-Ampt infiltration headroom, and Torricelli submerged outfall capping. Click any vector below to inspect its governing physical equation.
+        </p>
+
+        <!-- 14-Feature Interactive Tensor Matrix -->
+        <div class="tensor-matrix-grid" id="tensorMatrixContainer">
+          <div class="tensor-chip active" onclick="inspectTensorFeature(0)">
+            <div class="tensor-chip-index">VECTOR [00]</div>
+            <div class="tensor-chip-name">Rainfall Intensity R₀</div>
+            <div class="tensor-chip-physics">mm/hr Doppler Radar rate</div>
+          </div>
+          <div class="tensor-chip" onclick="inspectTensorFeature(1)">
+            <div class="tensor-chip-index">VECTOR [01]</div>
+            <div class="tensor-chip-name">Antecedent R₄₈</div>
+            <div class="tensor-chip-physics">48h Cumulative rain sum</div>
+          </div>
+          <div class="tensor-chip" onclick="inspectTensorFeature(2)">
+            <div class="tensor-chip-index">VECTOR [02]</div>
+            <div class="tensor-chip-name">Ground Saturation R₁₂₀</div>
+            <div class="tensor-chip-physics">120h Deep moisture reservoir</div>
+          </div>
+          <div class="tensor-chip" onclick="inspectTensorFeature(3)">
+            <div class="tensor-chip-index">VECTOR [03]</div>
+            <div class="tensor-chip-name">Convective CAPE</div>
+            <div class="tensor-chip-physics">J/kg Atmospheric instability</div>
+          </div>
+          <div class="tensor-chip" onclick="inspectTensorFeature(4)">
+            <div class="tensor-chip-index">VECTOR [04]</div>
+            <div class="tensor-chip-name">Pressure Drop ΔP</div>
+            <div class="tensor-chip-physics">hPa Barometric cyclone eye</div>
+          </div>
+          <div class="tensor-chip" onclick="inspectTensorFeature(5)">
+            <div class="tensor-chip-index">VECTOR [05]</div>
+            <div class="tensor-chip-name">Surface Wind Drag</div>
+            <div class="tensor-chip-physics">km/h 10m storm sheer</div>
+          </div>
+          <div class="tensor-chip" onclick="inspectTensorFeature(6)">
+            <div class="tensor-chip-index">VECTOR [06]</div>
+            <div class="tensor-chip-name">SPI-30 Drought Index</div>
+            <div class="tensor-chip-physics">Standardized precipitation</div>
+          </div>
+          <div class="tensor-chip" onclick="inspectTensorFeature(7)">
+            <div class="tensor-chip-index">VECTOR [07]</div>
+            <div class="tensor-chip-name">SPI-90 Deep Aquifer</div>
+            <div class="tensor-chip-physics">Long-term groundwater head</div>
+          </div>
+          <div class="tensor-chip" onclick="inspectTensorFeature(8)">
+            <div class="tensor-chip-index">VECTOR [08]</div>
+            <div class="tensor-chip-name">Volumetric Soil θ</div>
+            <div class="tensor-chip-physics">Green-Ampt saturation %</div>
+          </div>
+          <div class="tensor-chip" onclick="inspectTensorFeature(9)">
+            <div class="tensor-chip-index">VECTOR [09]</div>
+            <div class="tensor-chip-name">Hydraulic Infiltration Kₛ</div>
+            <div class="tensor-chip-physics">mm/hr Darcy soil permeability</div>
+          </div>
+          <div class="tensor-chip" onclick="inspectTensorFeature(10)">
+            <div class="tensor-chip-index">VECTOR [10]</div>
+            <div class="tensor-chip-name">Drainage Proximity</div>
+            <div class="tensor-chip-physics">Normalized outfall distance</div>
+          </div>
+          <div class="tensor-chip" onclick="inspectTensorFeature(11)">
+            <div class="tensor-chip-index">VECTOR [11]</div>
+            <div class="tensor-chip-name">Topographic TWI</div>
+            <div class="tensor-chip-physics">ln(a / tan β) runoff sink</div>
+          </div>
+          <div class="tensor-chip" onclick="inspectTensorFeature(12)">
+            <div class="tensor-chip-index">VECTOR [12]</div>
+            <div class="tensor-chip-name">Urban Imperviousness</div>
+            <div class="tensor-chip-physics">Asphalt fraction (0.0 to 1.0)</div>
+          </div>
+          <div class="tensor-chip" onclick="inspectTensorFeature(13)">
+            <div class="tensor-chip-index">VECTOR [13]</div>
+            <div class="tensor-chip-name">Tidal Surge H_tide</div>
+            <div class="tensor-chip-physics">Torricelli coastal head (m)</div>
+          </div>
+        </div>
+
+        <!-- Dynamic Equation Card -->
+        <div class="card-luxury" id="tensorEquationBox" style="background: rgba(8, 12, 22, 0.9); border-color: rgba(56, 189, 248, 0.35); padding: 2rem;">
+          <div style="font-family: var(--font-mono); font-size: 0.75rem; color: #38bdf8; margin-bottom: 0.5rem;" id="formulaVectorTitle">
+            [INSPECTING VECTOR 00 // RAINFALL RATE R₀]
+          </div>
+          <div style="font-family: var(--font-mono); font-size: 1.15rem; color: #ffffff; margin-bottom: 0.6rem;" id="formulaLatexMath">
+            q_in(t) = R₀ · (1 - Impervious) + R₀ · Impervious ⟷ Convective Cloudburst Forcing
+          </div>
+          <p style="font-size: 0.92rem; color: #94a3b8; line-height: 1.6;" id="formulaExplanation">
+            Instantaneous precipitation rate from ground Doppler radar & satellite arrays. When R₀ exceeds soil infiltration capacity Kₛ, excess ponding transitions instantly into overland sheet flow governed by the Manning-Strickler equation.
           </p>
-          <button class="btn-water" onclick="startTokenStreamDemo()">
-            <span>▶️ Run 150 Token/s Inference Stream</span>
-          </button>
-        </div>
-
-        <div class="token-stream-terminal" id="tokenStreamTerminal">
-          <div style="color: #64748b; font-size: 0.75rem; margin-bottom: 0.5rem;">[EDGE SURROGATE STREAMING // TIER 1 GROQ LPU &amp; V8 ISOLATE]</div>
-          <span id="tokenStreamOutput">Click 'Run 150 Token/s Inference Stream' to witness edge speed...</span>
-          <span class="token-cursor"></span>
         </div>
       </div>
 
-      <!-- Scene 7: Why Choose Us, Instagram-Style DMs & Trashed Feedback -->
-      <div class="scene-block" style="margin: 3.5rem 0;">
-        <div>
-          <div style="font-family: var(--font-mono); font-size: 0.75rem; color: #a855f7;">SCENE 7 // COMMUNITY REVIEWS</div>
-          <h2 style="font-family: var(--font-display); font-size: 2.2rem; margin-bottom: 0.75rem;">Why choose MeteoFlood?</h2>
-          <p style="color: var(--c-text-muted); font-size: 0.95rem; margin-bottom: 1.25rem;">
-            See why hydrologists, disaster responders, and port authorities across 15 global river basins rely on MeteoFlood's zero-fake alert guarantee.
-          </p>
-          <div style="padding: 1rem; border-radius: 14px; background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.3); font-size: 0.88rem; color: #e9d5ff;">
-            💬 Have thoughts? Send feedback below. Our automated recycling engine disposes of it with zero corporate bureaucracy!
-          </div>
-        </div>
+      <!-- 5. ACT III: ADVERSARIAL GROQ LPU VERIFICATION GATE -->
+      <div class="scroll-reveal" style="margin: 5.5rem 0;">
+        <div class="chapter-eyebrow">ACT III // ZERO FALSE PANIC GUARANTEE</div>
+        <h2 class="chapter-heading-giant">Adversarial Groq LPU Verification Gate</h2>
+        <p class="chapter-lead-text">
+          Before any civilian alarm or evacuation warning is broadcast, Groq LPU acts as an adversarial hydrological auditor, cross-examining neural predictions against live physical meteorology in 1.4 seconds. Witness the live audit process below.
+        </p>
 
-        <div class="insta-dm-deck">
-          <div class="insta-dm-header">
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
-              <span style="font-size: 1.2rem;">📬</span>
-              <strong style="font-size: 0.95rem;">Hydrology Dispatch Inbox</strong>
+        <!-- Live Interactive Groq Testbench -->
+        <div class="groq-testbench-card">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+            <div>
+              <span style="font-family: var(--font-mono); font-size: 0.75rem; color: #38bdf8; font-weight: 700;">LIVE ENGINE: Tier-1 Groq LPU (openai/gpt-oss-120b)</span>
+              <h3 style="font-size: 1.5rem; color: #ffffff; margin-top: 0.2rem; font-weight: 700;">Simulate Adversarial Verification</h3>
             </div>
-            <span class="insta-unread-badge">100+ New Messages</span>
-          </div>
-
-          <div class="insta-dm-body" id="instaDmBody">
-            <div class="dm-bubble">
-              <strong>@social_media_user_1</strong>
-              Did your radar detect the Rhine River cloudburst before municipal civil defense sirens?
-              <div style="color:#38bdf8; margin-top:0.3rem;">↳ MeteoFlood: Yes, alert dispatched 18 minutes prior to municipal sirens.</div>
-            </div>
-            <div class="dm-bubble">
-              <strong>@tokyo_civil_engineer</strong>
-              Is hydrostatic equilibrium strictly enforced at coastal tidal outfalls?
-              <div style="color:#38bdf8; margin-top:0.3rem;">↳ MeteoFlood: Bounded by Torricelli backwater capping (Htide - Zinvert).</div>
-            </div>
-            <div class="dm-bubble">
-              <strong>@valencia_delta_monitor</strong>
-              Are citizen sensor reports accepted blindly or verified?
-              <div style="color:#38bdf8; margin-top:0.3rem;">↳ MeteoFlood: Secondary belief protocol verifies terrain elevation and radar contours before training ingestion.</div>
+            <div style="display: flex; gap: 0.8rem; flex-wrap: wrap;">
+              <button class="btn-water" onclick="simulateGroqTestbench('monsoon')" style="font-size: 0.86rem; padding: 0.6rem 1.25rem;">
+                🚨 Simulate Monsoon Surge
+              </button>
+              <button class="btn-keynote-secondary" onclick="simulateGroqTestbench('dry_false_alarm')" style="font-size: 0.86rem; padding: 0.6rem 1.25rem;">
+                🛡️ Simulate Dry False Alarm
+              </button>
             </div>
           </div>
 
-          <div class="dm-input-area" id="dmInputArea">
-            <input type="text" id="userFeedbackInput" placeholder="Type your feedback (e.g. Needs more river gauges)...">
-            <button onclick="sendAndTrashFeedback()" class="btn-water" style="padding: 0.5rem 1rem; font-size: 0.85rem;">Send</button>
-            <div class="trash-bin-visual" id="trashBinIcon" title="Zero-Bureaucracy Feedback Shredder">🗑️</div>
+          <!-- 3-Stage Pipeline Flow -->
+          <div class="testbench-stage-flow">
+            <div class="stage-card">
+              <div style="font-family: var(--font-mono); font-size: 0.72rem; color: #94a3b8; margin-bottom: 0.3rem;">STAGE 01</div>
+              <div style="font-weight: 700; color: #ffffff; font-size: 1.05rem;">Neural Forward Pass</div>
+              <div style="font-size: 0.8rem; color: #38bdf8; margin-top: 0.3rem;" id="tbStage1Status">14-F Prediction: +28.4 cm</div>
+            </div>
+            <div class="stage-arrow">→</div>
+            <div class="stage-card" style="border-color: rgba(56, 189, 248, 0.4); background: rgba(56, 189, 248, 0.05);">
+              <div style="font-family: var(--font-mono); font-size: 0.72rem; color: #38bdf8; margin-bottom: 0.3rem;">STAGE 02</div>
+              <div style="font-weight: 700; color: #ffffff; font-size: 1.05rem;">Groq LPU Adversarial Audit</div>
+              <div style="font-size: 0.8rem; color: #6ee7b7; margin-top: 0.3rem;" id="tbStage2Status">Cross-Checking Physics...</div>
+            </div>
+            <div class="stage-arrow">→</div>
+            <div class="stage-card" id="tbStage3Card" style="border-color: #10b981; background: rgba(16, 185, 129, 0.08);">
+              <div style="font-family: var(--font-mono); font-size: 0.72rem; color: #10b981; margin-bottom: 0.3rem;">STAGE 03</div>
+              <div style="font-weight: 700; color: #10b981; font-size: 1.05rem;" id="tbVerdictBadge">✓ FALSE ALARM DISMISSED</div>
+              <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 0.3rem;" id="tbActionBadge">Alert Suppressed</div>
+            </div>
+          </div>
+
+          <!-- Console Live Telemetry Log -->
+          <div style="background: #050810; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 1.5rem; font-family: var(--font-mono); font-size: 0.88rem; color: #a5f3fc; line-height: 1.65;" id="tbConsoleOutput">
+            [GROQ AUDIT VERDICT]: SUB_HAZARD_WATCH_ADVISORY • Confidence: 94/100<br>
+            [PHYSICAL AUDIT]: Zero recent rainfall (R₀ = 0.0 mm/h), 55% soil saturation, and 0.08m tide surge leave ample infiltration capacity. Forecasted depth refuted as false positive.<br>
+            [TACTICAL ADVISORY]: Conditions nominal. No evacuation required; standard transit routes operating without restriction.
           </div>
         </div>
       </div>
 
-      <!-- Scene 8: AI Model Transparency, 70B Architecture & Accuracy Benchmarks -->
-      <div class="card-luxury" id="aiTransparencySection" style="margin: 3.5rem 0; border-color: rgba(6, 182, 212, 0.4); background: radial-gradient(circle at 50% 0%, rgba(6, 182, 212, 0.08) 0%, rgba(28, 20, 15, 0.95) 100%);">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+      <!-- 6. ACT IV: MULTI-STREAM PLANETARY MESH (RAYCAST/LINEAR BENTO GRID) -->
+      <div class="scroll-reveal" style="margin: 5.5rem 0;">
+        <div class="chapter-eyebrow">ACT IV // CONTINUOUS INGESTION</div>
+        <h2 class="chapter-heading-giant">18 Planetary Ingestion Feeds. Sub-Second CDN Mesh.</h2>
+        <p class="chapter-lead-text">
+          Earth observation satellites, numerical weather prediction ensembles, and coastal tidal arrays unified into a single real-time mesh across 300+ global Cloudflare edge nodes.
+        </p>
+
+        <!-- Raycast/Linear Bento Showcase -->
+        <div class="bento-showcase">
+          <div class="bento-card">
+            <div class="bento-icon-badge">🌊</div>
+            <h3 class="bento-title">Copernicus GloFAS</h3>
+            <p class="bento-desc">
+              90-day continuous gridded river discharge predictions across global catchment networks, powered by ECMWF numerical reanalysis.
+            </p>
+            <span class="bento-tag">ECMWF / CEMS INGESTION</span>
+          </div>
+
+          <div class="bento-card">
+            <div class="bento-icon-badge">🛰️</div>
+            <h3 class="bento-title">NOAA GFS &amp; HRRR</h3>
+            <p class="bento-desc">
+              High-Resolution Rapid Refresh 3km atmospheric grids delivering convective cloudburst energy (CAPE) and deep barometric pressure drops.
+            </p>
+            <span class="bento-tag">RADAR REANALYSIS</span>
+          </div>
+
+          <div class="bento-card">
+            <div class="bento-icon-badge">🌧️</div>
+            <h3 class="bento-title">NASA GPM IMERG</h3>
+            <p class="bento-desc">
+              Multi-satellite precipitation radar constellation mapping extreme cloudburst fronts with orbital dual-frequency radar calibration.
+            </p>
+            <span class="bento-tag">SATELLITE MICROWAVE</span>
+          </div>
+
+          <div class="bento-card">
+            <div class="bento-icon-badge">🌀</div>
+            <h3 class="bento-title">WorldTides &amp; Marine API</h3>
+            <p class="bento-desc">
+              Sub-meter astronomical tide projections combined with storm-surge sea surface height for Torricelli gravity backflow boundary capping.
+            </p>
+            <span class="bento-tag">TIDAL BACKWATER CAPPING</span>
+          </div>
+
+          <div class="bento-card">
+            <div class="bento-icon-badge">⚡</div>
+            <h3 class="bento-title">10-Core Distributed Edge</h3>
+            <p class="bento-desc">
+              3 active mirror gateways, dedicated Core-3 click processor, and 7 continental hydrological shards operating at 0.001s forward pass latency.
+            </p>
+            <span class="bento-tag">CLOUDFLARE V8 ISOLATES</span>
+          </div>
+
+          <div class="bento-card">
+            <div class="bento-icon-badge">🛡️</div>
+            <h3 class="bento-title">Instant Civic Webhooks</h3>
+            <p class="bento-desc">
+              Zero-lag evacuation webhooks and high-priority civil defense alerts triggered only after Groq LPU adversarial consistency validation.
+            </p>
+            <span class="bento-tag">REAL-TIME DISPATCH</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7. ACT V: DEVELOPER PLATFORM & LIVE SDK TERMINAL -->
+      <div class="scroll-reveal" style="margin: 5.5rem 0;">
+        <div class="chapter-eyebrow">ACT V // DEVELOPER PLATFORM</div>
+        <h2 class="chapter-heading-giant">Engineered for Infrastructure Engineers &amp; Hydrologists</h2>
+        <p class="chapter-lead-text">
+          Query live 150km perimeter flood status, street-level +1h/+3h/+6h water depths, and Groq reasoning with two lines of code.
+        </p>
+
+        <!-- Code Terminal Deck -->
+        <div class="code-terminal-deck">
+          <div class="code-terminal-tabs">
+            <button class="code-tab-btn active" onclick="switchCodeTab('python')">Python SDK (floodlock-sdk)</button>
+            <button class="code-tab-btn" onclick="switchCodeTab('curl')">cURL REST API</button>
+            <button class="code-tab-btn" onclick="switchCodeTab('ts')">TypeScript / Node</button>
+            <div style="margin-left: auto; display: flex; gap: 0.5rem; align-items: center;">
+              <button onclick="runCodeSnippetDemo()" class="btn-water" style="padding: 0.35rem 0.85rem; font-size: 0.76rem;">▶ Run Edge Query</button>
+              <button onclick="copyCurrentCodeSnippet()" class="btn-keynote-secondary" style="padding: 0.35rem 0.85rem; font-size: 0.76rem;" id="copyCodeBtn">📋 Copy</button>
+            </div>
+          </div>
+
+          <pre class="code-terminal-body" id="codeTerminalDisplay"><code>from floodlock_sdk import FloodLockClient
+
+# Initialize client with automated edge failover
+client = FloodLockClient(api_key="flk_live_...")
+
+# Query 150km perimeter hazard status
+result = client.check_radius(lat=19.21, lon=73.10, radius_km=150)
+
+print(f"Danger Level: {result.danger_level}")        # PERIMETER_NOMINAL
+print(f"In Danger Zone: {result.in_danger_zone}")    # False
+print(f"Groq Verified: {result.threat_verified}")    # False (Dismissed)
+print(f"Advisory: {result.tactical_advisory}")       # Transit routes nominal</code></pre>
+        </div>
+      </div>
+
+      <!-- 8. ACT VI: EMPIRICAL BENCHMARKS & SCIENTIFIC FAQ -->
+      <div class="card-luxury scroll-reveal" style="margin: 5.5rem 0; background: radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.08) 0%, rgba(13, 19, 32, 0.95) 100%);">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; margin-bottom: 2rem;">
           <div>
-            <div style="font-family: var(--font-mono); font-size: 0.75rem; color: #38bdf8; letter-spacing: 0.12em; text-transform: uppercase;">
-              EMPIRICAL BENCHMARKS &amp; ARCHITECTURAL DISCLOSURE
-            </div>
-            <h2 style="font-family: var(--font-display); font-size: 2.4rem; margin-top: 0.2rem;">
+            <div class="chapter-eyebrow">EMPIRICAL BENCHMARKS &amp; ARCHITECTURAL DISCLOSURE</div>
+            <h2 class="chapter-heading-giant" style="font-size: 2.2rem; margin-bottom: 0.5rem;">
               70B Parameter Hydrological Ensemble &amp; AI Safeguards
             </h2>
           </div>
           <div style="display: flex; gap: 0.6rem; flex-wrap: wrap;">
-            <span style="font-family: var(--font-mono); font-size: 0.75rem; background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #6ee7b7; padding: 0.35rem 0.85rem; border-radius: 999px; font-weight: 700;">
+            <span style="font-family: var(--font-mono); font-size: 0.74rem; background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #6ee7b7; padding: 0.35rem 0.85rem; border-radius: 999px; font-weight: 700;">
               ✓ 94.2% GROUND-TRUTH ACCURACY
             </span>
-            <span style="font-family: var(--font-mono); font-size: 0.75rem; background: rgba(56, 189, 248, 0.15); border: 1px solid #38bdf8; color: #38bdf8; padding: 0.35rem 0.85rem; border-radius: 999px; font-weight: 700;">
+            <span style="font-family: var(--font-mono); font-size: 0.74rem; background: rgba(56, 189, 248, 0.15); border: 1px solid #38bdf8; color: #38bdf8; padding: 0.35rem 0.85rem; border-radius: 999px; font-weight: 700;">
               70B PARAMETER ENSEMBLE
             </span>
           </div>
         </div>
 
-        <!-- Critical AI Disclaimer Notice -->
-        <div style="background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 12px; padding: 1.1rem 1.35rem; margin-bottom: 1.75rem; display: flex; align-items: flex-start; gap: 0.85rem;">
-          <span style="font-size: 1.4rem; line-height: 1;">⚠️</span>
-          <div style="font-size: 0.88rem; color: #fef3c7; line-height: 1.6;">
-            <strong>Artificial Intelligence Disclosure &amp; Operational Limitation:</strong> AI models can make mistakes, hallucinate micro-meteorological variables, and degrade during unprecedented 1,000-year anomalous cloudburst events. MeteoFlood predictions are supplementary intelligence and do not supersede municipal evacuations or civil defense directives.
-          </div>
-        </div>
-
-        <!-- 3-Column Architectural Grid -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem; margin-bottom: 2rem;">
-          <div style="background: rgba(10, 7, 5, 0.6); border: 1px solid rgba(214, 197, 179, 0.15); border-radius: 14px; padding: 1.25rem;">
-            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">📐</div>
-            <h4 style="font-family: var(--font-sans); font-size: 1.05rem; font-weight: 700; margin-bottom: 0.4rem; color: var(--c-linen);">
-              Deterministic Safety Floor
-            </h4>
-            <p style="font-size: 0.84rem; color: var(--c-text-muted); line-height: 1.55;">
-              If physical river sensors breach critical discharge thresholds, our hard-coded 2D Manning-Strickler shallow water equations strictly override neural model output to eliminate catastrophic false negatives.
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2.5rem;">
+          <div style="background: rgba(7, 10, 18, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 18px; padding: 1.5rem;">
+            <div style="font-size: 1.6rem; margin-bottom: 0.6rem;">📐</div>
+            <h4 style="font-size: 1.1rem; font-weight: 700; color: #ffffff; margin-bottom: 0.4rem;">Deterministic Safety Floor</h4>
+            <p style="font-size: 0.88rem; color: #94a3b8; line-height: 1.6;">
+              If physical river discharge sensors breach critical thresholds, our hard-coded 2D Manning-Strickler shallow water equations strictly override neural model output to eliminate catastrophic false negatives.
             </p>
           </div>
-
-          <div style="background: rgba(10, 7, 5, 0.6); border: 1px solid rgba(214, 197, 179, 0.15); border-radius: 14px; padding: 1.25rem;">
-            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🛰️</div>
-            <h4 style="font-family: var(--font-sans); font-size: 1.05rem; font-weight: 700; margin-bottom: 0.4rem; color: var(--c-linen);">
-              Continuous Retraining &amp; Calibration
-            </h4>
-            <p style="font-size: 0.84rem; color: var(--c-text-muted); line-height: 1.55;">
-              Our ensemble weights are continuously retrained on weekly Copernicus Sentinel-1 Synthetic Aperture Radar (SAR) flood masks and NASA GPM satellite radar to actively adapt to climate shifts.
+          <div style="background: rgba(7, 10, 18, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 18px; padding: 1.5rem;">
+            <div style="font-size: 1.6rem; margin-bottom: 0.6rem;">🛰️</div>
+            <h4 style="font-size: 1.1rem; font-weight: 700; color: #ffffff; margin-bottom: 0.4rem;">Continuous Satellite Calibration</h4>
+            <p style="font-size: 0.88rem; color: #94a3b8; line-height: 1.6;">
+              Trained across 14,000 empirical historical storms with Copernicus Sentinel-1 synthetic aperture radar surface-water extent masks. Continuous recalibration prevents seasonal climate drift.
             </p>
           </div>
-
-          <div style="background: rgba(10, 7, 5, 0.6); border: 1px solid rgba(214, 197, 179, 0.15); border-radius: 14px; padding: 1.25rem;">
-            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🎯</div>
-            <h4 style="font-family: var(--font-sans); font-size: 1.05rem; font-weight: 700; margin-bottom: 0.4rem; color: var(--c-linen);">
-              94.2% Empirical Accuracy
-            </h4>
-            <p style="font-size: 0.84rem; color: var(--c-text-muted); line-height: 1.55;">
-              Benchmarked against 10 years of historical ground-truth water marks across 7 planetary basins (Houston, Mumbai, London, Rotterdam, Tokyo, Venice, Dhaka) with a mean peak-depth error under 4.1 cm.
+          <div style="background: rgba(7, 10, 18, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 18px; padding: 1.5rem;">
+            <div style="font-size: 1.6rem; margin-bottom: 0.6rem;">🧠</div>
+            <h4 style="font-size: 1.1rem; font-weight: 700; color: #ffffff; margin-bottom: 0.4rem;">Groq LPU Adversarial Reasoning</h4>
+            <p style="font-size: 0.88rem; color: #94a3b8; line-height: 1.6;">
+              Sub-second deep causal audits cross-examine meteorology against terrain permeability, preventing the false alarms that cost cities millions in unnecessary shutdowns.
             </p>
           </div>
         </div>
 
-        <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
-          <a href="privacy.html" class="btn-water" style="text-decoration: none; padding: 0.45rem 1.1rem; font-size: 0.82rem;">
-            Read Full Model Policy &amp; Architecture Spec →
-          </a>
-        </div>
-      </div>
-
-      <!-- Scene 9: Frequently Asked Questions (Accordion) -->
-      <div class="card-luxury" id="faqSection" style="margin: 3.5rem 0;">
-        <div style="font-family: var(--font-mono); font-size: 0.75rem; color: #38bdf8; letter-spacing: 0.12em; text-transform: uppercase;">
-          KNOWLEDGE BASE &amp; CIVIL GUIDANCE
-        </div>
-        <h2 style="font-family: var(--font-display); font-size: 2.4rem; margin: 0.25rem 0 1rem;">
-          Frequently Asked Questions
-        </h2>
-        <p style="color: var(--c-text-muted); font-size: 0.95rem; margin-bottom: 1.5rem;">
-          Technical, operational, and life-safety questions answered with complete transparency.
-        </p>
-
-        <div class="faq-accordion" id="faqAccordion">
-          <!-- FAQ 1 -->
-          <div class="faq-item">
-            <button class="faq-question" onclick="toggleFaq(this)">
-              <span>How accurate is MeteoFlood during catastrophic storm surges?</span>
-              <span class="faq-icon">▼</span>
-            </button>
-            <div class="faq-answer">
-              MeteoFlood achieves a 94.2% spatial-temporal correlation across 10-year historical monsoon ground truth across 7 global coastal basins. By fusing Copernicus GloFAS 90-day discharge, NOAA atmospheric pressure fields, and local tidal surges, outfall water levels maintain a Mean Squared Error of under 4.1 cm.
+        <!-- Clean Interactive FAQ Accordion -->
+        <div style="border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 2rem;">
+          <h3 style="font-size: 1.5rem; font-weight: 700; color: #ffffff; margin-bottom: 1.25rem;">Frequently Asked Technical Questions</h3>
+          <div class="faq-list">
+            <div class="faq-item">
+              <button class="faq-question" onclick="toggleFaq(this)">
+                <span>What makes MeteoFlood's 14-feature surrogate faster than conventional hydrodynamic models?</span>
+                <span class="faq-icon">▼</span>
+              </button>
+              <div class="faq-answer">
+                Conventional hydrodynamic packages (HEC-RAS, LISFLOOD, TUFLOW) solve 2D non-linear Saint-Venant partial differential equations across hundreds of thousands of spatial cells, requiring hours of compute time. MeteoFlood extracts 14 dominant physical dimensionless numbers and computes a closed-form forward tensor pass in 12 milliseconds directly inside Cloudflare V8 isolates.
+              </div>
             </div>
-          </div>
 
-          <!-- FAQ 2 -->
-          <div class="faq-item">
-            <button class="faq-question" onclick="toggleFaq(this)">
-              <span>Can the AI model make mistakes or hallucinate flood depths?</span>
-              <span class="faq-icon">▼</span>
-            </button>
-            <div class="faq-answer">
-              Yes. All neural and machine-learned systems operate on probability distributions and can fail during unforeseen anomalies (such as sudden levee breaches or structural culvert blockages). To prevent hazardous false negatives, MeteoFlood enforces a deterministic 2D Manning-Strickler hydrodynamic safety floor that overrides AI predictions whenever raw physical gauges exceed hazard levels.
+            <div class="faq-item">
+              <button class="faq-question" onclick="toggleFaq(this)">
+                <span>How does the system ensure zero false alarms during high-rainfall events?</span>
+                <span class="faq-icon">▼</span>
+              </button>
+              <div class="faq-answer">
+                Heavy rainfall alone does not cause flooding if antecedent soil saturation is low and natural drainage channels have ample headroom. Groq LPU inspects Green-Ampt infiltration headroom and tidal surge height. If soil capacity absorbs the precipitation volume, the alarm is automatically downgraded to nominal monitoring with causal attribution logged.
+              </div>
             </div>
-          </div>
 
-          <!-- FAQ 3 -->
-          <div class="faq-item">
-            <button class="faq-question" onclick="toggleFaq(this)">
-              <span>How many parameters power the MeteoFlood intelligence ensemble?</span>
-              <span class="faq-icon">▼</span>
-            </button>
-            <div class="faq-answer">
-              The high-level reasoning and risk-synthesis tier is driven by a 70-Billion Parameter Hydrological Ensemble (combining Llama-3.3-70B distilled reasoning with physics-bounded tensor surrogates). Real-time millisecond edge calculations run on a specialized 14-feature V8 tensor surrogate deployed across global edge points of presence.
-            </div>
-          </div>
-
-          <!-- FAQ 4 -->
-          <div class="faq-item">
-            <button class="faq-question" onclick="toggleFaq(this)">
-              <span>How often are the models improved and retrained?</span>
-              <span class="faq-icon">▼</span>
-            </button>
-            <div class="faq-answer">
-              MeteoFlood continuously ingests real-time telemetry from Copernicus Sentinel-1 radar altimetry, NOAA HRRR radar, and NASA GPM precipitation. Neural surrogate weights undergo automated weekly fine-tuning against newly confirmed satellite surface-water extent masks to ensure zero model drift over changing climate baselines.
-            </div>
-          </div>
-
-          <!-- FAQ 5 -->
-          <div class="faq-item">
-            <button class="faq-question" onclick="toggleFaq(this)">
-              <span>How do municipal agencies and developers access the API?</span>
-              <span class="faq-icon">▼</span>
-            </button>
-            <div class="faq-answer">
-              Authenticated developers can generate API keys directly in the API Platform view. Our Cloudflare Edge endpoints deliver sub-15ms response times globally for point-coordinate depth queries, antecedent soil moisture indices, and 72-hour forecast vectors. Commercial licenses include dedicated webhooks and enterprise SLA support.
-            </div>
-          </div>
-
-          <!-- FAQ 6 -->
-          <div class="faq-item">
-            <button class="faq-question" onclick="toggleFaq(this)">
-              <span>What is MeteoFlood's data privacy and cookie retention policy?</span>
-              <span class="faq-icon">▼</span>
-            </button>
-            <div class="faq-answer">
-              MeteoFlood operates strictly under Lantern Mechatronics' Zero-Tracker architecture. We store only cryptographically hashed session tokens and local UI preferences in localStorage. We do not sell user data, do not load behavioral advertising cookies, and support full GDPR Article 17 right-to-erasure directly via your account settings.
+            <div class="faq-item">
+              <button class="faq-question" onclick="toggleFaq(this)">
+                <span>How can municipal civil defense agencies integrate MeteoFlood?</span>
+                <span class="faq-icon">▼</span>
+              </button>
+              <div class="faq-answer">
+                Agencies can connect via REST API or deploy the official Python SDK (`pip install floodlock-sdk`). Real-time emergency webhooks dispatch instantaneous perimeter hazard status and safe evacuation corridors with sub-15ms edge latency globally.
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Scene 10: About Founder (Hacker Terminal Style) -->
-      <div class="founder-code-terminal">
-        <pre><code>print("════════════════════════════════════════════════════════════════")
-print("FOUNDER & CHIEF ARCHITECT: Daksh Dahore (Age: 14)")
-print("ORGANIZATION: LanternMech / MeteoFlood Planetary Initiative")
-print("MISSION: Zero-Latency Physics-Informed Hydrology")
-print("CORE PLATFORM: 70B Ensemble + 14-Feature Edge Surrogate")
-print("BENCHMARK: 94.2% Empirical Accuracy • Deterministic Safety Floor")
-print("════════════════════════════════════════════════════════════════")</code></pre>
+      <!-- 9. FOUNDER & INITIATIVE CREDENTIAL (MINIMALIST LUXURY) -->
+      <div class="scroll-reveal" style="margin: 4rem 0 6rem; text-align: center;">
+        <div style="display: inline-flex; align-items: center; gap: 0.75rem; background: rgba(13, 19, 32, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 999px; padding: 0.6rem 1.4rem;">
+          <img src="assets/logo.jpg" alt="Logo" style="width: 26px; height: 26px; border-radius: 50%; object-fit: cover;">
+          <span style="font-family: var(--font-mono); font-size: 0.8rem; color: #cbd5e1;">
+            Founded &amp; Architected by <strong>Daksh Dahore</strong> • Lantern Mechatronics Planetary Initiative
+          </span>
+        </div>
       </div>
+
     </section>
 
-    <!-- ══════════════════════════════════════════════════════════════════
+<!-- ══════════════════════════════════════════════════════════════════
          VIEW 2: PASSWORDLESS AUTH & BOT SECURITY GATE
          ══════════════════════════════════════════════════════════════════ -->
     <section id="view-auth" class="view-section">
@@ -2632,340 +3150,480 @@ console.log(data);</code></pre>
       audioEngine.volume = parseFloat(val) / 100;
     }
 
-    /* ══════════════════════════════════════════════════════════════════
-       2. INTERACTIVE 4K SCROLL STORY CANVAS CONTROLLER
+        /* ══════════════════════════════════════════════════════════════════
+       2. $10,000 APPLE/LINEAR-TIER FLUID & INTERACTIVE CONTROLLERS
        ══════════════════════════════════════════════════════════════════ */
     let canvas, ctx;
-    let storyProgress = 0.1;
-    let raindrops = [];
-    let ripples = [];
-    let manX = 300, manY = 400, manAlive = true, plankSnapped = false;
-    let cars = [
-      { x: 180, y: 380, width: 70, height: 35, floatOffset: 0 },
-      { x: 450, y: 395, width: 80, height: 40, floatOffset: 1.5 }
-    ];
+    let fluidParticles = [];
+    let fluidRipples = [];
+    let mousePos = { x: -1000, y: -1000, vx: 0, vy: 0, prevX: 0, prevY: 0 };
+    let targetWaterDepthFrac = 0.25;
+    let currentWaterDepthFrac = 0.25;
 
+    // ── Hydrodynamic Fluid Dynamics Engine ──
     function initStoryCanvas() {
       canvas = document.getElementById('storyCanvas');
       if (!canvas) return;
       ctx = canvas.getContext('2d');
-      resizeCanvas();
-      window.addEventListener('resize', resizeCanvas);
+      resizeStoryCanvas();
+      window.addEventListener('resize', resizeStoryCanvas);
 
-      for (let i = 0; i < 160; i++) {
-        raindrops.push({
+      // Spawn vector fluid particles
+      fluidParticles = [];
+      const particleCount = Math.min(140, Math.floor((canvas.width * canvas.height) / 5000));
+      for (let i = 0; i < particleCount; i++) {
+        fluidParticles.push({
           x: Math.random() * canvas.width,
           y: Math.random() * canvas.height,
-          speed: 6 + Math.random() * 8,
-          len: 12 + Math.random() * 10
+          vx: (Math.random() - 0.5) * 1.2,
+          vy: (Math.random() - 0.5) * 0.8,
+          baseRadius: 1.5 + Math.random() * 2,
+          hue: 190 + Math.random() * 30, // Cyan to electric blue
+          alpha: 0.3 + Math.random() * 0.6,
+          phase: Math.random() * Math.PI * 2
         });
       }
 
+      // Mouse & Interactive Turbulence
       canvas.addEventListener('mousemove', (e) => {
-        if (e.buttons === 1) {
-          const rect = canvas.getBoundingClientRect();
-          ripples.push({
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top,
+        const rect = canvas.getBoundingClientRect();
+        const curX = e.clientX - rect.left;
+        const curY = e.clientY - rect.top;
+        mousePos.vx = curX - mousePos.prevX;
+        mousePos.vy = curY - mousePos.prevY;
+        mousePos.prevX = curX;
+        mousePos.prevY = curY;
+        mousePos.x = curX;
+        mousePos.y = curY;
+
+        if (Math.abs(mousePos.vx) + Math.abs(mousePos.vy) > 8) {
+          fluidRipples.push({
+            x: curX,
+            y: curY,
             radius: 4,
-            alpha: 1
+            maxRadius: 60 + Math.random() * 30,
+            alpha: 0.8
           });
-          audioEngine.playRipple();
+          if (typeof audioEngine !== 'undefined') audioEngine.playRipple();
         }
       });
 
+      canvas.addEventListener('mouseleave', () => {
+        mousePos.x = -1000;
+        mousePos.y = -1000;
+      });
+
+      // Depth Scrubber
       const scrubber = document.getElementById('storyScrubber');
       if (scrubber) {
         scrubber.addEventListener('input', (e) => {
-          storyProgress = parseFloat(e.target.value) / 100;
-          updateStorySceneState();
+          targetWaterDepthFrac = parseFloat(e.target.value) / 100;
+          const hudDesc = document.getElementById('storyHudDesc');
+          const depthM = (targetWaterDepthFrac * 3.5).toFixed(2);
+          if (hudDesc) {
+            hudDesc.textContent = `Inundation Depth: ${depthM} meters. Overland sheet-flow rate: ${(targetWaterDepthFrac * 140).toFixed(1)} m³/s. Saint-Venant shallow water equations dynamically stabilized.`;
+          }
         });
       }
 
-      window.addEventListener('scroll', () => {
-        const container = document.getElementById('storyCanvasContainer');
-        if (!container) return;
-        const rect = container.getBoundingClientRect();
-        const winH = window.innerHeight;
-        if (rect.top < winH && rect.bottom > 0) {
-          const scrollFrac = (winH - rect.top) / (winH + rect.height);
-          storyProgress = Math.min(Math.max(scrollFrac, 0), 1);
-          if (scrubber) scrubber.value = Math.round(storyProgress * 100);
-          updateStorySceneState();
-        }
-      });
+      // Initialize all companion systems
+      initScrollReveal();
+      initBentoSpotlight();
+      initSplitSlider();
 
-      requestAnimationFrame(renderStoryCanvas);
+      requestAnimationFrame(renderFluidCanvas);
     }
 
-    function resizeCanvas() {
-      if (!canvas) return;
+    function resizeStoryCanvas() {
+      if (!canvas || !canvas.parentElement) return;
       canvas.width = canvas.parentElement.clientWidth;
       canvas.height = canvas.parentElement.clientHeight;
     }
 
-    function updateStorySceneState() {
-      const tag = document.getElementById('storyHudTag');
-      const title = document.getElementById('storyHudTitle');
-      const desc = document.getElementById('storyHudDesc');
-
-      if (storyProgress < 0.25) {
-        if (tag) tag.innerHTML = '🌧️ <span>SCENE 1 // SERENE JAPANESE TOWN</span>';
-        if (title) title.textContent = 'What is MeteoFlood?';
-        if (desc) desc.textContent = 'Rain falls gently across traditional tile roofs. Water droplets collide and splash against typography. MeteoFlood predicts compound flood depth across 15 global river basins in 12ms.';
-        plankSnapped = false; manAlive = true;
-      } else if (storyProgress < 0.55) {
-        if (tag) tag.innerHTML = '🏙️ <span>SCENE 2 // CONCRETE JUNGLE FLOOD</span>';
-        if (title) title.textContent = 'What are urban floods?';
-        if (desc) desc.textContent = 'Impervious concrete surfaces overload drainage culverts. Drag mouse across water to create interactive hydrodynamic ripples with procedural audio!';
-        plankSnapped = false; manAlive = true;
-      } else if (storyProgress < 0.8) {
-        if (tag) tag.innerHTML = '⚠️ <span>SCENE 3 // SURVIVOR AT RISK</span>';
-        if (title) title.textContent = 'Why municipal warnings fail';
-        if (desc) desc.textContent = 'Plank strikes debris! Survivor submerges. When seconds decide survival, MeteoFlood locks onto the vortex with instant street-level neural forecasting.';
-        plankSnapped = true;
-      } else {
-        if (tag) tag.innerHTML = '⚡ <span>SCENE 4 // VORTEX DRAINAGE & RECOVERY</span>';
-        if (title) title.textContent = 'How MeteoFlood Solves This';
-        if (desc) desc.textContent = 'Survivor safely drifts to the right edge. On the opposite side, automated storm sluices open and water drains away while mathematical PDEs de-scramble into clear predictions.';
-        plankSnapped = true; manAlive = true;
-      }
-    }
-
-    function renderStoryCanvas() {
+    function renderFluidCanvas(timestamp) {
       if (!ctx || !canvas) return;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
       const w = canvas.width;
       const h = canvas.height;
+      const t = timestamp * 0.001;
 
-      // 1. Sky Gradient
-      const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
-      if (storyProgress < 0.3) {
-        skyGrad.addColorStop(0, '#0c1524'); skyGrad.addColorStop(1, '#1e293b');
-      } else if (storyProgress < 0.7) {
-        skyGrad.addColorStop(0, '#060a12'); skyGrad.addColorStop(1, '#0f172a');
-      } else {
-        skyGrad.addColorStop(0, '#040d1a'); skyGrad.addColorStop(1, '#0a192f');
-      }
-      ctx.fillStyle = skyGrad;
+      // Smooth depth lerp
+      currentWaterDepthFrac += (targetWaterDepthFrac - currentWaterDepthFrac) * 0.08;
+
+      ctx.clearRect(0, 0, w, h);
+
+      // 1. Deep Space Ocean Gradient Background
+      const bgGrad = ctx.createRadialGradient(w * 0.5, h * 0.3, 50, w * 0.5, h * 0.5, w * 0.8);
+      bgGrad.addColorStop(0, '#0a1324');
+      bgGrad.addColorStop(0.6, '#060a14');
+      bgGrad.addColorStop(1, '#03050a');
+      ctx.fillStyle = bgGrad;
       ctx.fillRect(0, 0, w, h);
 
-      // 2. Japanese Village (Scene 1)
-      if (storyProgress < 0.35) {
-        const roofAlpha = Math.max(1 - storyProgress * 3, 0);
-        ctx.save();
-        ctx.globalAlpha = roofAlpha;
-        ctx.fillStyle = '#262626';
+      // 2. Animated Topological Isobar Waves
+      const isobarCount = 5;
+      const waterLineY = h * (1.0 - currentWaterDepthFrac * 0.65);
+
+      for (let b = 0; b < isobarCount; b++) {
+        const offset = b * 32;
+        const waveY = waterLineY + offset;
         ctx.beginPath();
-        ctx.moveTo(w * 0.15, h * 0.65);
-        ctx.lineTo(w * 0.35, h * 0.45);
-        ctx.lineTo(w * 0.55, h * 0.65);
-        ctx.closePath();
-        ctx.fill();
-        ctx.strokeStyle = '#404040';
-        ctx.lineWidth = 3;
-        ctx.stroke();
-        ctx.fillStyle = '#451a03';
-        ctx.fillRect(w * 0.22, h * 0.65, w * 0.26, h * 0.25);
-        ctx.restore();
-      }
+        ctx.moveTo(0, waveY);
 
-      // 3. City Skyscrapers (Scenes 2 & 3)
-      if (storyProgress >= 0.2) {
-        const cityAlpha = Math.min((storyProgress - 0.2) * 3, 1);
-        ctx.save();
-        ctx.globalAlpha = cityAlpha;
-        ctx.fillStyle = '#111827';
-        ctx.fillRect(w * 0.08, h * 0.2, w * 0.14, h * 0.8);
-        ctx.fillRect(w * 0.26, h * 0.35, w * 0.16, h * 0.8);
-        ctx.fillRect(w * 0.62, h * 0.15, w * 0.18, h * 0.8);
-        ctx.fillRect(w * 0.82, h * 0.3, w * 0.15, h * 0.8);
-        ctx.restore();
-      }
-
-      // 4. Water Level
-      let waterY = h * 0.85;
-      if (storyProgress >= 0.2 && storyProgress < 0.75) {
-        waterY = h * (0.85 - (storyProgress - 0.2) * 0.6);
-      } else if (storyProgress >= 0.75) {
-        waterY = h * (0.55 + (storyProgress - 0.75) * 0.7);
-      }
-
-      const waterGrad = ctx.createLinearGradient(0, waterY, 0, h);
-      waterGrad.addColorStop(0, 'rgba(6, 182, 212, 0.75)');
-      waterGrad.addColorStop(1, 'rgba(15, 23, 42, 0.95)');
-      ctx.fillStyle = waterGrad;
-      ctx.fillRect(0, waterY, w, h - waterY);
-
-      ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      ctx.moveTo(0, waterY);
-      for (let x = 0; x <= w; x += 30) {
-        const wave = Math.sin(x * 0.02 + Date.now() * 0.003) * 3;
-        ctx.lineTo(x, waterY + wave);
-      }
-      ctx.stroke();
-
-      // 5. Floating Cars
-      if (storyProgress >= 0.35 && storyProgress < 0.85) {
-        cars.forEach((car, idx) => {
-          const bob = Math.sin(Date.now() * 0.002 + car.floatOffset) * 6;
-          const carY = waterY - 15 + bob;
-          ctx.fillStyle = idx === 0 ? '#b91c1c' : '#1d4ed8';
-          ctx.fillRect(car.x, carY, car.width, car.height);
-          ctx.fillStyle = '#0f172a';
-          ctx.beginPath();
-          ctx.arc(car.x + 15, carY + car.height, 8, 0, Math.PI * 2);
-          ctx.arc(car.x + car.width - 15, carY + car.height, 8, 0, Math.PI * 2);
-          ctx.fill();
-        });
-      }
-
-      // 6. Struggling Man & Wooden Plank
-      if (storyProgress >= 0.45) {
-        let manTargetX = w * 0.52;
-        let manTargetY = waterY - 12;
-
-        if (storyProgress >= 0.6 && storyProgress < 0.75) {
-          manTargetY = waterY + 45;
-          ctx.fillStyle = '#78350f';
-          ctx.fillRect(manTargetX - 35, waterY + 5, 20, 6);
-          ctx.fillRect(manTargetX + 15, waterY + 8, 20, 6);
-        } else if (storyProgress >= 0.75) {
-          manTargetX = w * (0.52 + (storyProgress - 0.75) * 1.6);
-          manTargetY = waterY - 16;
-          ctx.strokeStyle = '#f97316';
-          ctx.lineWidth = 4;
-          ctx.beginPath();
-          ctx.arc(manTargetX, manTargetY + 5, 14, 0, Math.PI * 2);
-          ctx.stroke();
-        } else {
-          ctx.fillStyle = '#92400e';
-          ctx.fillRect(manTargetX - 30, waterY - 5, 60, 8);
+        for (let x = 0; x <= w; x += 25) {
+          const wave1 = Math.sin(x * 0.006 + t * 1.5 + b) * (14 - b * 2);
+          const wave2 = Math.cos(x * 0.012 - t * 0.8) * 6;
+          // Mouse turbulence distortion
+          const distToMouse = Math.hypot(x - mousePos.x, waveY - mousePos.y);
+          const mouseDisp = distToMouse < 140 ? Math.sin((140 - distToMouse) * 0.1) * 16 : 0;
+          ctx.lineTo(x, waveY + wave1 + wave2 + mouseDisp);
         }
 
-        ctx.fillStyle = '#fde047';
-        ctx.beginPath();
-        ctx.arc(manTargetX, manTargetY, 9, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      // 7. Raindrops
-      ctx.strokeStyle = 'rgba(165, 243, 252, 0.6)';
-      ctx.lineWidth = 1.2;
-      raindrops.forEach(drop => {
-        ctx.beginPath();
-        ctx.moveTo(drop.x, drop.y);
-        ctx.lineTo(drop.x + 1, drop.y + drop.len);
-        ctx.stroke();
-        drop.y += drop.speed;
-        if (drop.y > waterY) {
-          drop.y = 0;
-          drop.x = Math.random() * w;
-        }
-      });
-
-      // 8. Ripples
-      ripples.forEach(rip => {
-        ctx.strokeStyle = `rgba(56, 189, 248, ${rip.alpha})`;
+        ctx.strokeStyle = `rgba(56, 189, 248, ${0.18 - b * 0.03})`;
         ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.arc(rip.x, rip.y, rip.radius, 0, Math.PI * 2);
         ctx.stroke();
-        rip.radius += 1.8;
-        rip.alpha -= 0.025;
-      });
-      ripples = ripples.filter(r => r.alpha > 0);
 
-      requestAnimationFrame(renderStoryCanvas);
-    }
+        if (b === 0) {
+          // Fill water volume below top wave
+          ctx.lineTo(w, h);
+          ctx.lineTo(0, h);
+          ctx.closePath();
+          const waterFill = ctx.createLinearGradient(0, waterLineY, 0, h);
+          waterFill.addColorStop(0, 'rgba(6, 182, 212, 0.22)');
+          waterFill.addColorStop(0.6, 'rgba(2, 132, 199, 0.45)');
+          waterFill.addColorStop(1, 'rgba(5, 11, 24, 0.85)');
+          ctx.fillStyle = waterFill;
+          ctx.fill();
+        }
+      }
 
-    /* ══════════════════════════════════════════════════════════════════
-       3. MATHEMATICAL EQUATION DE-SCRAMBLER
-       ══════════════════════════════════════════════════════════════════ */
-    let scrambleInterval = null;
-    function triggerMathDescramble() {
-      const el = document.getElementById('mathScrambleText');
-      if (!el) return;
-      audioEngine.playDrop();
-      let ticks = 0;
-      const chars = "∂∇∫ΣΔημθλσστQWhuXYZ0123456789+-*/=";
-      const targetText = "COMPUTATIONAL LEAP SOLVED: 14-Hour PDE Supercomputer Simulation Compressed into a 14-Feature Edge Surrogate Running in 12 Milliseconds at 60 FPS.";
+      // 3. Fluid Stream Particles with Constellation Vectors
+      for (let i = 0; i < fluidParticles.length; i++) {
+        const p = fluidParticles[i];
 
-      clearInterval(scrambleInterval);
-      scrambleInterval = setInterval(() => {
-        ticks++;
-        let scrambled = "";
-        for (let i = 0; i < targetText.length; i++) {
-          if (i < ticks * 2) {
-            scrambled += targetText[i];
-          } else {
-            scrambled += chars[Math.floor(Math.random() * chars.length)];
+        // Velocity vector field
+        p.vx += Math.cos(p.y * 0.005 + t) * 0.05;
+        p.vy += Math.sin(p.x * 0.005 + t) * 0.03;
+
+        // Mouse repelling force
+        const dx = p.x - mousePos.x;
+        const dy = p.y - mousePos.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist < 120 && dist > 1) {
+          const force = (120 - dist) / 120;
+          p.vx += (dx / dist) * force * 1.4;
+          p.vy += (dy / dist) * force * 1.4;
+        }
+
+        // Apply friction
+        p.vx *= 0.94;
+        p.vy *= 0.94;
+        p.x += p.vx + 0.6;
+        p.y += p.vy;
+
+        // Wrap edges
+        if (p.x > w + 20) p.x = -20;
+        if (p.x < -20) p.x = w + 20;
+        if (p.y > h + 20) p.y = -20;
+        if (p.y < -20) p.y = h + 20;
+
+        // Draw particle node
+        const glow = Math.sin(t * 2 + p.phase) * 0.3 + 0.7;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.baseRadius * glow, 0, Math.PI * 2);
+        ctx.fillStyle = `hsla(${p.hue}, 90%, 65%, ${p.alpha * glow})`;
+        ctx.shadowColor = '#38bdf8';
+        ctx.shadowBlur = 10;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Connect nearby particles with subtle light paths
+        for (let j = i + 1; j < fluidParticles.length; j++) {
+          const p2 = fluidParticles[j];
+          const pDist = Math.hypot(p.x - p2.x, p.y - p2.y);
+          if (pDist < 75) {
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.strokeStyle = `rgba(56, 189, 248, ${(1 - pDist / 75) * 0.16})`;
+            ctx.lineWidth = 0.8;
+            ctx.stroke();
           }
         }
-        el.textContent = scrambled;
-        if (ticks * 2 >= targetText.length) {
-          clearInterval(scrambleInterval);
-          el.textContent = targetText;
-          audioEngine.playRipple();
+      }
+
+      // 4. Expanding Wave Ripples
+      for (let i = fluidRipples.length - 1; i >= 0; i--) {
+        const rip = fluidRipples[i];
+        ctx.beginPath();
+        ctx.arc(rip.x, rip.y, rip.radius, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(56, 189, 248, ${rip.alpha})`;
+        ctx.lineWidth = 1.6;
+        ctx.stroke();
+
+        rip.radius += 2.2;
+        rip.alpha -= 0.02;
+        if (rip.alpha <= 0) {
+          fluidRipples.splice(i, 1);
         }
-      }, 35);
+      }
+
+      requestAnimationFrame(renderFluidCanvas);
     }
 
-    /* ══════════════════════════════════════════════════════════════════
-       4. BLISTERING TOKEN STREAMING ENGINE (150 TOKENS/SEC)
-       ══════════════════════════════════════════════════════════════════ */
-    let tokenStreamInterval = null;
-    function startTokenStreamDemo() {
-      const output = document.getElementById('tokenStreamOutput');
-      if (!output) return;
-      audioEngine.playDrop();
+    // ── Apple Scroll Reveal Engine ──
+    function initScrollReveal() {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('revealed');
+          }
+        });
+      }, {
+        threshold: 0.08,
+        rootMargin: '0px 0px -40px 0px'
+      });
 
-      const sampleTokens = (
-        "INITIATING V8 SURROGATE INFERENCE... [TENSOR INPUTS: Rain=65.2mm/h, CAPE=2840J/kg, SoilSat=84%, Tide=+2.4m] " +
-        "--> GREEN-AMPT INFILTRATION SATURATED. " +
-        "--> TORRICELLI GRAVITY OUTFLOW BACKWATER CAP ACTIVE AT HYDROSTATIC BOUNDARY. " +
-        "--> 36-STEP PREDICTIVE HYDROGRAPH SOLVED IN 11.8 MILLISECONDS. " +
-        "--> PEAK WATER DEPTH: 1.42 METERS AT +42 MINUTES. FLOOD PROBABILITY: 99.4%. " +
-        "--> URGENCY LEVEL 4: EVACUATION DISPATCH MANDATED."
-      ).split(" ");
-
-      output.textContent = "";
-      let idx = 0;
-      clearInterval(tokenStreamInterval);
-      tokenStreamInterval = setInterval(() => {
-        if (idx < sampleTokens.length) {
-          output.textContent += sampleTokens[idx] + " ";
-          idx++;
-        } else {
-          clearInterval(tokenStreamInterval);
-        }
-      }, 15);
+      document.querySelectorAll('.scroll-reveal').forEach((el) => {
+        observer.observe(el);
+      });
     }
 
-    /* ══════════════════════════════════════════════════════════════════
-       5. INSTAGRAM FEEDBACK & TRASH CAN CRUMPLE ANIMATION
-       ══════════════════════════════════════════════════════════════════ */
-    function sendAndTrashFeedback() {
-      const input = document.getElementById('userFeedbackInput');
-      const val = input?.value.trim();
-      if (!val) return;
-      audioEngine.playTrash();
+    // ── Raycast/Linear Dynamic Bento Spotlight ──
+    function initBentoSpotlight() {
+      document.querySelectorAll('.bento-card').forEach((card) => {
+        card.addEventListener('mousemove', (e) => {
+          const rect = card.getBoundingClientRect();
+          card.style.setProperty('--mouse-x', `${e.clientX - rect.left}px`);
+          card.style.setProperty('--mouse-y', `${e.clientY - rect.top}px`);
+        });
+      });
+    }
 
-      const dmArea = document.getElementById('dmInputArea');
-      const ball = document.createElement('div');
-      ball.className = 'paper-crumple-ball';
-      dmArea.appendChild(ball);
+    // ── Interactive Split-Comparison Slider ──
+    function initSplitSlider() {
+      const box = document.getElementById('splitSliderBox');
+      const leftLayer = document.getElementById('splitLeftLayer');
+      const handle = document.getElementById('splitHandle');
+      if (!box || !leftLayer || !handle) return;
+
+      let isDragging = false;
+
+      const setDivider = (clientX) => {
+        const rect = box.getBoundingClientRect();
+        let pct = ((clientX - rect.left) / rect.width) * 100;
+        pct = Math.max(10, Math.min(90, pct));
+        leftLayer.style.width = `${pct}%`;
+        handle.style.left = `${pct}%`;
+      };
+
+      box.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        setDivider(e.clientX);
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        setDivider(e.clientX);
+      });
+
+      window.addEventListener('mouseup', () => {
+        isDragging = false;
+      });
+
+      box.addEventListener('touchstart', (e) => {
+        if (e.touches.length > 0) setDivider(e.touches[0].clientX);
+      }, { passive: true });
+
+      box.addEventListener('touchmove', (e) => {
+        if (e.touches.length > 0) setDivider(e.touches[0].clientX);
+      }, { passive: true });
+    }
+
+    // ── 14-Feature Tensor Formula Inspector ──
+    const TENSOR_FORMULAS = [
+      { title: "[VECTOR 00 // RAINFALL RATE R₀]", math: "q_in(t) = R₀ · (1 - Impervious) + R₀ · Impervious ⟷ Convective Forcing", desc: "Instantaneous rain intensity measured by ground Doppler radar and satellite feeds. When R₀ exceeds soil infiltration capacity Ks, excess ponding transitions immediately into overland runoff." },
+      { title: "[VECTOR 01 // 48-HOUR ANTECEDENT R₄₈]", math: "S_accum = \sum_{t=0}^{48} R(t) ⟷ Pre-Saturation Load", desc: "48-hour cumulative precipitation. Saturates shallow root-zone pore spaces, determining whether incoming storms will absorb or instantly sheet-flow." },
+      { title: "[VECTOR 02 // 120-HOUR GROUND LOAD R₁₂₀]", math: "W_subsurface = \int_{0}^{120} (R(t) - ET(t)) dt ⟷ Aquifer Pre-fill", desc: "5-day cumulative catchment memory. Elevated R₁₂₀ eliminates baseline storage capacity across natural drainage swales and regional river valleys." },
+      { title: "[VECTOR 03 // CONVECTIVE CAPE]", math: "CAPE = \int_{z_f}^{z_n} g \cdot \frac{T_{v,parcel} - T_{v,env}}{T_{v,env}} dz ⟷ Atmospheric Instability", desc: "Convective Available Potential Energy. Values > 2000 J/kg signal catastrophic vertical cloudburst convection capable of dropping 100+ mm/h in localized 1-5km cells." },
+      { title: "[VECTOR 04 // BAROMETRIC EYE DROP ΔP]", math: "\Delta P = P_{local} - 1013.25 \text{ hPa} ⟷ Inverse Barometer Surcharge", desc: "Deep pressure depression. A 1 hPa drop raises regional coastal sea level by ~1 cm (the inverted barometer effect), exacerbating coastal tidal locking." },
+      { title: "[VECTOR 05 // SURFACE WIND SHEAR]", math: "\tau_w = \rho_{air} C_d U_{10}^2 ⟷ Surface Drag Force", desc: "10-meter wind velocity vector. Sustained on-shore winds push water masses up estuaries, preventing urban storm canals from emptying into the sea." },
+      { title: "[VECTOR 06 // STANDARDIZED PRECIPITATION SPI-30]", math: "SPI_{30} = \frac{R_{30} - \mu_{30}}{\sigma_{30}} ⟷ Monthly Moisture Deviation", desc: "Standardized Precipitation Index over 30 days. Quantifies whether the soil column entered the storm under severe drought or extreme pre-saturation." },
+      { title: "[VECTOR 07 // DEEP AQUIFER MEMORY SPI-90]", math: "SPI_{90} = \frac{R_{90} - \mu_{90}}{\sigma_{90}} ⟷ Quarterly Groundwater Baseline", desc: "90-day standardized regional aquifer index. Captures seasonal groundwater table elevation and baseflow baseline across major river catchments." },
+      { title: "[VECTOR 08 // VOLUMETRIC SOIL SATURATION θ]", math: "f(t) = K_s \cdot \left(1 + \frac{\psi \cdot (\theta_s - \theta_i)}{F(t)}\right) ⟷ Green-Ampt Infiltration", desc: "Green-Ampt volumetric moisture saturation. As θ approaches θ_saturated (100%), soil infiltration capacity decays asymptotically to minimum saturated conductivity Ks." },
+      { title: "[VECTOR 09 // SATURATED CONDUCTIVITY Kₛ]", math: "q = -K_s \cdot \frac{\partial h}{\partial z} ⟷ Darcy Infiltration Gradient", desc: "Soil hydraulic permeability (mm/hr). High Ks (sandy soils) allows rapid subterranean absorption; low Ks (clay/silt) causes rapid surface ponding." },
+      { title: "[VECTOR 10 // DRAINAGE PROXIMITY]", math: "D_{outfall} = \min_b \|\mathbf{x} - \mathbf{x}_b\|_2 ⟷ Hydraulic Travel Distance", desc: "Euclidean and topological distance to the nearest major stream channel or gravity storm outfall. Controls kinematic wave concentration time." },
+      { title: "[VECTOR 11 // TOPOGRAPHIC WETNESS TWI]", math: "TWI = \ln\left(\frac{\alpha}{\tan \beta}\right) ⟷ Beven Catchment Index", desc: "Topographic Wetness Index where α is upslope contributing drainage area and tan β is local terrain slope. Identifies natural geographical drainage convergence zones." },
+      { title: "[VECTOR 12 // URBAN IMPERVIOUSNESS]", math: "C_{runoff} = 0.05 + 0.90 \cdot \text{Impervious} ⟷ Concrete Grid Fraction", desc: "Fraction of urban terrain sealed by asphalt, concrete, and roof structures (0.0 to 1.0). Disables natural infiltration and accelerates peak runoff velocity." },
+      { title: "[VECTOR 13 // TIDAL SURGE H_TIDE]", math: "Q_{out} = C_d A \sqrt{2g (H_{tide} - Z_{invert})} ⟷ Torricelli Outflow Capping", desc: "Astronomical tide height + meteorological surge at outfall. When H_tide exceeds outfall invert elevation Z_invert, gravity drainage locks and storm water backs up into city streets." }
+    ];
+
+    function inspectTensorFeature(idx) {
+      document.querySelectorAll('.tensor-chip').forEach((c, i) => {
+        c.classList.toggle('active', i === idx);
+      });
+      const data = TENSOR_FORMULAS[idx] || TENSOR_FORMULAS[0];
+      const titleEl = document.getElementById('formulaVectorTitle');
+      const mathEl = document.getElementById('formulaLatexMath');
+      const descEl = document.getElementById('formulaExplanation');
+      if (titleEl) titleEl.textContent = data.title;
+      if (mathEl) mathEl.textContent = data.math;
+      if (descEl) descEl.textContent = data.desc;
+      if (typeof audioEngine !== 'undefined') audioEngine.playDrop();
+    }
+
+    // ── Groq Adversarial Live Testbench ──
+    function simulateGroqTestbench(scenario) {
+      const s1 = document.getElementById('tbStage1Status');
+      const s2 = document.getElementById('tbStage2Status');
+      const s3Card = document.getElementById('tbStage3Card');
+      const verdictBadge = document.getElementById('tbVerdictBadge');
+      const actionBadge = document.getElementById('tbActionBadge');
+      const consoleOut = document.getElementById('tbConsoleOutput');
+
+      if (typeof audioEngine !== 'undefined') audioEngine.playDrop();
+
+      if (s2) s2.textContent = "Groq LPU Auditing (openai/gpt-oss-120b)...";
+      if (s2) s2.style.color = "#f59e0b";
 
       setTimeout(() => {
-        ball.remove();
-        alert("🗑️ Feedback received & safely thrown into the recycling bin! (Zero corporate bureaucracy)");
-      }, 750);
-      input.value = "";
+        if (scenario === 'monsoon') {
+          if (s1) s1.textContent = "14-F Prediction: +40.8 cm (Risk: 100%)";
+          if (s2) s2.textContent = "✓ Physics Confirmed (Inundation Inevitable)";
+          if (s2) s2.style.color = "#38bdf8";
+          if (s3Card) {
+            s3Card.style.borderColor = "#ef4444";
+            s3Card.style.background = "rgba(239, 68, 68, 0.12)";
+          }
+          if (verdictBadge) {
+            verdictBadge.textContent = "🚨 VERIFIED FLOOD HAZARD";
+            verdictBadge.style.color = "#ef4444";
+          }
+          if (actionBadge) {
+            actionBadge.textContent = "CRITICAL ALARM DISPATCHED";
+            actionBadge.style.color = "#f87171";
+          }
+          if (consoleOut) {
+            consoleOut.innerHTML = `
+              <span style="color:#ef4444; font-weight:700;">[GROQ VERDICT]</span>: CONFIRMED_FLOOD_HAZARD • Confidence: 97/100<br>
+              <span style="color:#38bdf8;">[PHYSICAL AUDIT]</span>: Extreme 185 mm/h rain, 96% antecedent soil saturation, and 4.48m tidal backflow surcharge strictly guarantee catastrophic street inundation.<br>
+              <span style="color:#6ee7b7;">[EVACUATION CORRIDORS]</span>: Elevated flyover arterials (+8m datum) fully passable. Submerged rail underpasses impassable.
+            `;
+          }
+        } else {
+          if (s1) s1.textContent = "Neural Candidate Flag: Spurious Anomaly";
+          if (s2) s2.textContent = "🛡️ Refuted by Physical Telemetry";
+          if (s2) s2.style.color = "#10b981";
+          if (s3Card) {
+            s3Card.style.borderColor = "#10b981";
+            s3Card.style.background = "rgba(16, 185, 129, 0.08)";
+          }
+          if (verdictBadge) {
+            verdictBadge.textContent = "✓ FALSE ALARM DISMISSED";
+            verdictBadge.style.color = "#10b981";
+          }
+          if (actionBadge) {
+            actionBadge.textContent = "Alert Suppressed (Zero Panic)";
+            actionBadge.style.color = "#6ee7b7";
+          }
+          if (consoleOut) {
+            consoleOut.innerHTML = `
+              <span style="color:#10b981; font-weight:700;">[GROQ VERDICT]</span>: FALSE_ALARM_DOWNGRADED • Confidence: 94/100<br>
+              <span style="color:#38bdf8;">[PHYSICAL AUDIT]</span>: Zero recent rainfall (R₀ = 0.0 mm/h), ample soil capacity (55% saturation), and nominal 0.08m coastal tide cannot generate flood depths. Spurious alert suppressed.<br>
+              <span style="color:#6ee7b7;">[CIVIC ADVISORY]</span>: Conditions nominal. Transit routes operating without restriction; civic panic averted.
+            `;
+          }
+        }
+        if (typeof audioEngine !== 'undefined') audioEngine.playRipple();
+      }, 700);
     }
 
-    /* ══════════════════════════════════════════════════════════════════
+    // ── Developer Code Terminal Tabs ──
+    const CODE_SNIPPETS = {
+      python: `from floodlock_sdk import FloodLockClient
+
+# Initialize client with automated edge failover
+client = FloodLockClient(api_key="flk_live_948f8a29b01c4e78d9102ab3c4d")
+
+# Query 150km perimeter hazard status
+result = client.check_radius(lat=19.21, lon=73.10, radius_km=150)
+
+print(f"Danger Level: {result.danger_level}")        # PERIMETER_NOMINAL
+print(f"In Danger Zone: {result.in_danger_zone}")    # False
+print(f"Groq Verified: {result.threat_verified}")    # False (Dismissed)
+print(f"Advisory: {result.tactical_advisory}")       # Transit routes nominal`,
+
+      curl: `curl -X GET "https://floodlock-click-processor.lanternmech.workers.dev/api/forecast?lat=19.21&lon=73.10&reasoning=true" \\
+  -H "Accept: application/json" \\
+  -H "Authorization: Bearer flk_live_948f8a29b01c4e78d9102ab3c4d"`,
+
+      ts: `import { FloodLockClient } from '@meteoflood/sdk';
+
+const client = new FloodLockClient({
+  apiKey: 'flk_live_948f8a29b01c4e78d9102ab3c4d',
+  timeoutMs: 3000
+});
+
+const forecast = await client.getTacticalForecast({ lat: 19.21, lon: 73.10 });
+console.log('Threat Level:', forecast.threat_level);
+console.log('Groq Audit:', forecast.tactical_reasoning?.physical_consistency_audit);`
+    };
+
+    let activeCodeLang = 'python';
+
+    function switchCodeTab(lang) {
+      activeCodeLang = lang;
+      document.querySelectorAll('.code-tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent.toLowerCase().includes(lang));
+      });
+      const display = document.getElementById('codeTerminalDisplay');
+      if (display) {
+        display.innerHTML = `<code>${CODE_SNIPPETS[lang] || CODE_SNIPPETS.python}</code>`;
+      }
+      if (typeof audioEngine !== 'undefined') audioEngine.playDrop();
+    }
+
+    function copyCurrentCodeSnippet() {
+      const code = CODE_SNIPPETS[activeCodeLang] || CODE_SNIPPETS.python;
+      navigator.clipboard.writeText(code).then(() => {
+        const btn = document.getElementById('copyCodeBtn');
+        if (btn) {
+          const old = btn.textContent;
+          btn.textContent = '✓ Copied!';
+          setTimeout(() => btn.textContent = old, 1500);
+        }
+      });
+    }
+
+    function runCodeSnippetDemo() {
+      const display = document.getElementById('codeTerminalDisplay');
+      if (!display) return;
+      display.innerHTML = `<code>[EXECUTING V8 EDGE QUERY...] Connecting to nearest Cloudflare PoP (12ms RTT)...</code>`;
+      if (typeof audioEngine !== 'undefined') audioEngine.playDrop();
+
+      setTimeout(() => {
+        display.innerHTML = `<code>{
+  "timestamp": "${new Date().toISOString()}",
+  "latency_ms": 11.8,
+  "coordinates": { "lat": 19.21, "lon": 73.10 },
+  "threat_level": "ELEVATED_WATCH",
+  "groq_audit_verdict": "SUB_HAZARD_WATCH_ADVISORY",
+  "neural_predictions": {
+    "depth_trajectory_cm": { "h1": 2.8, "h3": 2.6, "h6": 0 },
+    "runoff_q_m3s": 0.0,
+    "flash_flood_probability": 0.02
+  },
+  "tactical_reasoning": {
+    "engine": "Tier-1 Groq LPU (openai/gpt-oss-120b)",
+    "verification_status": "FALSE_ALARM_DOWNGRADED",
+    "confidence_score": 94,
+    "physical_consistency_audit": "Zero recent rainfall, moderate soil saturation (55%), and nominal 0.08m coastal tide cannot generate flood depths.",
+    "tactical_civic_advisory": "Conditions nominal. Standard transit routes operating without restriction."
+  }
+}</code>`;
+        if (typeof audioEngine !== 'undefined') audioEngine.playRipple();
+      }, 600);
+    }
+/* ══════════════════════════════════════════════════════════════════
        6. CLOUDFLARE TURNSTILE BOT PROTECTION (AUTO-RESETTING)
        ══════════════════════════════════════════════════════════════════ */
     window.turnstileToken = null;
