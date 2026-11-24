@@ -181,3 +181,4 @@ with open(INDEX_PATH, 'w', encoding='utf-8') as f:
     f.write(html)
 
 print("Light mode and layout breathing room successfully applied!")
+

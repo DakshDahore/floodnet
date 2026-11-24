@@ -1410,9 +1410,10 @@ export default {
             userPicture = userData.picture || null;
           } else if (provider === "github") {
             const redirectUri = body.redirect_uri || `${getSafeFrontendRedirect(env.FRONTEND_URL, env)}/auth/callback`;
-            const clientId = String(env.GITHUB_CLIENT_ID || "").trim();
-            const clientSecret = String(env.GITHUB_CLIENT_SECRET || "").trim();
             const cleanRedirectUri = String(redirectUri || "").trim();
+            const isDedicatedPages = cleanRedirectUri.includes("pages.dev") && Boolean(env.GITHUB_CLIENT_ID_PAGES);
+            const clientId = String(isDedicatedPages ? env.GITHUB_CLIENT_ID_PAGES : (env.GITHUB_CLIENT_ID || "")).trim();
+            const clientSecret = String(isDedicatedPages ? env.GITHUB_CLIENT_SECRET_PAGES : (env.GITHUB_CLIENT_SECRET || "")).trim();
             const cleanCode = String(code || "").trim();
 
             const tokenRes = await fetch("https://github.com/login/oauth/access_token", {
@@ -1534,9 +1535,10 @@ export default {
 
       // ── GET /api/auth/oauth/github (1-Click GitHub OAuth Entrypoint) ──
       if (path === "/api/auth/oauth/github" && method === "GET") {
-        const clientId = (env.GITHUB_CLIENT_ID || "").trim();
         const originParam = url.searchParams.get("origin") || env.FRONTEND_URL || "";
         const safeFrontendUrl = getSafeFrontendRedirect(originParam, env);
+        const isPages = safeFrontendUrl.includes("pages.dev");
+        const clientId = String((isPages && env.GITHUB_CLIENT_ID_PAGES) ? env.GITHUB_CLIENT_ID_PAGES : (env.GITHUB_CLIENT_ID || "")).trim();
         if (!clientId) {
           return Response.redirect(`${safeFrontendUrl}/#oauth_error=github_unconfigured`, 302);
         }
@@ -1626,12 +1628,15 @@ export default {
           } else if (provider === "github") {
             const workerOrigin = new URL(request.url).origin;
             const redirectUri = `${workerOrigin}/api/auth/oauth/callback`;
+            const isPages = frontendUrl.includes("pages.dev") && Boolean(env.GITHUB_CLIENT_ID_PAGES);
+            const clientId = isPages ? env.GITHUB_CLIENT_ID_PAGES : (env.GITHUB_CLIENT_ID || "");
+            const clientSecret = isPages ? env.GITHUB_CLIENT_SECRET_PAGES : (env.GITHUB_CLIENT_SECRET || "");
             const tokenRes = await fetch("https://github.com/login/oauth/access_token", {
               method: "POST",
               headers: { "Content-Type": "application/json", Accept: "application/json" },
               body: JSON.stringify({
-                client_id: env.GITHUB_CLIENT_ID || "",
-                client_secret: env.GITHUB_CLIENT_SECRET || "",
+                client_id: clientId,
+                client_secret: clientSecret,
                 code,
                 redirect_uri: redirectUri,
               }),
