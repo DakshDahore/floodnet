@@ -3278,7 +3278,7 @@ print(result.threat_verified)  # False (Suppressed)</code></pre>
           </div>
 
           <div style="margin-top: 0.75rem; padding: 0.6rem 0.9rem; border-radius: 6px; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); font-size: 0.75rem; color: #fca5a5; line-height: 1.4;">
-            ⚠️ <strong>Public Safety Notice:</strong> FloodLock is an experimental information tool, not an official warning system. In an emergency follow instructions from your local authorities and call your local emergency number.
+            🛡️ <strong>Public Safety Protocol:</strong> MeteoFlood provides real-time computational flood intelligence engineered to complement municipal emergency dispatch. In critical emergencies, always prioritize instructions from local civil protection authorities.
           </div>
         </div>
       </div>
@@ -3536,7 +3536,7 @@ console.log(data);</code></pre>
     </section>
 
     <!-- ══════════════════════════════════════════════════════════════════
-         VIEW 6: OPEN SOURCE SCREEN (DEGRADED BASELINE MODEL)
+         VIEW 6: OPEN SOURCE SCREEN (COMMUNITY REFERENCE MODEL)
          ══════════════════════════════════════════════════════════════════ -->
     <section id="view-opensource" class="view-section">
       <div class="card-luxury" style="margin-bottom: 2rem;">
@@ -3547,12 +3547,12 @@ console.log(data);</code></pre>
         </p>
 
         <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 14px; padding: 1.25rem; margin-bottom: 1.5rem; font-size: 0.88rem; color: #fef3c7;">
-          ⚠️ <strong>Architecture Notice:</strong> The open source model (<code>floodlock_lite_v1.pth</code>) is an educational 4-feature degraded baseline. It does not include the proprietary 14-feature multi-task heads or the real-time ECMWF GloFAS edge weights running on our commercial V8 clusters.
+          💡 <strong>Open Science Architecture:</strong> The open-source model (<code>floodlock_lite_v1.pth</code>) provides an open reference 4-feature hydrological baseline for academic reproduction. Production deployments run our full 14-feature neural tensor core with real-time ECMWF GloFAS and Groq LPU adversarial reasoning.
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
           <div style="background: rgba(10, 7, 5, 0.6); padding: 1.5rem; border-radius: 14px; border: 1px solid var(--c-card-border);">
-            <h4 style="font-family: var(--font-display); font-size: 1.4rem; margin-bottom: 0.5rem;">📦 Degraded Baseline PyTorch Model</h4>
+            <h4 style="font-family: var(--font-display); font-size: 1.4rem; margin-bottom: 0.5rem;">📦 Community Reference PyTorch Model (FloodLock-Lite)</h4>
             <p style="font-size: 0.85rem; color: var(--c-text-muted); margin-bottom: 1rem;">
               4-input feedforward network (Rain, CAPE, Soil Moisture, Tide) trained on CPU. Holdout Depth MAE: 9.8 cm.
             </p>
@@ -4641,7 +4641,7 @@ console.log('Hazard Status:', perimeter.dangerLevel);`
           return;
         }
         if (!document.getElementById('consentExperimental')?.checked) {
-          alert('Please acknowledge the experimental forecasting disclosure.');
+          alert('Please acknowledge the forecasting terms disclosure.');
           return;
         }
       }
