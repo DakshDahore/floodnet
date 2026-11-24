@@ -1151,7 +1151,7 @@
       </div>
       <div class="water-dock-item" onclick="switchView('account')">
         <span class="dock-icon">👤</span>
-        <span class="dock-label">My Account</span>
+        <span class="dock-label">My Account <span id="dockQuotaPill" style="font-size: 0.68rem; background: rgba(56, 189, 248, 0.2); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; padding: 0.1rem 0.45rem; border-radius: 999px; margin-left: 0.35rem; display: none;">0/10</span></span>
       </div>
       <div class="water-dock-item" onclick="switchView('opensource')">
         <span class="dock-icon">📦</span>
@@ -2023,12 +2023,16 @@ console.log(data);</code></pre>
             <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
               <span>Daily Quota Consumption (UTC Reset 00:00)</span>
               <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <span id="liveSyncBadge" style="display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.72rem; color: #34d399; background: rgba(52, 211, 153, 0.1); border: 1px solid rgba(52, 211, 153, 0.3); padding: 0.15rem 0.55rem; border-radius: 999px;">
+                  <span id="liveSyncDot" style="width: 7px; height: 7px; border-radius: 50%; background: #34d399; display: inline-block; box-shadow: 0 0 8px rgba(52, 211, 153, 0.6); transition: all 0.3s ease;"></span>
+                  <span>Live Sync 1s</span>
+                </span>
                 <strong id="accountQuotaText">0 / 10 Queries Used</strong>
                 <button onclick="refreshAccountUsage(true)" class="btn-water" style="padding: 0.2rem 0.65rem; font-size: 0.75rem; border-radius: 6px;">⟳ Refresh Meter</button>
               </div>
             </div>
             <div style="width: 100%; height: 10px; background: rgba(214, 197, 179, 0.1); border-radius: 999px; overflow: hidden; margin-bottom: 0.75rem;">
-              <div id="accountQuotaBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #38bdf8, var(--c-cognac)); border-radius: 999px;"></div>
+              <div id="accountQuotaBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #38bdf8, var(--c-cognac)); border-radius: 999px; transition: width 0.4s ease;"></div>
             </div>
             <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; color: var(--c-text-muted); flex-wrap: wrap; gap: 0.5rem;">
               <span>⚡ Synchronized with Python SDK (<code>floodlock-sdk</code>) and edge worker clusters.</span>
@@ -3252,21 +3256,18 @@ console.log(data);</code></pre>
     }
 
     function applyLoggedInState(user) {
-      if (!user || (!user.email && !user.identity)) {
-        logoutSession();
-        return;
-      }
+      if (!user) return;
       document.getElementById('dockPreLogin').style.display = 'none';
       document.getElementById('dockPostLogin').style.display = 'flex';
       
-      const email = user.email || user.identity || '';
-      const name = user.name || (email ? email.split('@')[0] : 'User');
+      const email = user.email || user.identity || user.identity_masked || user.identity_raw || (user.user_id ? `${user.user_id}@meteoflood.live` : '');
+      const name = user.name || (email ? email.split('@')[0] : 'Developer');
       const plan = (user.plan || 'free').toUpperCase();
       
       const accEmail = document.getElementById('accountEmail');
       const accName = document.getElementById('accountDisplayName');
       const accBadge = document.getElementById('accountPlanBadge');
-      if (accEmail) accEmail.textContent = email;
+      if (accEmail && email) accEmail.textContent = email;
       if (accName) accName.textContent = name;
       if (accBadge) accBadge.textContent = `${plan} TIER`;
       
@@ -3287,11 +3288,13 @@ console.log(data);</code></pre>
       updateQuotaUi(0, dailyQuota, dailyQuota);
       refreshAccountUsage();
       loadUserApiKey();
+      startLiveAutoRefresh();
     }
 
     function updateQuotaUi(used, limit, remaining) {
       const quotaText = document.getElementById('accountQuotaText');
       const quotaBar = document.getElementById('accountQuotaBar');
+      const dockPill = document.getElementById('dockQuotaPill');
       const u = Math.max(0, parseInt(used) || 0);
       const lim = Math.max(1, parseInt(limit) || 10);
       const rem = remaining !== undefined ? Math.max(0, parseInt(remaining)) : Math.max(0, lim - u);
@@ -3310,6 +3313,63 @@ console.log(data);</code></pre>
           quotaBar.style.background = 'linear-gradient(90deg, #38bdf8, var(--c-cognac))';
         }
       }
+      if (dockPill) {
+        dockPill.textContent = `${u}/${lim}`;
+        dockPill.style.display = 'inline-block';
+      }
+    }
+
+    let autoRefreshTimer = null;
+    let isAutoRefreshing = false;
+    let lastSeenUsage = -1;
+
+    function startLiveAutoRefresh() {
+      if (autoRefreshTimer) return;
+
+      const pollCycle = async () => {
+        const token = window.FloodConfig ? window.FloodConfig.getSessionToken() : null;
+        if (!token) {
+          autoRefreshTimer = setTimeout(pollCycle, 2000);
+          return;
+        }
+
+        if (isAutoRefreshing) {
+          autoRefreshTimer = setTimeout(pollCycle, 1000);
+          return;
+        }
+
+        isAutoRefreshing = true;
+        try {
+          const res = await window.FloodConfig.fetchApi('USER_USAGE', { timeoutMs: 3000 });
+          if (res.ok && res.data) {
+            const u = res.data.queries_used !== undefined ? res.data.queries_used : 0;
+            const lim = res.data.daily_quota || 10;
+            const rem = res.data.daily_remaining !== undefined ? res.data.daily_remaining : Math.max(0, lim - u);
+            updateQuotaUi(u, lim, rem);
+
+            if (lastSeenUsage !== -1 && u !== lastSeenUsage) {
+              const liveDot = document.getElementById('liveSyncDot');
+              if (liveDot) {
+                liveDot.style.transform = 'scale(1.6)';
+                liveDot.style.boxShadow = '0 0 14px #38bdf8';
+                setTimeout(() => {
+                  liveDot.style.transform = 'scale(1)';
+                  liveDot.style.boxShadow = '0 0 8px rgba(52, 211, 153, 0.6)';
+                }, 450);
+              }
+            }
+            lastSeenUsage = u;
+          }
+        } catch (e) {
+          // Zero disruption: silent catch, no errors, no popups, no auto-logout!
+        } finally {
+          isAutoRefreshing = false;
+          const delay = document.hidden ? 3000 : 1000;
+          autoRefreshTimer = setTimeout(pollCycle, delay);
+        }
+      };
+
+      autoRefreshTimer = setTimeout(pollCycle, 1000);
     }
 
     async function refreshAccountUsage(showFeedback = false) {
@@ -4912,15 +4972,28 @@ console.log(data);</code></pre>
 
       const session = window.FloodConfig.getSessionToken();
       const user = window.FloodConfig.getUserProfile();
-      if (session && user && (user.email || user.identity)) {
-        applyLoggedInState(user);
+      if (session) {
+        if (user) {
+          applyLoggedInState(user);
+        } else {
+          applyLoggedInState({ email: 'developer@meteoflood.live', plan: 'free' });
+        }
+        window.FloodConfig.fetchApi('USER_PROFILE', { timeoutMs: 5000 }).then(res => {
+          if (res.ok && res.data && res.data.profile) {
+            window.FloodConfig.setSession(session, res.data.profile);
+            applyLoggedInState(res.data.profile);
+          } else if (res.status === 401) {
+            logoutSession();
+          }
+        }).catch(() => {
+          // Network hiccup or offline: Keep session intact, do not logout!
+        });
       } else {
         logoutSession();
       }
+
+      startLiveAutoRefresh();
     });
-  </script>
-</body>
-</html>
   </script>
 </body>
 </html>
