@@ -5670,35 +5670,11 @@ console.log('Hazard Status:', perimeter.dangerLevel);`
     function loginWithGitHub() {
       const cleanOrigin = window.location.origin.replace(/\/+$/, '');
       const isPages = window.location.hostname.includes("pages.dev");
-
-      // ── Dual GitHub Login Architecture ──
-      if (isPages) {
-        // Option A: Dedicated Pages.dev OAuth App Client ID
-        const pagesClientId = window.FLOODLOCK_GH_CLIENT_ID_PAGES || "";
-        if (pagesClientId) {
-          const redirectUri = `${cleanOrigin}/auth/callback`;
-          const stateObj = { origin: cleanOrigin, provider: "github", ts: Date.now() };
-          const stateStr = encodeURIComponent(JSON.stringify(stateObj));
-          window.location.href = `https://github.com/login/oauth/authorize?client_id=${encodeURIComponent(pagesClientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=read:user%20user:email&state=${stateStr}`;
-          return;
-        }
-
-        // Option B: Netlify OAuth Forwarding Bridge (Zero redirect_uri mismatch!)
-        // Uses authorized client Ov23liHMgDQduw9y5SOT with callback https://metoflood.netlify.app/auth/callback.
-        // Netlify callback detects origin=pages.dev and forwards code seamlessly.
-        const netlifyClientId = "Ov23liHMgDQduw9y5SOT";
-        const netlifyCallback = "https://metoflood.netlify.app/auth/callback";
-        const stateObj = { origin: cleanOrigin, provider: "github", ts: Date.now() };
-        const stateStr = encodeURIComponent(JSON.stringify(stateObj));
-        window.location.href = `https://github.com/login/oauth/authorize?client_id=${encodeURIComponent(netlifyClientId)}&redirect_uri=${encodeURIComponent(netlifyCallback)}&scope=read:user%20user:email&state=${stateStr}`;
-      } else {
-        // Standard Netlify Direct OAuth
-        const netlifyClientId = "Ov23liHMgDQduw9y5SOT";
-        const redirectUri = `${cleanOrigin}/auth/callback`;
-        const stateObj = { origin: cleanOrigin, provider: "github", ts: Date.now() };
-        const stateStr = encodeURIComponent(JSON.stringify(stateObj));
-        window.location.href = `https://github.com/login/oauth/authorize?client_id=${encodeURIComponent(netlifyClientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=read:user%20user:email&state=${stateStr}`;
-      }
+      const clientId = isPages ? "Ov23li0qner783rsRpZL" : "Ov23liHMgDQduw9y5SOT";
+      const redirectUri = `${cleanOrigin}/auth/callback`;
+      const stateObj = { origin: cleanOrigin, provider: "github", ts: Date.now() };
+      const stateStr = encodeURIComponent(JSON.stringify(stateObj));
+      window.location.href = `https://github.com/login/oauth/authorize?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=read:user%20user:email&state=${stateStr}`;
     }
 
     // ── XSS-safe HTML escaper (RED-1 fix) ──
@@ -6209,20 +6185,11 @@ console.log('Hazard Status:', perimeter.dangerLevel);`
 
         const cleanRootOrigin = window.location.origin.replace(/\/+$/, '');
 
-        // If returned to Netlify but originating site was Pages.dev, forward immediately:
-        if (returnOrigin && returnOrigin !== cleanRootOrigin && returnOrigin.includes('pages.dev')) {
-          window.location.href = `${returnOrigin}/auth/callback?code=${encodeURIComponent(oauthCode)}&state=${encodeURIComponent(urlParams.get('state') || '')}`;
-          return;
-        }
-
         switchView('auth');
         const status = document.getElementById('authStatusMsg');
         if (status) status.innerHTML = `<span style="color:var(--c-accent);">Authenticating ${oauthProvider === 'github' ? 'GitHub' : 'Google'} credentials with Cloudflare Edge...</span>`;
 
-        // If on pages.dev without dedicated client ID, use the Netlify callback matching GitHub's registered app
-        const exchangeRedirectUri = (window.location.hostname.includes('pages.dev') && !window.FLOODLOCK_GH_CLIENT_ID_PAGES && oauthProvider === 'github')
-          ? 'https://metoflood.netlify.app/auth/callback'
-          : `${cleanRootOrigin}/auth/callback`;
+        const exchangeRedirectUri = `${cleanRootOrigin}/auth/callback`;
 
         window.FloodConfig.fetchApi('AUTH_OAUTH_EXCHANGE', {
           method: 'POST',

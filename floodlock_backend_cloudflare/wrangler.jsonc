@@ -57,7 +57,8 @@
     "OTP_FROM_ADDRESS": "MeteoFlood <onboarding@resend.dev>",
     "GOOGLE_CLIENT_ID": "337870843063-6ibga32hlca5b7s800dfdhm7prudl8j1.apps.googleusercontent.com",
     "GITHUB_CLIENT_ID": "Ov23liHMgDQduw9y5SOT",
-    "FRONTEND_URL": "https://metoflood.netlify.app"
+    "GITHUB_CLIENT_ID_PAGES": "Ov23li0qner783rsRpZL",
+    "FRONTEND_URL": "https://floodlock.pages.dev"
   },
   "services": [
     {

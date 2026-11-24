@@ -1411,9 +1411,9 @@ export default {
           } else if (provider === "github") {
             const redirectUri = body.redirect_uri || `${getSafeFrontendRedirect(env.FRONTEND_URL, env)}/auth/callback`;
             const cleanRedirectUri = String(redirectUri || "").trim();
-            const isDedicatedPages = cleanRedirectUri.includes("pages.dev") && Boolean(env.GITHUB_CLIENT_ID_PAGES);
-            const clientId = String(isDedicatedPages ? env.GITHUB_CLIENT_ID_PAGES : (env.GITHUB_CLIENT_ID || "")).trim();
-            const clientSecret = String(isDedicatedPages ? env.GITHUB_CLIENT_SECRET_PAGES : (env.GITHUB_CLIENT_SECRET || "")).trim();
+            const isDedicatedPages = cleanRedirectUri.includes("pages.dev");
+            const clientId = String(isDedicatedPages ? (env.GITHUB_CLIENT_ID_PAGES || "Ov23li0qner783rsRpZL") : (env.GITHUB_CLIENT_ID || "Ov23liHMgDQduw9y5SOT")).trim();
+            const clientSecret = String(isDedicatedPages ? (env.GITHUB_CLIENT_SECRET_PAGES || env.GITHUB_CLIENT_SECRET || "") : (env.GITHUB_CLIENT_SECRET || "")).trim();
             const cleanCode = String(code || "").trim();
 
             const tokenRes = await fetch("https://github.com/login/oauth/access_token", {
