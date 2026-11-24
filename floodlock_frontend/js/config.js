@@ -9,10 +9,10 @@
  */
 
 const WORKER_ENDPOINTS = [
+  "https://floodlock-backend.dakshdahore1995.workers.dev",
   "https://floodlock-backend.dahoremugdha.workers.dev",
   "https://floodlock-backend.dakshdadafit.workers.dev",
   "https://floodlock-backend.lanternmech.workers.dev",
-  "https://floodlock-backend.dakshdahore1995.workers.dev",
   "https://floodlock-backend-standby.dakshdahore1995.workers.dev",
 ];
 
