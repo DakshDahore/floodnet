@@ -1,6 +1,8 @@
 /google0595da6a3a0e69c6.html /google0595da6a3a0e69c6.html 200
+/auth/callback    /auth/callback/index.html       200
+
 # API Proxy for legacy environments
 /api/*         /.netlify/functions/api/:splat  200
 
-# SPA fallback for Cloudflare Pages (only catches routes that don't match a real file)
+# SPA fallback for routes that don't match static files
 /*             /index.html                     200

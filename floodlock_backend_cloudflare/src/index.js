@@ -88,7 +88,16 @@ const SCENARIO_PROFILES = {
 function buildCorsHeaders(request, env) {
   const origin = request.headers.get("Origin") || "";
   const allowed = (env.ALLOWED_ORIGINS || "").split(",").map((s) => s.trim()).filter(Boolean);
-  const allowOrigin = allowed.length === 0 ? (origin || "*") : allowed.includes(origin) ? origin : "";
+  let isAllowed = allowed.length === 0 || allowed.includes(origin);
+  if (!isAllowed && origin) {
+    try {
+      const u = new URL(origin);
+      if (u.hostname === "localhost" || u.hostname === "127.0.0.1" || u.hostname.endsWith(".pages.dev") || u.hostname.endsWith(".netlify.app")) {
+        isAllowed = true;
+      }
+    } catch {}
+  }
+  const allowOrigin = isAllowed ? (origin || "*") : "";
 
   return {
     "Access-Control-Allow-Origin": allowOrigin,
@@ -963,6 +972,7 @@ export default {
         try { body = await request.json(); } catch { body = {}; }
         const code = body.code;
         const provider = body.provider || "google";
+        console.log(`[AUTH_EXCHANGE] Received request: provider=${provider}, origin=${request.headers.get("Origin")}, redirect_uri=${body.redirect_uri}, code_len=${(code || "").length}`);
         if (!code) {
           return jsonResponse(request, env, { error: "MISSING_CODE", message: "OAuth authorization code required." }, 400);
         }
@@ -979,6 +989,8 @@ export default {
             const cleanRedirectUri = String(redirectUri || "").trim();
             const cleanCode = String(code || "").trim();
 
+            console.log(`[AUTH_EXCHANGE] Contacting Google token endpoint with client_id=${clientId}, redirect_uri=${cleanRedirectUri}`);
+
             const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
               method: "POST",
               headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -992,7 +1004,7 @@ export default {
             });
             if (!tokenRes.ok) {
               const errTxt = await tokenRes.text();
-              console.error("Google token exchange error:", errTxt);
+              console.error("[AUTH_EXCHANGE] Google token exchange rejected:", errTxt);
               let desc = "";
               try {
                 const parsed = JSON.parse(errTxt);
@@ -1002,6 +1014,7 @@ export default {
               }
               return jsonResponse(request, env, { error: "TOKEN_EXCHANGE_FAILED", message: `Google token exchange failed: ${desc}`, detail: errTxt }, 400);
             }
+            console.log("[AUTH_EXCHANGE] Google token exchange SUCCEEDED! Fetching userinfo...");
             const tokenData = await tokenRes.json();
             const userRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
               headers: { Authorization: `Bearer ${tokenData.access_token}` },
@@ -1131,11 +1144,12 @@ export default {
               daily_quota: dailyQuota,
               is_admin: isAdmin,
               created_at: profile.created_at,
-              picture: userData?.picture || null,
-              avatar_url: userData?.picture || null,
+              picture: userPicture,
+              avatar_url: userPicture,
             },
           });
         } catch (err) {
+          console.error("[AUTH_EXCHANGE] Exception:", err.stack || err.message);
           return jsonResponse(request, env, { error: "OAUTH_EXCEPTION", message: err.message }, 500);
         }
       }

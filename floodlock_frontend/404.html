@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>404: Coordinate Out of Bounds — MeteoFlood Intelligence</title>
+  <meta name="description" content="Hydrological mesh anomaly. The requested coordinate or route does not exist.">
+  <link rel="canonical" href="https://metoflood.netlify.app/404.html">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌊</text></svg>">
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --c-obsidian: #100C08;
+      --c-umber: #2A1F17;
+      --c-cognac: #92542B;
+      --c-cognac-hover: #b86b38;
+      --c-sage: #788279;
+      --c-beige: #D6C5B3;
+      --c-linen: #F8F5EE;
+      --c-water: #06b6d4;
+      --c-water-glow: rgba(6, 182, 212, 0.4);
+      --c-alert: #ef4444;
+      --font-display: 'Instrument Serif', Georgia, serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      --font-sans: 'Plus Jakarta Sans', -apple-system, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: radial-gradient(circle at 50% 30%, #1c140f 0%, var(--c-obsidian) 100%);
+      color: var(--c-linen);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1.5rem;
+      text-align: center;
+      overflow-x: hidden;
+    }
+    .radar-container {
+      position: relative;
+      width: 180px;
+      height: 180px;
+      margin: 0 auto 2rem;
+      border-radius: 50%;
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      background: radial-gradient(circle, rgba(6, 182, 212, 0.05) 0%, transparent 70%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 50px rgba(6, 182, 212, 0.15);
+    }
+    .radar-ring {
+      position: absolute;
+      border-radius: 50%;
+      border: 1px dashed rgba(6, 182, 212, 0.2);
+    }
+    .radar-ring-1 { width: 120px; height: 120px; }
+    .radar-ring-2 { width: 60px; height: 60px; }
+    .radar-sweep {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: conic-gradient(from 0deg, transparent 0deg, transparent 270deg, rgba(6, 182, 212, 0.35) 360deg);
+      animation: sweep 3s linear infinite;
+    }
+    @keyframes sweep {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .glitch-code {
+      font-family: var(--font-mono);
+      font-size: 3.5rem;
+      font-weight: 800;
+      letter-spacing: -0.05em;
+      color: var(--c-water);
+      text-shadow: 0 0 20px var(--c-water-glow);
+      position: relative;
+      z-index: 2;
+    }
+    .tag {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      letter-spacing: 0.15em;
+      color: var(--c-cognac);
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+    }
+    h1 {
+      font-family: var(--font-display);
+      font-size: 2.5rem;
+      font-weight: 400;
+      line-height: 1.15;
+      margin-bottom: 1rem;
+    }
+    p {
+      color: var(--c-beige);
+      max-width: 520px;
+      font-size: 1rem;
+      line-height: 1.6;
+      margin: 0 auto 2rem;
+      opacity: 0.9;
+    }
+    .search-box {
+      max-width: 440px;
+      width: 100%;
+      margin: 0 auto 2rem;
+      position: relative;
+    }
+    .search-input {
+      width: 100%;
+      background: rgba(42, 31, 23, 0.8);
+      border: 1px solid rgba(214, 197, 179, 0.25);
+      border-radius: 999px;
+      padding: 0.85rem 3.5rem 0.85rem 1.25rem;
+      color: #fff;
+      font-family: var(--font-sans);
+      font-size: 0.95rem;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+    .search-input:focus {
+      border-color: var(--c-water);
+      box-shadow: 0 0 20px var(--c-water-glow);
+    }
+    .search-btn {
+      position: absolute;
+      right: 6px;
+      top: 6px;
+      bottom: 6px;
+      width: 38px;
+      border-radius: 50%;
+      background: var(--c-water);
+      border: none;
+      color: var(--c-obsidian);
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .action-group {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .btn-action {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.8rem 1.75rem;
+      border-radius: 999px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+    .btn-primary {
+      background: var(--c-water);
+      color: var(--c-obsidian);
+    }
+    .btn-primary:hover {
+      background: #22d3ee;
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(6, 182, 212, 0.3);
+    }
+    .btn-secondary {
+      background: rgba(214, 197, 179, 0.1);
+      color: var(--c-linen);
+      border: 1px solid rgba(214, 197, 179, 0.25);
+    }
+    .btn-secondary:hover {
+      background: rgba(214, 197, 179, 0.18);
+      transform: translateY(-2px);
+    }
+    .footer-note {
+      margin-top: 3.5rem;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--c-sage);
+    }
+  </style>
+</head>
+<body>
+  <div class="radar-container">
+    <div class="radar-sweep"></div>
+    <div class="radar-ring radar-ring-1"></div>
+    <div class="radar-ring radar-ring-2"></div>
+    <div class="glitch-code">404</div>
+  </div>
+
+  <div class="tag">Topological Anomaly // Hydro-Mesh Coordinate Missing</div>
+  <h1>Lost in the Compound Backflow</h1>
+  <p>The coordinate, telemetry slice, or sector route you requested does not exist on our active hydrological mesh or has been submerged by antecedent water levels.</p>
+
+  <form class="search-box" onsubmit="event.preventDefault(); const q = document.getElementById('q').value; window.location.href = '/?q=' + encodeURIComponent(q);">
+    <input type="text" id="q" class="search-input" placeholder="Search planetary basin (e.g. Mithi, Thames, Rhine)..." />
+    <button type="submit" class="search-btn">🔍</button>
+  </form>
+
+  <div class="action-group">
+    <a href="/" class="btn-action btn-primary">🌊 Return to Tactical Radar</a>
+    <a href="/privacy.html" class="btn-action btn-secondary">Legal &amp; Model Specs</a>
+  </div>
+
+  <div class="footer-note">
+    Lantern Mechatronics // MeteoFlood Planetary Disaster Defense Node
+  </div>
+</body>
+</html>

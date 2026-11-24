@@ -25,4 +25,5 @@ node_modules/
 dist/
 floodlock_gemini_memory_pack/
 .netlify/
+.wrangler/
 _archive_not_for_release/

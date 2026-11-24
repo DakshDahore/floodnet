@@ -2,19 +2,274 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MeteoFlood - Authenticating Session...</title>
-  <script>
-    // Relay authorization code and state back to root index.html preserving query parameters
-    const target = '/' + (window.location.search || '') + (window.location.hash || '');
-    window.location.replace(target);
-  </script>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌊</text></svg>">
+  <style>
+    :root {
+      --bg: #07090e;
+      --card-bg: rgba(15, 23, 42, 0.75);
+      --border: rgba(56, 189, 248, 0.2);
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --cyan: #38bdf8;
+      --emerald: #10b981;
+      --rose: #f43f5e;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: radial-gradient(circle at 50% 20%, #0f172a 0%, var(--bg) 100%);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+    .auth-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 1.25rem;
+      padding: 2.5rem 2rem;
+      max-width: 460px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 40px rgba(56, 189, 248, 0.08);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+    .logo-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      font-size: 2rem;
+      margin-bottom: 1.25rem;
+      animation: pulse-glow 2.5s infinite ease-in-out;
+    }
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 15px rgba(56, 189, 248, 0.2); transform: scale(1); }
+      50% { box-shadow: 0 0 30px rgba(56, 189, 248, 0.4); transform: scale(1.04); }
+    }
+    h1 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.5rem;
+    }
+    p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      line-height: 1.5;
+      margin-bottom: 1.5rem;
+    }
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid rgba(56, 189, 248, 0.2);
+      border-top-color: var(--cyan);
+      border-radius: 50%;
+      margin: 1.5rem auto;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .status-badge {
+      display: inline-block;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.78rem;
+      padding: 0.4rem 0.85rem;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.1);
+      color: var(--cyan);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      margin-bottom: 1rem;
+      word-break: break-word;
+    }
+    .status-badge.error {
+      background: rgba(244, 63, 94, 0.1);
+      color: var(--rose);
+      border-color: rgba(244, 63, 94, 0.3);
+    }
+    .status-badge.success {
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--emerald);
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+    .btn-action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+      padding: 0.8rem 1.5rem;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      color: #fff;
+      font-weight: 600;
+      font-size: 0.9rem;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-top: 1rem;
+    }
+    .btn-action:hover {
+      background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+      transform: translateY(-1px);
+    }
+  </style>
 </head>
-<body style="background:#0a0705;color:#f3eee8;display:flex;align-items:center;justify-content:center;height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;margin:0;">
-  <div style="text-align:center;">
-    <div style="font-size:2rem;margin-bottom:1rem;">🌊</div>
-    <h2 style="font-size:1.25rem;font-weight:600;margin:0 0 0.5rem 0;">MeteoFlood Intelligence</h2>
-    <p style="color:#94a3b8;font-size:0.9rem;margin:0;">Verifying cryptographic OAuth credentials...</p>
+<body>
+  <div class="auth-card">
+    <div class="logo-badge" id="authIcon">🌊</div>
+    <h1 id="authTitle">MeteoFlood Authentication</h1>
+    <p id="authSubtitle">Exchanging cryptographic OAuth tokens with Cloudflare Edge clusters...</p>
+    
+    <div class="spinner" id="authSpinner"></div>
+    <div class="status-badge" id="authBadge">INITIALIZING EDGE HANDSHAKE</div>
+    <div id="authActionContainer" style="display: none;">
+      <button class="btn-action" onclick="window.location.replace('/')">Return to Dashboard</button>
+    </div>
   </div>
+
+  <script>
+    (async function processOAuthCallback() {
+      const badge = document.getElementById('authBadge');
+      const title = document.getElementById('authTitle');
+      const subtitle = document.getElementById('authSubtitle');
+      const spinner = document.getElementById('authSpinner');
+      const icon = document.getElementById('authIcon');
+      const actionContainer = document.getElementById('authActionContainer');
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      const oauthError = urlParams.get('error') || urlParams.get('error_description');
+      const stateRaw = urlParams.get('state');
+
+      // 1. Check for immediate provider errors (user cancelled or permission denied)
+      if (oauthError) {
+        showError('OAuth Access Denied', oauthError);
+        return;
+      }
+
+      if (!code) {
+        // Fallback: If user visited /auth/callback directly without params
+        showError('No Authorization Code', 'Missing OAuth authorization credentials in callback payload.');
+        return;
+      }
+
+      // 2. Prevent Double-Execution (Atomic Single-Run Lock)
+      const lockKey = 'fl_oauth_lock_' + code.substring(0, 16);
+      if (sessionStorage.getItem(lockKey)) {
+        badge.innerText = 'EXCHANGE IN PROGRESS';
+        return;
+      }
+      sessionStorage.setItem(lockKey, Date.now().toString());
+
+      // 3. Resolve Provider & Clean Redirect URI
+      let provider = 'google';
+      try {
+        if (stateRaw) {
+          const parsed = JSON.parse(decodeURIComponent(stateRaw));
+          if (parsed.provider) provider = parsed.provider;
+        }
+      } catch (e) {
+        console.warn('Could not parse OAuth state parameter:', e);
+      }
+
+      const cleanOrigin = window.location.origin.replace(/\/+$/, '');
+      const redirectUri = `${cleanOrigin}/auth/callback`;
+
+      title.innerText = `Authenticating ${provider === 'github' ? 'GitHub' : 'Google'} Identity`;
+      badge.innerText = 'CONTACTING CLOUDFLARE EDGE CLUSTER';
+
+      // 4. Candidate Edge Clusters (Failover Pipeline)
+      const edgeClusters = [
+        "https://floodlock-backend.dahoremugdha.workers.dev",
+        "https://floodlock-backend.dakshdadafit.workers.dev",
+        "https://floodlock-backend.lanternmech.workers.dev"
+      ];
+
+      let exchangeSuccess = false;
+      let lastErrorMessage = 'Failed to reach any edge worker node.';
+
+      for (const base of edgeClusters) {
+        try {
+          const response = await fetch(`${base}/api/auth/oauth/exchange`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              code: code,
+              provider: provider,
+              redirect_uri: redirectUri
+            })
+          });
+
+          const data = await response.json().catch(() => ({}));
+
+          if (response.ok && (data.session_token || data.token) && data.user) {
+            const token = data.session_token || data.token;
+            const user = data.user;
+
+            localStorage.setItem('floodlock_session_token', token);
+            localStorage.setItem('floodlock_user_profile', JSON.stringify(user));
+            sessionStorage.removeItem(lockKey);
+
+            exchangeSuccess = true;
+            spinner.style.display = 'none';
+            icon.innerText = '🛡️';
+            badge.className = 'status-badge success';
+            badge.innerText = 'SESSION SECURED';
+            title.innerText = `Welcome, ${user.name || user.email || 'Tactical Operator'}`;
+            subtitle.innerText = 'Cryptographic handshake verified. Entering MeteoFlood Command Center...';
+
+            setTimeout(() => {
+              window.location.replace('/');
+            }, 600);
+            return;
+          } else {
+            // Google or GitHub token exchange returned an error
+            let desc = data.message || data.error || 'Token verification failed';
+            if (data.detail) {
+              try {
+                const parsed = typeof data.detail === 'string' ? JSON.parse(data.detail) : data.detail;
+                if (parsed.error_description) desc += ` (${parsed.error_description})`;
+              } catch {
+                desc += ` (${data.detail})`;
+              }
+            }
+            lastErrorMessage = desc;
+            // If the server responded with any error, the authorization code was processed. Do not retry another mirror.
+            break;
+          }
+        } catch (fetchErr) {
+          console.warn(`Worker node ${base} unreachable:`, fetchErr);
+          lastErrorMessage = fetchErr.message;
+        }
+      }
+
+      if (!exchangeSuccess) {
+        sessionStorage.removeItem(lockKey);
+        showError('Authentication Failed', lastErrorMessage);
+      }
+
+      function showError(errTitle, errMsg) {
+        spinner.style.display = 'none';
+        icon.innerText = '⚠️';
+        title.innerText = errTitle;
+        subtitle.innerText = errMsg;
+        badge.className = 'status-badge error';
+        badge.innerText = 'CRYPTO HANDSHAKE REJECTED';
+        actionContainer.style.display = 'block';
+      }
+    })();
+  </script>
 </body>
 </html>
-
