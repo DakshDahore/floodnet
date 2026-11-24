@@ -3023,10 +3023,9 @@ console.log(data);</code></pre>
        7. VIEW SWITCHING & WATERY SIDEBAR DOCK
        ══════════════════════════════════════════════════════════════════ */
     function switchView(viewId) {
-      // Security Gate: Tactical Map, API platform, and Account require active authentication
       const session = window.FloodConfig ? window.FloodConfig.getSessionToken() : null;
-      if (['dashboard', 'api', 'account'].includes(viewId) && !session) {
-        alert('🔒 Authentication Required: Access to the Tactical Command Deck and telemetry radar requires signing in through the Login Gate.');
+      if (viewId === 'account' && !session) {
+        showFloatingToast('Please sign in to access your Account Dashboard', true);
         viewId = 'auth';
       }
 
@@ -3042,7 +3041,9 @@ console.log(data);</code></pre>
       window.scrollTo({ top: 0, behavior: 'smooth' });
 
       if (viewId === 'dashboard') {
-        setTimeout(initMap, 200);
+        initMap();
+        setTimeout(() => { if (mapInstance) mapInstance.resize(); }, 150);
+        setTimeout(() => { if (mapInstance) mapInstance.resize(); }, 400);
       } else if (viewId === 'account') {
         refreshAccountUsage();
       }
@@ -3466,8 +3467,19 @@ console.log(data);</code></pre>
     let userLocationMarker = null;
 
     function initMap() {
-      if (mapInstance) return;
+      if (typeof maplibregl === 'undefined') {
+        console.warn('[TacticalMap] maplibregl not yet loaded, retrying in 200ms...');
+        setTimeout(initMap, 200);
+        return;
+      }
+      if (mapInstance) {
+        mapInstance.resize();
+        return;
+      }
       try {
+        const container = document.getElementById('map');
+        if (!container) return;
+
         mapInstance = new maplibregl.Map({
           container: 'map',
           style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
@@ -3482,43 +3494,50 @@ console.log(data);</code></pre>
 
         mapInstance.addControl(new maplibregl.NavigationControl(), 'top-right');
 
-        const geolocate = new maplibregl.GeolocateControl({
-          positionOptions: { enableHighAccuracy: true },
-          trackUserLocation: true,
-          showUserLocation: true
-        });
-        mapInstance.addControl(geolocate, 'top-right');
-        geolocate.on('geolocate', (e) => {
-          recenterToUserLocation(e.coords.latitude, e.coords.longitude);
+        try {
+          const geolocate = new maplibregl.GeolocateControl({
+            positionOptions: { enableHighAccuracy: true },
+            trackUserLocation: true,
+            showUserLocation: true
+          });
+          mapInstance.addControl(geolocate, 'top-right');
+          geolocate.on('geolocate', (e) => {
+            recenterToUserLocation(e.coords.latitude, e.coords.longitude);
+          });
+        } catch (geoErr) {
+          console.warn('[TacticalMap] Geolocate control bypassed:', geoErr);
+        }
+
+        mapInstance.on('error', (e) => {
+          console.warn('[TacticalMap Error]', e);
         });
 
         mapInstance.on('load', () => {
+          mapInstance.resize();
           loadPlanetaryAMRHeatGrid();
           loadActivePlanetaryFloods();
           loadBasinTelemetry(19.21, 73.10, "Ulhas-Mithi Coastal Basin (Mumbai)");
         });
+
+        setTimeout(() => { if (mapInstance) mapInstance.resize(); }, 300);
+        setTimeout(() => { if (mapInstance) mapInstance.resize(); }, 800);
       } catch (err) {
         console.error('Map init:', err);
       }
     }
 
     const GATEWAY_CLUSTER = [
-      window.FloodConfig ? window.FloodConfig.getBaseUrl().replace(/\/+$/, '') : 'https://floodlock-backend.dakshdahore1995.workers.dev',
-      'https://floodlock-backend-standby.dakshdahore1995.workers.dev',
       'https://floodlock-backend.dahoremugdha.workers.dev',
       'https://floodlock-backend.dakshdadafit.workers.dev',
-      'https://floodlock-backend.lanternmech.workers.dev'
+      'https://floodlock-backend.lanternmech.workers.dev',
+      window.FloodConfig ? window.FloodConfig.getBaseUrl().replace(/\/+$/, '') : ''
     ].filter((v, i, a) => Boolean(v) && a.indexOf(v) === i);
 
     const CLICK_CLUSTER = [
       'https://floodlock-click-processor.lanternmech.workers.dev',
-      'https://floodlock-click-processor.dakshdahore1995.workers.dev',
-      window.FloodConfig ? window.FloodConfig.getBaseUrl().replace(/\/+$/, '') : 'https://floodlock-backend.lanternmech.workers.dev',
-      'https://floodlock-backend.lanternmech.workers.dev',
-      'https://floodlock-backend.dakshdahore1995.workers.dev',
-      'https://floodlock-backend-standby.dakshdahore1995.workers.dev',
       'https://floodlock-backend.dahoremugdha.workers.dev',
-      'https://floodlock-backend.dakshdadafit.workers.dev'
+      'https://floodlock-backend.dakshdadafit.workers.dev',
+      'https://floodlock-backend.lanternmech.workers.dev'
     ].filter((v, i, a) => Boolean(v) && a.indexOf(v) === i);
 
     async function loadPlanetaryAMRHeatGrid(forceRefresh = false) {
@@ -3531,7 +3550,7 @@ console.log(data);</code></pre>
         for (const base of GATEWAY_CLUSTER) {
           try {
             const url = `${base}/api/flood/planetary-heatgrid${refreshParam}`;
-            const res = await fetch(url, { signal: AbortSignal.timeout(9000) });
+            const res = await fetch(url, { signal: AbortSignal.timeout(4000) });
             if (res.ok) {
               const parsed = await res.json();
               if (parsed && parsed.features) {
