@@ -55,7 +55,7 @@
     "EMAILJS_PUBLIC_KEY": "JyA8ccT87iU8JnkPi",
     "OTP_DELIVERY_URL": "https://api.resend.com/emails",
     "OTP_FROM_ADDRESS": "MeteoFlood <onboarding@resend.dev>",
-    "GOOGLE_CLIENT_ID": "665808449308-0m3lp5romjn2o4cq0510tm3os8r5nc7e.apps.googleusercontent.com",
+    "GOOGLE_CLIENT_ID": "337870843063-6ibga32hlca5b7s800dfdhm7prudl8j1.apps.googleusercontent.com",
     "GITHUB_CLIENT_ID": "Ov23liHMgDQduw9y5SOT",
     "FRONTEND_URL": "https://metoflood.netlify.app"
   },
