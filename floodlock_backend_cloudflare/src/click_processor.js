@@ -246,6 +246,7 @@ function jsonResponse(request, env, data, status = 200, extraHeaders = {}) {
 
 export default {
   async fetch(request, env, ctx) {
+    const t0 = performance.now();
     const url = new URL(request.url);
     const method = request.method;
     const path = url.pathname;
@@ -356,9 +357,11 @@ export default {
 
       const neuralPred = predict14F(features);
       const isBlackSwan = telem.r0 > 50.0 && features[12] > 0.70;
+      const forceReasoning = url.searchParams.get("reasoning") === "true" || url.searchParams.get("force_ai") === "true";
       // Synchronized thresholds matching Master Gateway index.js
       const isThreat =
         forceThreat ||
+        forceReasoning ||
         isBlackSwan ||
         neuralPred.depth_trajectory_cm.h1 > 10.0 ||
         neuralPred.flash_flood_probability > 0.60 ||
@@ -441,9 +444,7 @@ export default {
         flood_audit_log: floodAuditLog,
         dual_trigger_black_swan: isBlackSwan,
         disclaimer: PUBLIC_SAFETY_DISCLAIMER,
-        tactical_reasoning: isPhysicalHazard
-          ? (tacticalReasoning || buildDeterministicEdgeSop(telem, neuralPred, lat, lon))
-          : (finalThreatLevel === "NOMINAL" || finalThreatLevel === "MONITORED_NOMINAL" ? null : tacticalReasoning),
+        tactical_reasoning: tacticalReasoning || buildDeterministicEdgeSop(telem, neuralPred, lat, lon),
       }, 200, {
         "X-Worker-Core": "Core-3-ClickProcessor",
         "X-Response-Time-Ms": `${neuralPred.latency_ms}`,

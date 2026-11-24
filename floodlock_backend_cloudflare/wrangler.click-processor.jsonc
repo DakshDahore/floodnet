@@ -9,7 +9,7 @@
   "kv_namespaces": [
     {
       "binding": "FLOODLOCK_KV",
-      "id": "64ec69f748d3430fb3d34b8d6e59d8c3"
+      "id": "14d0a3d3d4174a49a2440e855bffdde0"
     }
   ],
   "vars": {
@@ -19,6 +19,7 @@
     "GROQ_MODEL": "openai/gpt-oss-120b",
     "GEMINI_MODEL": "gemini-2.5-flash",
     "ALLOWED_ORIGINS": "https://metoflood.netlify.app,https://floodlock.pages.dev,https://floodnet.netlify.app,https://dakshdahore1995-design.github.io"
-  }
+  },
+  "account_id": "4f373d94982be61d1ae2e30418da958a"
 }
 

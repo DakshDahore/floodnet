@@ -301,7 +301,7 @@ Return ONLY a valid JSON object matching the exact schema below:
 
   const groqModel = env.GROQ_MODEL || "openai/gpt-oss-120b";
   if (env.GROQ_API_KEY) {
-    const groqTripped = cbStub ? await cbStub.isOpen("groq") : false;
+    const groqTripped = (cbStub && typeof cbStub.isOpen === "function") ? await cbStub.isOpen("groq") : false;
     if (!groqTripped) {
       try {
         const qRes = await fetchWithTimeout(
@@ -327,22 +327,22 @@ Return ONLY a valid JSON object matching the exact schema below:
           const qData = await qRes.json();
           const parsed = JSON.parse(qData.choices[0].message.content);
           const normalized = normalizeTacticalPayload(parsed, `Tier-1 Groq LPU (${groqModel})`, deterministicFloor, isPhysicalHazard);
-          if (cbStub) await cbStub.recordSuccess("groq");
+          if (cbStub && typeof cbStub.recordSuccess === "function") await cbStub.recordSuccess("groq");
           if (!skipCache && env.FLOODLOCK_KV) {
             await env.FLOODLOCK_KV.put(clusterKey, JSON.stringify(normalized), { expirationTtl: 600 });
           }
           return normalized;
         }
-        if (cbStub) await cbStub.recordFailure("groq");
+        if (cbStub && typeof cbStub.recordFailure === "function") await cbStub.recordFailure("groq");
       } catch {
-        if (cbStub) await cbStub.recordFailure("groq");
+        if (cbStub && typeof cbStub.recordFailure === "function") await cbStub.recordFailure("groq");
       }
     }
   }
 
   const geminiModel = env.GEMINI_MODEL || "gemini-2.5-flash";
   if (env.GEMINI_API_KEY) {
-    const geminiTripped = cbStub ? await cbStub.isOpen("gemini") : false;
+    const geminiTripped = (cbStub && typeof cbStub.isOpen === "function") ? await cbStub.isOpen("gemini") : false;
     if (!geminiTripped) {
       try {
         const gRes = await fetchWithTimeout(
@@ -371,15 +371,15 @@ Return ONLY a valid JSON object matching the exact schema below:
           const rawText = gData.candidates?.[0]?.content?.parts?.[0]?.text;
           const parsed = JSON.parse(rawText);
           const normalized = normalizeTacticalPayload(parsed, `Tier-2 Google Cloud (${geminiModel} GA)`, deterministicFloor, isPhysicalHazard);
-          if (cbStub) await cbStub.recordSuccess("gemini");
+          if (cbStub && typeof cbStub.recordSuccess === "function") await cbStub.recordSuccess("gemini");
           if (!skipCache && env.FLOODLOCK_KV) {
             await env.FLOODLOCK_KV.put(clusterKey, JSON.stringify(normalized), { expirationTtl: 600 });
           }
           return normalized;
         }
-        if (cbStub) await cbStub.recordFailure("gemini");
+        if (cbStub && typeof cbStub.recordFailure === "function") await cbStub.recordFailure("gemini");
       } catch {
-        if (cbStub) await cbStub.recordFailure("gemini");
+        if (cbStub && typeof cbStub.recordFailure === "function") await cbStub.recordFailure("gemini");
       }
     }
   }

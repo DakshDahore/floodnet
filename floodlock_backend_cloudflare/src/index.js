@@ -2406,9 +2406,7 @@ export default {
           dual_trigger_black_swan: isBlackSwan,
           quota: quotaStatus,
           disclaimer: PUBLIC_SAFETY_DISCLAIMER,
-          tactical_reasoning: isPhysicalHazard
-            ? (tacticalReasoning || buildDeterministicEdgeSop(telem, neuralPred, lat, lon))
-            : (finalThreatLevel === "NOMINAL" || finalThreatLevel === "MONITORED_NOMINAL" ? null : tacticalReasoning),
+          tactical_reasoning: tacticalReasoning || buildDeterministicEdgeSop(telem, neuralPred, lat, lon),
         }, 200, qosHeaders);
       }
 
